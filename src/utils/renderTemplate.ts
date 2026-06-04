@@ -1,5 +1,11 @@
 import { Product, ProductAsset, Template, TemplateSlot, TextField } from "../types";
 
+export let DEMO_MODE = false;
+
+export function setDemoMode(val: boolean) {
+  DEMO_MODE = val;
+}
+
 export interface RenderOffsets {
   hOffset?: number; // slider percent offset -50 to 50
   vOffset?: number; // slider percent offset -50 to 50
@@ -298,6 +304,9 @@ async function drawSlot(
   if (matchingAsset && matchingAsset.fileUrl) {
     const isPlaceholder = ["front", "inner", "side", "pdf", "png", "ring", "det_cov", "det_pg", "det_base", "ad", "white_bg"].includes(matchingAsset.fileUrl);
     if (isPlaceholder) {
+      if (!DEMO_MODE) {
+        throw new Error("产品资产缺失或加载失败");
+      }
       assetUrl = generateDynamicAssetDataUrl(product, matchingAsset.assetType);
     } else {
       assetUrl = matchingAsset.fileUrl;

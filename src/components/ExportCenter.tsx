@@ -125,7 +125,7 @@ export const ExportCenter: React.FC<ExportCenterProps> = ({
         <div className="lg:col-span-5 bg-slate-50/50 p-5 rounded-2xl border border-slate-150 space-y-5 text-sm text-slate-600">
           <h3 className="text-xs font-black uppercase tracking-widest text-slate-450 pb-2 border-b border-slate-200/60 flex items-center">
             <Settings className="w-4 h-4 mr-1.5 text-slate-500" />
-            打包及命名规则配置
+            批量下载与命名规则配置
           </h3>
 
           {/* Sizing selection */}

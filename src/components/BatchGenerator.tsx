@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Product, Template, GenerationTask, GeneratedImage } from "../types";
-import { renderTemplateToCanvas } from "../utils/renderTemplate";
+import { renderTemplateToCanvas, setDemoMode, DEMO_MODE } from "../utils/renderTemplate";
 import {
   CheckCircle,
   FolderOpen,
@@ -47,6 +47,12 @@ export const BatchGenerator: React.FC<BatchGeneratorProps> = ({
   const [currentSynthesizingTask, setCurrentSynthesizingTask] = useState<GenerationTask | null>(null);
   const [renderedQueueLog, setRenderedQueueLog] = useState<string[]>([]);
   const [completedImagesCount, setCompletedImagesCount] = useState(0);
+  const [demoMode, setDemoModeState] = useState(DEMO_MODE);
+
+  const handleDemoModeToggle = (val: boolean) => {
+    setDemoModeState(val);
+    setDemoMode(val);
+  };
 
   const toggleProductSelect = (id: string) => {
     setSelectedProductIds((prev) =>
@@ -129,7 +135,8 @@ export const BatchGenerator: React.FC<BatchGeneratorProps> = ({
         } catch (err) {
           console.error("Template rendering to canvas failed: ", err);
           isFailed = true;
-          qualityIssues.push("渲染失败: 产品资产缺失或加载失败");
+          qualityIssues.push("Canvas渲染失败");
+          qualityIssues.push("产品资产缺失或加载失败");
         }
 
         syntheticImagesResult.push({
@@ -154,7 +161,7 @@ export const BatchGenerator: React.FC<BatchGeneratorProps> = ({
           newTask.failedCount = (newTask.failedCount || 0) + 1;
           setRenderedQueueLog((prev) => [
             ...prev,
-            `❌ [${currentCount}/${totalCount}] 渲染失败：【${prod.productCode}-${prod.productName}】 模具：${temp.templateName} (原因: ${qualityIssues[qualityIssues.length - 1]})`
+            `❌ [${currentCount}/${totalCount}] 渲染失败，已进入人工处理队列：【${prod.productCode}-${prod.productName}】 模具：${temp.templateName}`
           ]);
         } else {
           setRenderedQueueLog((prev) => [
@@ -446,6 +453,34 @@ export const BatchGenerator: React.FC<BatchGeneratorProps> = ({
                 <option>统一不烫金 (仅套正面插画)</option>
               </select>
             </div>
+          </div>
+
+          {/* Demo Mode Toggle Banner */}
+          <div className="p-4 rounded-xl border border-blue-200 bg-blue-50/20 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs leading-normal">
+            <div className="space-y-0.5">
+              <span className="font-bold flex items-center text-slate-800">
+                🛠️ 台历资产验证模式：
+                <span className={`ml-1.5 font-black uppercase font-mono px-2 py-0.5 rounded text-[10px] ${demoMode ? "bg-amber-100 text-amber-800" : "bg-emerald-100 text-emerald-800"}`}>
+                  {demoMode ? "DEMO 模式 (允许矢量占位图)" : "生产模式 (必须使用真实 PNG)"}
+                </span>
+              </span>
+              <p className="text-[10px] text-slate-500">
+                {demoMode 
+                  ? "未配置台历实物原图时，将自动为您绘制高精度矢量原型进行套板预览。" 
+                  : "严禁任何矢量占位图 fallback。如遇到产品没有真实高分辨率 PNG 资产，将自动抛出错漏并引导转入人工修正。"}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => handleDemoModeToggle(!demoMode)}
+              className={`font-semibold px-3 py-1.5 rounded-lg whitespace-nowrap transition-all text-xs cursor-pointer ${
+                demoMode 
+                  ? "bg-amber-600 hover:bg-amber-700 text-white" 
+                  : "bg-slate-700 hover:bg-slate-800 text-white"
+              }`}
+            >
+              切换至{demoMode ? " 生产模式 " : " DEMO 模式 "}
+            </button>
           </div>
 
           <div className="flex justify-between pt-4 border-t border-slate-100">
