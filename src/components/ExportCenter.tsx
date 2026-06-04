@@ -39,8 +39,7 @@ export const ExportCenter: React.FC<ExportCenterProps> = ({
   const exportableImages = generatedImages.filter(
     img => img.fileUrl && img.fileUrl !== "url" && img.reviewStatus !== "needs_adjustment"
   ); 
-  const approvedImages = exportableImages;
-  const readyCount = approvedImages.length;
+  const readyCount = exportableImages.length;
 
   const platformsMap: Record<string, string> = {
     taobao: "淘宝主图/详情规范",
@@ -92,7 +91,7 @@ export const ExportCenter: React.FC<ExportCenterProps> = ({
           setShowComplete(true);
 
           // Physically trigger sequential downloads of all true dynamically-generated images in parallel/staggered layout!
-          approvedImages.forEach((img, idx) => {
+          exportableImages.forEach((img, idx) => {
             if (img.fileUrl && img.fileUrl !== "url") {
               setTimeout(() => {
                 const link = document.createElement("a");
@@ -244,7 +243,7 @@ export const ExportCenter: React.FC<ExportCenterProps> = ({
 
             {/* Scrollable filenames list */}
             <div className="flex-1 overflow-y-auto space-y-1.5 max-h-80 pr-1 min-h-[220px]">
-              {approvedImages.map((img) => (
+              {exportableImages.map((img) => (
                 <div
                   key={img.id}
                   className="p-2.5 border border-slate-100 bg-slate-50/50 hover:bg-slate-50 rounded-xl flex items-center justify-between text-xs font-mono text-slate-600"
