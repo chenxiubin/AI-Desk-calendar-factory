@@ -191,7 +191,7 @@ export const BatchGenerator: React.FC<BatchGeneratorProps> = ({
     newTask.pendingReviewCount = totalCount - failedCount;
     onStartWorkflow(newTask, syntheticImagesResult);
 
-    if (newTask.failedCount > 0) {
+    if ((newTask.failedCount || 0) > 0) {
       setRenderedQueueLog((prev) => [
         ...prev,
         `批量任务完成，其中 ${newTask.failedCount} 张渲染失败，已进入人工处理队列。`
