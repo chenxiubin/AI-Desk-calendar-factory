@@ -1,6 +1,6 @@
 import { Product, ProductAsset, Template, TemplateSlot, TextField } from "../types";
 
-export let DEMO_MODE = false;
+export let DEMO_MODE = true;
 
 export function setDemoMode(val: boolean) {
   DEMO_MODE = val;
