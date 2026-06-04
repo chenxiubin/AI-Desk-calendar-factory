@@ -88,11 +88,26 @@ export const ExportCenter: React.FC<ExportCenterProps> = ({
           clearInterval(interval);
           setIsZipping(false);
           setShowComplete(true);
+
+          // Physically trigger sequential downloads of all true dynamically-generated images in parallel/staggered layout!
+          approvedImages.forEach((img, idx) => {
+            if (img.fileUrl && img.fileUrl !== "url") {
+              setTimeout(() => {
+                const link = document.createElement("a");
+                link.href = img.fileUrl;
+                link.download = getCompiledFileName(img);
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+              }, idx * 250); // 250ms stagger to prevent prompt blockage by browser policies
+            }
+          });
+
           return 100;
         }
-        return prev + 15;
+        return prev + 20;
       });
-    }, 250);
+    }, 200);
   };
 
   return (
@@ -235,9 +250,21 @@ export const ExportCenter: React.FC<ExportCenterProps> = ({
                   <p className="font-bold truncate text-slate-700 pr-4">
                     {getCompiledFileName(img)}
                   </p>
-                  <span className="text-[9px] bg-emerald-50 text-emerald-800 border-emerald-100 border px-1.5 py-0.5 rounded-full font-bold shrink-0">
-                    质检通过
-                  </span>
+                  <div className="flex items-center space-x-2 shrink-0">
+                    <span className="text-[9px] bg-emerald-50 text-emerald-800 border-emerald-100 border px-1.5 py-0.5 rounded-full font-bold">
+                      质检通过
+                    </span>
+                    {img.fileUrl && img.fileUrl !== "url" && (
+                      <a
+                        href={img.fileUrl}
+                        download={getCompiledFileName(img)}
+                        className="p-1 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded transition-all cursor-pointer"
+                        title="下载此张"
+                      >
+                        <FileDown className="w-4 h-4" />
+                      </a>
+                    )}
+                  </div>
                 </div>
               ))}
 

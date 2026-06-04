@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { Product, Template, GenerationTask, GeneratedImage } from "../types";
+import { renderTemplateToCanvas } from "../utils/renderTemplate";
 import {
   CheckCircle,
   FolderOpen,
@@ -61,7 +62,7 @@ export const BatchGenerator: React.FC<BatchGeneratorProps> = ({
   };
 
   // Launch Renderer Synthesis Flow
-  const launchSynthesisEngine = () => {
+  const launchSynthesisEngine = async () => {
     const totalCount = selectedProductIds.length * selectedTemplateIds.length;
     if (totalCount === 0) return;
 
@@ -91,17 +92,15 @@ export const BatchGenerator: React.FC<BatchGeneratorProps> = ({
 
     setCurrentSynthesizingTask(newTask);
 
-    // Build the collection of synthetic image products to mock in review center!
     const syntheticImagesResult: GeneratedImage[] = [];
 
-    // Loop products and templates
-    let index = 0;
-    selectedProductIds.forEach((prodId) => {
+    let currentCount = 0;
+    for (const prodId of selectedProductIds) {
       const prod = products.find((p) => p.id === prodId)!;
-      selectedTemplateIds.forEach((tempId) => {
+      for (const tempId of selectedTemplateIds) {
         const temp = templates.find((t) => t.id === tempId)!;
 
-        // Simulate some minor errors for a couple of images to make the Review suite look real and useful!
+        // Custom default quality issues matching presets
         let qualityIssues: string[] = [];
         if (prod.productCode === "061" && temp.id === "MAIN_003") {
           qualityIssues = ["产品尺寸偏小，后叠线圈部分有少许穿模遮挡"];
@@ -109,51 +108,49 @@ export const BatchGenerator: React.FC<BatchGeneratorProps> = ({
           qualityIssues = ["文案越界，材质描述行数过多超出底部防线"];
         }
 
+        // Render actual Canvas JPG dataURL!
+        let renderedUrl = "url";
+        try {
+          renderedUrl = await renderTemplateToCanvas(prod, temp);
+        } catch (err) {
+          console.error("Template rendering to canvas failed: ", err);
+        }
+
         syntheticImagesResult.push({
           id: `gen_img_${taskId}_${prod.id}_${temp.id}`,
           productId: prod.id,
           templateId: temp.id,
           imageType: temp.templateType,
-          fileUrl: "url", // visual component fallback
+          fileUrl: renderedUrl, // REAL CANVAS IMAGES
           width: temp.outputWidth,
           height: temp.outputHeight,
           reviewStatus: "pending",
           qualityIssues,
           createdAt: new Date().toISOString()
         });
-      });
-    });
 
-    // Animate item creation programmatically
-    let currentCount = 0;
-    const interval = setInterval(() => {
-      if (currentCount >= totalCount) {
-        clearInterval(interval);
-        setIsSynthesizing(false);
-        newTask.status = "completed";
-        newTask.progress = 100;
-        newTask.completedCount = totalCount;
-        onStartWorkflow(newTask, syntheticImagesResult);
-        setRenderedQueueLog((prev) => [...prev, "🎉 所有拼版任务合成成功！已存入「图片审核中心」待质检审核。"]);
-        return;
+        // Delicate short delays for high fidelity console output animation
+        await new Promise((resolve) => setTimeout(resolve, 320));
+
+        currentCount++;
+        setCompletedImagesCount(currentCount);
+        setRenderedQueueLog((prev) => [
+          ...prev,
+          `✓ [${currentCount}/${totalCount}] 成功处理：【${prod.productCode}-${prod.productName}】 🚀 套入模具：${temp.templateName} (${temp.outputWidth}x${temp.outputHeight}px)`
+        ]);
+
+        newTask.completedCount = currentCount;
+        newTask.progress = (currentCount / totalCount) * 100;
+        setCurrentSynthesizingTask({ ...newTask });
       }
+    }
 
-      const activeImage = syntheticImagesResult[currentCount];
-      const prod = products.find((p) => p.id === activeImage.productId)!;
-      const temp = templates.find((t) => t.id === activeImage.templateId)!;
-
-      setCompletedImagesCount(currentCount + 1);
-      setRenderedQueueLog((prev) => [
-        ...prev,
-        `✓ [${currentCount + 1}/${totalCount}] 成功处理：【${prod.productCode}-${prod.productName}】 🚀 套入模具：${temp.templateName} (${temp.outputWidth}x${temp.outputHeight}px)`
-      ]);
-
-      currentCount++;
-      if (currentSynthesizingTask) {
-        currentSynthesizingTask.completedCount = currentCount;
-        currentSynthesizingTask.progress = (currentCount / totalCount) * 100;
-      }
-    }, 450);
+    setIsSynthesizing(false);
+    newTask.status = "completed";
+    newTask.progress = 100;
+    newTask.completedCount = totalCount;
+    onStartWorkflow(newTask, syntheticImagesResult);
+    setRenderedQueueLog((prev) => [...prev, "🎉 所有拼版任务合成成功！已存入「图片审核中心」待质检审核。"]);
   };
 
   const getCompletenessText = (p: Product) => {

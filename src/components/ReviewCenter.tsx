@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { GeneratedImage, Product, Template } from "../types";
 import { VisualCalendar } from "./VisualCalendar";
+import { renderTemplateToCanvas } from "../utils/renderTemplate";
 import {
   ShieldCheck,
   CheckCircle,
@@ -56,6 +57,30 @@ export const ReviewCenter: React.FC<ReviewCenterProps> = ({
       setCurrentScale(activeImage.scaleFactor || 1.0);
     }
   }, [activeImage]);
+
+  const [renderedPreviewUrl, setRenderedPreviewUrl] = useState<string>("");
+
+  React.useEffect(() => {
+    let active = true;
+    if (activeImage && activeProduct && activeTemplate) {
+      renderTemplateToCanvas(activeProduct, activeTemplate, {
+        hOffset: currentXOffset,
+        vOffset: currentYOffset,
+        scale: currentScale
+      })
+        .then((url) => {
+          if (active) {
+            setRenderedPreviewUrl(url);
+          }
+        })
+        .catch((err) => {
+          console.error("Error drawing on slider change", err);
+        });
+    }
+    return () => {
+      active = false;
+    };
+  }, [activeImage, activeProduct, activeTemplate, currentXOffset, currentYOffset, currentScale]);
 
   // Filter matrix execution
   const filtered = generatedImages.filter((img) => {
@@ -234,12 +259,16 @@ export const ReviewCenter: React.FC<ReviewCenterProps> = ({
                     temp.background.sceneStyle
                   )}`}
                 >
-                  <VisualCalendar
-                    product={prod}
-                    type={temp.slots[0]?.assetType === "inner_page" ? "inner_page" : temp.slots[0]?.assetType === "side" ? "side" : "front_cover"}
-                    isNakedPNG={true}
-                    className="transform scale-[0.65]"
-                  />
+                  {img.fileUrl && img.fileUrl !== "url" ? (
+                    <img src={img.fileUrl} className="max-w-full max-h-full object-contain rounded" alt="Rendered Preview" />
+                  ) : (
+                    <VisualCalendar
+                      product={prod}
+                      type={temp.slots[0]?.assetType === "inner_page" ? "inner_page" : temp.slots[0]?.assetType === "side" ? "side" : "front_cover"}
+                      isNakedPNG={true}
+                      className="transform scale-[0.65]"
+                    />
+                  )}
 
                   {/* Warning overlay if flaws detected */}
                   {hasFlaws && (
@@ -303,34 +332,20 @@ export const ReviewCenter: React.FC<ReviewCenterProps> = ({
 
             {/* Sandbox single mock item layout */}
             <div
-              className={`h-40 w-full rounded-xl border border-slate-150 relative flex items-center justify-center overflow-hidden ${getReviewBackgroundStyle(
-                activeTemplate.background.sceneStyle
-              )}`}
+              className={`h-48 w-full rounded-xl border border-slate-150 relative flex items-center justify-center overflow-hidden p-2 bg-slate-100/50`}
             >
-              {/* Manual inline offsets applied */}
-              <div
-                className="absolute"
-                style={{
-                  left: `${activeTemplate.slots[0]?.x + currentXOffset}%`,
-                  top: `${activeTemplate.slots[0]?.y + currentYOffset}%`,
-                  width: `${activeTemplate.slots[0]?.maxWidth * currentScale}%`,
-                  height: `${activeTemplate.slots[0]?.maxHeight * currentScale}%`,
-                  transform: "translate(-50%, -100%)",
-                  zIndex: 25
-                }}
-              >
-                <div className="absolute inset-x-0 inset-y-0 border border-blue-500/20 pointer-events-none" />
-                <VisualCalendar
-                  product={activeProduct}
-                  type={activeTemplate.slots[0]?.assetType === "inner_page" ? "inner_page" : activeTemplate.slots[0]?.assetType === "side" ? "side" : "front_cover"}
-                  isNakedPNG={true}
-                  className="w-full h-full max-h-full flex items-end justify-center"
-                />
-              </div>
+              {renderedPreviewUrl ? (
+                <img src={renderedPreviewUrl} className="max-w-full max-h-full object-contain rounded shadow-sm" alt="Live Canvas Render" />
+              ) : (
+                <div className="flex flex-col items-center justify-center text-slate-405 space-y-2 text-xs">
+                  <RefreshCw className="w-5 h-5 animate-spin text-blue-500" />
+                  <span>像素微移合成中...</span>
+                </div>
+              )}
 
               {/* Variable overlay text demo */}
               <div className="absolute bottom-1.5 right-1.5 text-[8.5px] font-mono text-slate-200 select-none bg-slate-900/70 backdrop-blur-xs px-2 py-0.5 rounded-md">
-                层叠检视: {activeProduct.productName}
+                实时图层拼合检视: {activeProduct.productName}
               </div>
             </div>
 
