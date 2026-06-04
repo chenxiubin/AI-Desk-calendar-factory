@@ -202,34 +202,18 @@ function drawBackground(ctx: CanvasRenderingContext2D, template: Template, w: nu
 export function findMatchingAsset(product: Product, slotAssetType: string): ProductAsset | undefined {
   if (!product.assets || product.assets.length === 0) return undefined;
 
-  // 1. Prioritize exact matching assetType
+  // 1. 如果 slot.assetType 有明确值，优先匹配对应 assetType
   let exactMatch = product.assets.find((a) => a.status === "ready" && a.assetType === slotAssetType);
   if (exactMatch) return exactMatch;
 
-  // 2. Specific Fallbacks
-  // "front_cover" can fallback to "transparent_png"
-  if (slotAssetType === "front_cover") {
+  // 2. 只有 front_cover / white_bg / 主产品槽(transparent_png) 找不到对应资产时，才 fallback 到 transparent_png
+  const fallbackAllowedTypes = ["front_cover", "white_bg", "transparent_png"];
+  if (fallbackAllowedTypes.includes(slotAssetType)) {
     let fallbackPng = product.assets.find((a) => a.status === "ready" && a.assetType === "transparent_png");
     if (fallbackPng) return fallbackPng;
   }
 
-  // "inner_page、side、detail_ring、detail_cover、detail_page、detail_base、ad_area 不要默认全部用 transparent_png。"
-  // Only fallback to transparent_png for other compatible slots, but do not fallback for these specified ones.
-  const noFallbackTypes = [
-    "inner_page",
-    "side",
-    "detail_ring",
-    "detail_cover",
-    "detail_page",
-    "detail_base",
-    "ad_area"
-  ];
-
-  if (!noFallbackTypes.includes(slotAssetType)) {
-    let fallbackPng = product.assets.find((a) => a.status === "ready" && a.assetType === "transparent_png");
-    if (fallbackPng) return fallbackPng;
-  }
-
+  // 3. inner_page、side、detail_ring、detail_cover、detail_page、detail_base、ad_area 不允许默认 fallback 到 transparent_png。
   return undefined;
 }
 
@@ -319,8 +303,7 @@ async function drawSlot(
       assetUrl = matchingAsset.fileUrl;
     }
   } else {
-    // Graceful fallback: generate programmatic high-fidelity artwork
-    assetUrl = generateDynamicAssetDataUrl(product, slot.assetType || "front_cover");
+    throw new Error("产品资产缺失或加载失败");
   }
 
   // 5. Load the actual image, and calculate accurate aspect ratio preserving containment
@@ -330,25 +313,21 @@ async function drawSlot(
       const i = new Image();
       i.crossOrigin = "anonymous";
       i.onload = () => resolve(i);
-      i.onerror = (err) => reject(err);
+      i.onerror = () => reject(new Error("产品资产缺失或加载失败"));
       i.src = assetUrl;
     });
   } catch (err) {
     console.warn("Failed to load product image resource:", assetUrl, err);
-    return;
+    throw new Error("产品资产缺失或加载失败");
   }
 
   const imgW = img.naturalWidth || img.width || 800;
   const imgH = img.naturalHeight || img.height || 600;
-  const itemRatio = imgW / imgH;
 
-  // Standard "contain" sizing: fit content ratio into slot bounding box without stretching
-  let drawW = finalW;
-  let drawH = finalW / itemRatio;
-  if (drawH > finalH) {
-    drawH = finalH;
-    drawW = finalH * itemRatio;
-  }
+  // Use contain algorithm explicitly as requested: scale = Math.min(finalW / img.width, finalH / img.height)
+  const scale = Math.min(finalW / imgW, finalH / imgH);
+  const drawW = imgW * scale;
+  const drawH = imgH * scale;
 
   // Anchor alignment logic
   let drawX = 0;

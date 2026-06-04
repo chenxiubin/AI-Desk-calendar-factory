@@ -116,7 +116,7 @@ export const ExportCenter: React.FC<ExportCenterProps> = ({
       <div className="border-b border-slate-100 pb-4 shrink-0">
         <h2 className="text-sm font-bold text-slate-800 tracking-tight">排板成品极速批量导出中心</h2>
         <p className="text-[11px] text-slate-400 mt-1">
-          将质检审核通过的台历电商图按照选定电商平台建议尺寸、无损重组算法进行 ZIP 一键打封装打包。
+          将质检审核通过的台历电商图按照选定电商平台建议尺寸、无损重组算法进行高性能批量触发下载。
         </p>
       </div>
 
@@ -237,7 +237,7 @@ export const ExportCenter: React.FC<ExportCenterProps> = ({
                 <Archive className="w-4 h-4 mr-1 text-slate-450 shrink-0" />
                 即将导出的对齐拼板图片总名册 ({readyCount} 张)
               </span>
-              <span className="font-mono text-slate-400 text-[10px]">打包文件规格: {outputSize} | {outputFormat}</span>
+              <span className="font-mono text-slate-400 text-[10px]">导出文件规格: {outputSize} | {outputFormat}</span>
             </div>
 
             {/* Scrollable filenames list */}
@@ -287,7 +287,7 @@ export const ExportCenter: React.FC<ExportCenterProps> = ({
             {isZipping ? (
               <div className="space-y-2">
                 <div className="flex justify-between items-center text-xs font-bold text-slate-700">
-                  <span>正在并发压合二进制文件至 ZIP 压缩包 (archiver_fast_stream)...</span>
+                  <span>正在并行预热并触发浏览器批量下载队列...</span>
                   <span className="font-mono text-blue-600">{zipProgress}%</span>
                 </div>
                 <div className="w-full bg-slate-205 rounded-full h-2 overflow-hidden">
@@ -298,13 +298,13 @@ export const ExportCenter: React.FC<ExportCenterProps> = ({
                 </div>
               </div>
             ) : showComplete ? (
-              <div className="bg-emerald-55/35 border border-emerald-200 p-4 rounded-xl flex items-center justify-between text-xs text-emerald-900 mb-3 gap-4 leading-normal">
+              <div className="bg-emerald-55/35 border border-emerald-200 p-4 rounded-xl flex items-center justify-between text-xs text-emerald-950 mb-3 gap-4 leading-normal">
                 <div className="flex items-center space-x-3">
                   <CheckCircle2 className="w-6 h-6 text-emerald-500 shrink-0" />
                   <div>
-                    <span className="font-black block text-slate-800">打包ZIP编译成功！已完美下载至本地。</span>
-                    <p className="text-[10px] text-slate-450 mt-0.5">
-                      命名：2026年台历主图SKU详情_批量合集_pack.zip (共 {readyCount} 张高规图片)
+                    <span className="font-black block text-slate-800">批量下载启动成功！</span>
+                    <p className="text-[10px] text-slate-500 mt-0.5">
+                      浏览器正在按 250ms 延迟依次下载 {readyCount} 张高规大图。
                     </p>
                   </div>
                 </div>
@@ -312,7 +312,7 @@ export const ExportCenter: React.FC<ExportCenterProps> = ({
                   onClick={() => setShowComplete(false)}
                   className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-3 py-1.5 rounded-lg whitespace-nowrap transition-all cursor-pointer"
                 >
-                  再次打包
+                  再次下载
                 </button>
               </div>
             ) : null}
@@ -323,7 +323,7 @@ export const ExportCenter: React.FC<ExportCenterProps> = ({
                 className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-xl text-xs flex items-center justify-center space-x-2 shadow-md transition-all hover:shadow-lg hover:scale-[1.01] cursor-pointer"
               >
                 <DownloadCloud className="w-4 h-4 shrink-0" />
-                <span>一键触发 ZIP 打包下载至本地 ({readyCount} 张)</span>
+                <span>一键触发批量下载至本地 ({readyCount} 张)</span>
               </button>
             )}
           </div>

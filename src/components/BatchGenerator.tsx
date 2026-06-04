@@ -122,11 +122,12 @@ export const BatchGenerator: React.FC<BatchGeneratorProps> = ({
         }
 
         // Render actual Canvas JPG dataURL!
-        let renderedUrl = "url";
+        let renderedUrl = "";
         try {
           renderedUrl = await renderTemplateToCanvas(prod, temp);
         } catch (err) {
           console.error("Template rendering to canvas failed: ", err);
+          qualityIssues.push("产品资产缺失或加载失败");
         }
 
         syntheticImagesResult.push({
