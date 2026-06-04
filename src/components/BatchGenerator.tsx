@@ -34,10 +34,9 @@ export const BatchGenerator: React.FC<BatchGeneratorProps> = ({
   const [selectedProductIds, setSelectedProductIds] = useState<string[]>(
     products.filter((p) => p.status === "completed").map((p) => p.id)
   );
-  const [selectedTemplateIds, setSelectedTemplateIds] = useState<string[]>([
-    templates[0]?.id,
-    templates[2]?.id
-  ].filter(Boolean));
+  const [selectedTemplateIds, setSelectedTemplateIds] = useState<string[]>(
+    templates.filter((t) => t.id === "SKU_001" || t.id === "MAIN_001").map((t) => t.id)
+  );
 
   // Render variables defaults
   const [exportFormat, setExportFormat] = useState<"JPG" | "PNG" | "WebP">("JPG");
@@ -100,12 +99,26 @@ export const BatchGenerator: React.FC<BatchGeneratorProps> = ({
       for (const tempId of selectedTemplateIds) {
         const temp = templates.find((t) => t.id === tempId)!;
 
-        // Custom default quality issues matching presets
-        let qualityIssues: string[] = [];
-        if (prod.productCode === "061" && temp.id === "MAIN_003") {
-          qualityIssues = ["产品尺寸偏小，后叠线圈部分有少许穿模遮挡"];
-        } else if (prod.productCode === "064" && temp.id === "DETAIL_001") {
-          qualityIssues = ["文案越界，材质描述行数过多超出底部防线"];
+        // Dynamic quality issues checking: PNG缺失, 产品越界, 文案越界
+        const qualityIssues: string[] = [];
+        
+        // 1. PNG缺失 check:
+        const hasPng = prod.assets.some(a => a.assetType === "transparent_png" && a.status === "ready");
+        if (!hasPng) {
+          qualityIssues.push("PNG缺失: 未配置高抗锯齿透明PNG产品主图");
+        }
+        
+        // 2. 产品越界 check:
+        const slotsTooBig = temp.slots.some(s => s.maxWidth > 80 || s.maxHeight > 60);
+        const isBigItem = prod.size && (prod.size.includes("240mm") || prod.size.includes("260mm"));
+        if (slotsTooBig && isBigItem) {
+          qualityIssues.push("产品越界: 产品部件显示边界超出3D视口安全裁切线");
+        }
+
+        // 3. 文案越界 check:
+        const extraLongText = (prod.productName || "").length + (prod.seriesName || "").length > 8;
+        if (extraLongText && temp.textFields.some(tf => tf.isDynamic)) {
+          qualityIssues.push("文案越界: 所属系列与排套名称字轨数超出文字标定安全区");
         }
 
         // Render actual Canvas JPG dataURL!

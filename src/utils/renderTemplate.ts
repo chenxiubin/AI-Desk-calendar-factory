@@ -1,4 +1,4 @@
-import { Product, Template, TemplateSlot, TextField } from "../types";
+import { Product, ProductAsset, Template, TemplateSlot, TextField } from "../types";
 
 export interface RenderOffsets {
   hOffset?: number; // slider percent offset -50 to 50
@@ -197,6 +197,88 @@ function drawBackground(ctx: CanvasRenderingContext2D, template: Template, w: nu
 }
 
 /**
+ * Finds the correct asset from product based on the slot's requirements and fallbacks.
+ */
+export function findMatchingAsset(product: Product, slotAssetType: string): ProductAsset | undefined {
+  if (!product.assets || product.assets.length === 0) return undefined;
+
+  // 1. Prioritize exact matching assetType
+  let exactMatch = product.assets.find((a) => a.status === "ready" && a.assetType === slotAssetType);
+  if (exactMatch) return exactMatch;
+
+  // 2. Specific Fallbacks
+  // "front_cover" can fallback to "transparent_png"
+  if (slotAssetType === "front_cover") {
+    let fallbackPng = product.assets.find((a) => a.status === "ready" && a.assetType === "transparent_png");
+    if (fallbackPng) return fallbackPng;
+  }
+
+  // "inner_page、side、detail_ring、detail_cover、detail_page、detail_base、ad_area 不要默认全部用 transparent_png。"
+  // Only fallback to transparent_png for other compatible slots, but do not fallback for these specified ones.
+  const noFallbackTypes = [
+    "inner_page",
+    "side",
+    "detail_ring",
+    "detail_cover",
+    "detail_page",
+    "detail_base",
+    "ad_area"
+  ];
+
+  if (!noFallbackTypes.includes(slotAssetType)) {
+    let fallbackPng = product.assets.find((a) => a.status === "ready" && a.assetType === "transparent_png");
+    if (fallbackPng) return fallbackPng;
+  }
+
+  return undefined;
+}
+
+/**
+ * Dynamically renders product vector graphics onto a separate offscreen canvas 
+ * and returns a PNG dataURL. This preserves high-fidelity drawing while ensuring 
+ * the image load pipeline runs smoothly with exact dimensions.
+ */
+export function generateDynamicAssetDataUrl(product: Product, assetType: string): string {
+  const canvas = document.createElement("canvas");
+  
+  // Choose standard natural dimensions
+  let w = 800;
+  let h = 600;
+  if (assetType === "side") {
+    w = 600;
+    h = 800;
+  } else if (assetType === "ad_area") {
+    w = 800;
+    h = 300;
+  }
+  
+  canvas.width = w;
+  canvas.height = h;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return "";
+
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = "high";
+
+  // Draw the respective premium vector artwork
+  if (assetType === "front_cover" || assetType === "transparent_png" || assetType === "white_bg") {
+    drawVectorCover(ctx, product, 0, 0, w, h);
+  } else if (assetType === "inner_page") {
+    drawVectorInnerPage(ctx, product, 0, 0, w, h);
+  } else if (assetType === "side") {
+    drawVectorSide(ctx, product, 0, 0, w, h);
+  } else if (assetType === "ad_area") {
+    drawVectorAdArea(ctx, product, 0, 0, w, h);
+  } else if (assetType.startsWith("detail_")) {
+    drawVectorDetail(ctx, product, assetType, 0, 0, w, h);
+  } else {
+    drawVectorCover(ctx, product, 0, 0, w, h);
+  }
+
+  return canvas.toDataURL("image/png");
+}
+
+/**
  * Draws slotted container items
  */
 async function drawSlot(
@@ -225,17 +307,42 @@ async function drawSlot(
   const finalX = slotCenterX + hOffset;
   const finalY = slotCenterY + vOffset;
 
-  // Natural aspect ratio for our items
-  let itemRatio = 1.33; // Default typical 4:3 cover ratio
-  if (slot.assetType === "side") {
-    itemRatio = 0.75; // 3:4 side view
-  } else if (slot.assetType === "ad_area") {
-    itemRatio = 2.66; // Landscape banner ad
-  } else if (slot.assetType && slot.assetType.startsWith("detail_")) {
-    itemRatio = 1.33; 
+  // 4. Resolve the product asset to load
+  const matchingAsset = findMatchingAsset(product, slot.assetType || "front_cover");
+  let assetUrl = "";
+
+  if (matchingAsset && matchingAsset.fileUrl) {
+    const isPlaceholder = ["front", "inner", "side", "pdf", "png", "ring", "det_cov", "det_pg", "det_base", "ad", "white_bg"].includes(matchingAsset.fileUrl);
+    if (isPlaceholder) {
+      assetUrl = generateDynamicAssetDataUrl(product, matchingAsset.assetType);
+    } else {
+      assetUrl = matchingAsset.fileUrl;
+    }
+  } else {
+    // Graceful fallback: generate programmatic high-fidelity artwork
+    assetUrl = generateDynamicAssetDataUrl(product, slot.assetType || "front_cover");
   }
 
-  // Standard "contain" sizing: fit content ratio into slot bounding box
+  // 5. Load the actual image, and calculate accurate aspect ratio preserving containment
+  let img: HTMLImageElement;
+  try {
+    img = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const i = new Image();
+      i.crossOrigin = "anonymous";
+      i.onload = () => resolve(i);
+      i.onerror = (err) => reject(err);
+      i.src = assetUrl;
+    });
+  } catch (err) {
+    console.warn("Failed to load product image resource:", assetUrl, err);
+    return;
+  }
+
+  const imgW = img.naturalWidth || img.width || 800;
+  const imgH = img.naturalHeight || img.height || 600;
+  const itemRatio = imgW / imgH;
+
+  // Standard "contain" sizing: fit content ratio into slot bounding box without stretching
   let drawW = finalW;
   let drawH = finalW / itemRatio;
   if (drawH > finalH) {
@@ -256,7 +363,7 @@ async function drawSlot(
     drawY = finalY - drawH / 2;
   }
 
-  // 4. Draw Drop Shadow underneath the product
+  // 6. Draw Drop Shadow underneath the product
   if (slot.shadowRule && slot.shadowRule !== "very_light_shadow_or_none") {
     ctx.save();
     const shadowY = drawY + drawH + 1;
@@ -279,57 +386,8 @@ async function drawSlot(
     ctx.restore();
   }
 
-  // 5. Try loading real client transparencies.
-  // Prioritize "transparent_png" as requested, otherwise the corresponding assetType
-  const matchingAsset = product.assets.find(
-    (a) =>
-      a.status === "ready" &&
-      a.fileUrl &&
-      !["front", "inner", "side", "pdf", "png", "ring", "det_cov", "det_pg", "det_base", "ad"].includes(a.fileUrl) &&
-      (a.assetType === "transparent_png" || a.assetType === slot.assetType)
-  );
-
-  let realImageDrawn = false;
-  if (matchingAsset) {
-    try {
-      const img = await new Promise<HTMLImageElement>((resolve, reject) => {
-        const i = new Image();
-        i.crossOrigin = "anonymous";
-        i.onload = () => resolve(i);
-        i.onerror = (e) => reject(e);
-        i.src = matchingAsset.fileUrl;
-      });
-      ctx.drawImage(img, drawX, drawY, drawW, drawH);
-      realImageDrawn = true;
-    } catch (e) {
-      console.warn("Failed to retrieve product asset image: " + matchingAsset.fileUrl + ". Backing up to vector painter.", e);
-    }
-  }
-
-  // 6. Programmatic premium vector backup drawing
-  if (!realImageDrawn) {
-    ctx.save();
-    // Enable light shadows inside vectors to simulate material emboss
-    ctx.shadowColor = "rgba(0, 0, 0, 0.12)";
-    ctx.shadowBlur = 8;
-    ctx.shadowOffsetY = 4;
-
-    const assetType = slot.assetType || "front_cover";
-    if (assetType === "front_cover" || assetType === "transparent_png" || assetType === "white_bg") {
-      drawVectorCover(ctx, product, drawX, drawY, drawW, drawH);
-    } else if (assetType === "inner_page") {
-      drawVectorInnerPage(ctx, product, drawX, drawY, drawW, drawH);
-    } else if (assetType === "side") {
-      drawVectorSide(ctx, product, drawX, drawY, drawW, drawH);
-    } else if (assetType === "ad_area") {
-      drawVectorAdArea(ctx, product, drawX, drawY, drawW, drawH);
-    } else if (assetType.startsWith("detail_")) {
-      drawVectorDetail(ctx, product, assetType, drawX, drawY, drawW, drawH);
-    } else {
-      drawVectorCover(ctx, product, drawX, drawY, drawW, drawH);
-    }
-    ctx.restore();
-  }
+  // 7. Draw the loaded high-quality image resource onto the canvas
+  ctx.drawImage(img, drawX, drawY, drawW, drawH);
 }
 
 /**

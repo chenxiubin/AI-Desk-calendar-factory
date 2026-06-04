@@ -260,14 +260,14 @@ export const ReviewCenter: React.FC<ReviewCenterProps> = ({
                   )}`}
                 >
                   {img.fileUrl && img.fileUrl !== "url" ? (
-                    <img src={img.fileUrl} className="max-w-full max-h-full object-contain rounded" alt="Rendered Preview" />
+                    <img src={img.fileUrl} className="max-w-full max-h-full object-contain rounded animate-fade-in" alt="Rendered Preview" />
                   ) : (
-                    <VisualCalendar
-                      product={prod}
-                      type={temp.slots[0]?.assetType === "inner_page" ? "inner_page" : temp.slots[0]?.assetType === "side" ? "side" : "front_cover"}
-                      isNakedPNG={true}
-                      className="transform scale-[0.65]"
-                    />
+                    <div className="flex flex-col items-center justify-center p-4 text-slate-400 bg-slate-50/50 rounded-lg border border-dashed border-slate-200 w-full h-full">
+                      <span className="text-[10px] font-mono font-black uppercase tracking-widest text-slate-405 mb-1">
+                        UNRENDERED
+                      </span>
+                      <p className="text-[9px] text-slate-400">暂无真实渲染版式图</p>
+                    </div>
                   )}
 
                   {/* Warning overlay if flaws detected */}
