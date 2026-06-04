@@ -129,12 +129,16 @@ export const BatchGenerator: React.FC<BatchGeneratorProps> = ({
 
         // Render actual Canvas JPG dataURL!
         let renderedUrl = "";
-        let isFailed = false;
+        let reviewStatus: GeneratedImage["reviewStatus"] = "pending";
+        let renderFailed = false;
+
         try {
           renderedUrl = await renderTemplateToCanvas(prod, temp);
         } catch (err) {
           console.error("Template rendering to canvas failed: ", err);
-          isFailed = true;
+          renderFailed = true;
+          renderedUrl = "";
+          reviewStatus = "needs_adjustment";
           qualityIssues.push("Canvas渲染失败");
           qualityIssues.push("产品资产缺失或加载失败");
         }
@@ -147,7 +151,7 @@ export const BatchGenerator: React.FC<BatchGeneratorProps> = ({
           fileUrl: renderedUrl, // REAL CANVAS IMAGES
           width: temp.outputWidth,
           height: temp.outputHeight,
-          reviewStatus: isFailed ? "needs_adjustment" : "pending",
+          reviewStatus: reviewStatus,
           qualityIssues,
           createdAt: new Date().toISOString()
         });
@@ -157,7 +161,7 @@ export const BatchGenerator: React.FC<BatchGeneratorProps> = ({
 
         currentCount++;
         setCompletedImagesCount(currentCount);
-        if (isFailed) {
+        if (renderFailed) {
           newTask.failedCount = (newTask.failedCount || 0) + 1;
           setRenderedQueueLog((prev) => [
             ...prev,
@@ -171,6 +175,7 @@ export const BatchGenerator: React.FC<BatchGeneratorProps> = ({
         }
 
         newTask.completedCount = currentCount;
+        newTask.pendingReviewCount = totalCount - (newTask.failedCount || 0);
         newTask.progress = (currentCount / totalCount) * 105; // temporary offset to allow animation feel
         // Cap progress at 100
         if (newTask.progress > 99) newTask.progress = 99;
@@ -182,6 +187,7 @@ export const BatchGenerator: React.FC<BatchGeneratorProps> = ({
     newTask.status = "completed";
     newTask.progress = 100;
     newTask.completedCount = totalCount;
+    newTask.pendingReviewCount = totalCount - (newTask.failedCount || 0);
     onStartWorkflow(newTask, syntheticImagesResult);
     setRenderedQueueLog((prev) => [...prev, "🎉 所有拼版任务合成成功！已存入「图片审核中心」待质检审核。"]);
   };

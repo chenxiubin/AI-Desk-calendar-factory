@@ -1,6 +1,6 @@
 import { Product, ProductAsset, Template, TemplateSlot, TextField } from "../types";
 
-export let DEMO_MODE = true;
+export let DEMO_MODE = import.meta.env.VITE_DEMO_MODE === "true" || false;
 
 export function setDemoMode(val: boolean) {
   DEMO_MODE = val;
