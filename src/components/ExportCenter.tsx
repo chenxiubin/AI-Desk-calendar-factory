@@ -35,9 +35,9 @@ export const ExportCenter: React.FC<ExportCenterProps> = ({
   const [zipProgress, setZipProgress] = useState(0);
   const [showComplete, setShowComplete] = useState(false);
 
-  // Group images to check which ones are approved (excluding needs_adjustment or empty fileUrl)
+  // Group images to check which ones are approved (excluding needs_adjustment, empty, or 'url' fileUrls)
   const approvedImages = generatedImages.filter(
-    img => img.fileUrl && img.reviewStatus !== "needs_adjustment"
+    img => img.fileUrl && img.fileUrl !== "url" && img.reviewStatus !== "needs_adjustment"
   ); 
   const readyCount = approvedImages.length;
 
