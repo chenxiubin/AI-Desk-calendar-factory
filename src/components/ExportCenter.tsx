@@ -35,9 +35,10 @@ export const ExportCenter: React.FC<ExportCenterProps> = ({
   const [zipProgress, setZipProgress] = useState(0);
   const [showComplete, setShowComplete] = useState(false);
 
-  // Group images to check which ones are approved
-  const approvedImages = generatedImages; 
-  // We can treat them as export ready for demo capability, separating those with status="approved" etc.
+  // Group images to check which ones are approved (excluding needs_adjustment or empty fileUrl)
+  const approvedImages = generatedImages.filter(
+    img => img.fileUrl && img.reviewStatus !== "needs_adjustment"
+  ); 
   const readyCount = approvedImages.length;
 
   const platformsMap: Record<string, string> = {

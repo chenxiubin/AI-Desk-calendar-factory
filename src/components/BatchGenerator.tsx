@@ -187,9 +187,21 @@ export const BatchGenerator: React.FC<BatchGeneratorProps> = ({
     newTask.status = "completed";
     newTask.progress = 100;
     newTask.completedCount = totalCount;
-    newTask.pendingReviewCount = totalCount - (newTask.failedCount || 0);
+    const failedCount = newTask.failedCount || 0;
+    newTask.pendingReviewCount = totalCount - failedCount;
     onStartWorkflow(newTask, syntheticImagesResult);
-    setRenderedQueueLog((prev) => [...prev, "🎉 所有拼版任务合成成功！已存入「图片审核中心」待质检审核。"]);
+
+    if (failedCount > 0) {
+      setRenderedQueueLog((prev) => [
+        ...prev,
+        `⚠️ 批量任务完成，其中 ${failedCount} 张渲染失败，已进入人工处理队列。`
+      ]);
+    } else {
+      setRenderedQueueLog((prev) => [
+        ...prev,
+        "🎉 所有拼版任务合成成功！已存入「图片审核中心」待质检审核。"
+      ]);
+    }
   };
 
   const getCompletenessText = (p: Product) => {
