@@ -123,11 +123,13 @@ export const BatchGenerator: React.FC<BatchGeneratorProps> = ({
 
         // Render actual Canvas JPG dataURL!
         let renderedUrl = "";
+        let isFailed = false;
         try {
           renderedUrl = await renderTemplateToCanvas(prod, temp);
         } catch (err) {
           console.error("Template rendering to canvas failed: ", err);
-          qualityIssues.push("产品资产缺失或加载失败");
+          isFailed = true;
+          qualityIssues.push("渲染失败: 产品资产缺失或加载失败");
         }
 
         syntheticImagesResult.push({
@@ -138,7 +140,7 @@ export const BatchGenerator: React.FC<BatchGeneratorProps> = ({
           fileUrl: renderedUrl, // REAL CANVAS IMAGES
           width: temp.outputWidth,
           height: temp.outputHeight,
-          reviewStatus: "pending",
+          reviewStatus: isFailed ? "needs_adjustment" : "pending",
           qualityIssues,
           createdAt: new Date().toISOString()
         });
@@ -148,13 +150,23 @@ export const BatchGenerator: React.FC<BatchGeneratorProps> = ({
 
         currentCount++;
         setCompletedImagesCount(currentCount);
-        setRenderedQueueLog((prev) => [
-          ...prev,
-          `✓ [${currentCount}/${totalCount}] 成功处理：【${prod.productCode}-${prod.productName}】 🚀 套入模具：${temp.templateName} (${temp.outputWidth}x${temp.outputHeight}px)`
-        ]);
+        if (isFailed) {
+          newTask.failedCount = (newTask.failedCount || 0) + 1;
+          setRenderedQueueLog((prev) => [
+            ...prev,
+            `❌ [${currentCount}/${totalCount}] 渲染失败：【${prod.productCode}-${prod.productName}】 模具：${temp.templateName} (原因: ${qualityIssues[qualityIssues.length - 1]})`
+          ]);
+        } else {
+          setRenderedQueueLog((prev) => [
+            ...prev,
+            `✓ [${currentCount}/${totalCount}] 成功处理：【${prod.productCode}-${prod.productName}】 🚀 套入模具：${temp.templateName} (${temp.outputWidth}x${temp.outputHeight}px)`
+          ]);
+        }
 
         newTask.completedCount = currentCount;
-        newTask.progress = (currentCount / totalCount) * 100;
+        newTask.progress = (currentCount / totalCount) * 105; // temporary offset to allow animation feel
+        // Cap progress at 100
+        if (newTask.progress > 99) newTask.progress = 99;
         setCurrentSynthesizingTask({ ...newTask });
       }
     }
