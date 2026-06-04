@@ -199,7 +199,7 @@ export const BatchGenerator: React.FC<BatchGeneratorProps> = ({
     } else {
       setRenderedQueueLog((prev) => [
         ...prev,
-        "🎉 所有拼版任务合成成功！"
+        "🎉 所有拼版任务合成成功！已存入「图片审核中心」待质检审核。"
       ]);
     }
   };

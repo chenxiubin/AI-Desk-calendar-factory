@@ -1,6 +1,7 @@
+/// <reference types="vite/client" />
 import { Product, ProductAsset, Template, TemplateSlot, TextField } from "../types";
 
-export let DEMO_MODE = (import.meta as any).env?.VITE_DEMO_MODE === "true";
+export let DEMO_MODE = import.meta.env.VITE_DEMO_MODE === "true";
 
 export function setDemoMode(value: boolean) {
   DEMO_MODE = value;

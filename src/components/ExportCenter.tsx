@@ -36,9 +36,10 @@ export const ExportCenter: React.FC<ExportCenterProps> = ({
   const [showComplete, setShowComplete] = useState(false);
 
   // Group images to check which ones are approved (excluding needs_adjustment, empty, or 'url' fileUrls)
-  const approvedImages = generatedImages.filter(
+  const exportableImages = generatedImages.filter(
     img => img.fileUrl && img.fileUrl !== "url" && img.reviewStatus !== "needs_adjustment"
   ); 
+  const approvedImages = exportableImages;
   const readyCount = approvedImages.length;
 
   const platformsMap: Record<string, string> = {
