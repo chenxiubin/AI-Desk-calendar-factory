@@ -321,13 +321,9 @@ async function drawSlot(
     throw new Error("产品资产缺失或加载失败");
   }
 
-  const imgW = img.naturalWidth || img.width || 800;
-  const imgH = img.naturalHeight || img.height || 600;
-
-  // Use contain algorithm explicitly as requested: scale = Math.min(finalW / img.width, finalH / img.height)
-  const scale = Math.min(finalW / imgW, finalH / imgH);
-  const drawW = imgW * scale;
-  const drawH = imgH * scale;
+  const scale = Math.min(finalW / img.width, finalH / img.height);
+  const drawW = img.width * scale;
+  const drawH = img.height * scale;
 
   // Anchor alignment logic
   let drawX = 0;
