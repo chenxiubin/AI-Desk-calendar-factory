@@ -396,9 +396,50 @@ app.post("/api/runninghub/scene-fusion", async (req, res) => {
     const workflowId = workflowConfig.workflowId;
 
     const hasBaseImageNode = !!workflowConfig.baseImageNodeId;
-    let warning = "";
 
-    if (!hasBaseImageNode) {
+    // Step 1: Construct Dynamic nodeInfoList (except baseImage node which requires upload result)
+    let nodeInfoList = [];
+    if (workflowConfig.nodeInfoList && Array.isArray(workflowConfig.nodeInfoList)) {
+      nodeInfoList = [...workflowConfig.nodeInfoList];
+    } else {
+      if (workflowConfig.promptNodeId && prompt) {
+        nodeInfoList.push({
+          nodeId: workflowConfig.promptNodeId,
+          fieldName: "text",
+          fieldValue: prompt
+        });
+      }
+
+      if (workflowConfig.negativePromptNodeId && negativePrompt) {
+        nodeInfoList.push({
+          nodeId: workflowConfig.negativePromptNodeId,
+          fieldName: "text",
+          fieldValue: negativePrompt
+        });
+      }
+
+      if (workflowConfig.seedNodeId && seed !== undefined) {
+        nodeInfoList.push({
+          nodeId: workflowConfig.seedNodeId,
+          fieldName: "seed",
+          fieldValue: seed
+        });
+      }
+
+      if (workflowConfig.denoiseNodeId && denoise !== undefined) {
+        nodeInfoList.push({
+          nodeId: workflowConfig.denoiseNodeId,
+          fieldName: "denoise",
+          fieldValue: denoise
+        });
+      }
+    }
+
+    // Determine expected final nodeInfoList length
+    const expectedFinalLength = hasBaseImageNode ? (nodeInfoList.length + 1) : nodeInfoList.length;
+
+    let warning = "";
+    if (!hasBaseImageNode || expectedFinalLength === 0) {
       warning = "当前未配置 RunningHub 输入图片节点，任务将使用工作流默认参数，无法验证真实 Canvas 图融合。";
       console.warn(`[RunningHub Warning] ${warning}`);
     }
@@ -443,50 +484,13 @@ app.post("/api/runninghub/scene-fusion", async (req, res) => {
         res.status(500).json({ error: "Could not retrieve uploaded fileName from RunningHub", details: uploadData });
         return;
       }
-    }
 
-    // Step 3: Construct Dynamic nodeInfoList
-    let nodeInfoList = [];
-    if (workflowConfig.nodeInfoList && Array.isArray(workflowConfig.nodeInfoList)) {
-      nodeInfoList = workflowConfig.nodeInfoList;
-    } else {
-      if (hasBaseImageNode && workflowConfig.baseImageNodeId) {
+      // Append base image node to nodeInfoList
+      if (!workflowConfig.nodeInfoList) {
         nodeInfoList.push({
           nodeId: workflowConfig.baseImageNodeId,
           fieldName: "image",
           fieldValue: fileName
-        });
-      }
-
-      if (workflowConfig.promptNodeId && prompt) {
-        nodeInfoList.push({
-          nodeId: workflowConfig.promptNodeId,
-          fieldName: "text",
-          fieldValue: prompt
-        });
-      }
-
-      if (workflowConfig.negativePromptNodeId && negativePrompt) {
-        nodeInfoList.push({
-          nodeId: workflowConfig.negativePromptNodeId,
-          fieldName: "text",
-          fieldValue: negativePrompt
-        });
-      }
-
-      if (workflowConfig.seedNodeId && seed !== undefined) {
-        nodeInfoList.push({
-          nodeId: workflowConfig.seedNodeId,
-          fieldName: "seed",
-          fieldValue: seed
-        });
-      }
-
-      if (workflowConfig.denoiseNodeId && denoise !== undefined) {
-        nodeInfoList.push({
-          nodeId: workflowConfig.denoiseNodeId,
-          fieldName: "denoise",
-          fieldValue: denoise
         });
       }
     }
