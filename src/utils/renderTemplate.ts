@@ -1118,6 +1118,7 @@ export function getTemplateComponents(template: Template): TemplateComponent[] {
 
 /**
  * 1. Only renders: scene_base, product_slot. No shadows, text, badges.
+ * Optimized for RunningHub V2 Light & Shadow AI Fusion.
  */
 export async function renderFusionBaseImage(
   product: Product,

@@ -156,7 +156,7 @@ export interface GeneratedImage {
   horizontalOffset?: number;
   verticalOffset?: number;
   scaleFactor?: number;
-  // RunningHub AI Fusion extensions
+  // RunningHub AI Fusion extensions - Updated for Multi-Layer Compound Rendering
   aiFusionBaseUrl?: string;
   aiFusionUrl?: string;
   finalCompositeUrl?: string;
