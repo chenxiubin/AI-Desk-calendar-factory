@@ -20,12 +20,14 @@ interface AssetLibraryProps {
   products: Product[];
   onAddProduct: (product: Product) => void;
   onNavigateToRefine: (product: Product) => void;
+  onUpdateProductStatus: (productId: string, newStatus: Product["status"], newAssets: ProductAsset[]) => void;
 }
 
 export const AssetLibrary: React.FC<AssetLibraryProps> = ({
   products,
   onAddProduct,
-  onNavigateToRefine
+  onNavigateToRefine,
+  onUpdateProductStatus
 }) => {
   // Navigation states
   const [searchQuery, setSearchQuery] = useState("");
@@ -338,7 +340,52 @@ export const AssetLibrary: React.FC<AssetLibraryProps> = ({
 
             {/* Asset nodes lists */}
             <div className="space-y-2">
-              <h5 className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">关联实体文件</h5>
+              <div className="flex justify-between items-center">
+                <h5 className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">关联实体文件</h5>
+                {/* Micro upload for transparent_png */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    document.getElementById("direct-transparent-png-upload")?.click();
+                  }}
+                  className="text-[10px] font-semibold text-blue-650 hover:text-blue-700 flex items-center"
+                >
+                  <Plus className="w-3 h-3 mr-0.5" />
+                  上传真实图
+                </button>
+                <input
+                  id="direct-transparent-png-upload"
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    const reader = new FileReader();
+                    reader.onload = (event) => {
+                      const dataUrl = event.target?.result as string;
+                      const tempImg = new window.Image();
+                      tempImg.onload = () => {
+                        const newAsset: ProductAsset = {
+                          id: `ast_${selectedProduct.productCode}_uploaded_png_${Date.now()}`,
+                          productId: selectedProduct.id,
+                          assetType: "transparent_png",
+                          fileUrl: dataUrl,
+                          width: tempImg.width,
+                          height: tempImg.height,
+                          status: "ready"
+                        };
+                        (newAsset as any).fileName = file.name;
+
+                        const otherAssets = selectedProduct.assets.filter((a) => a.assetType !== "transparent_png");
+                        onUpdateProductStatus(selectedProduct.id, "completed", [...otherAssets, newAsset]);
+                      };
+                      tempImg.src = dataUrl;
+                    };
+                    reader.readAsDataURL(file);
+                  }}
+                />
+              </div>
               <div className="space-y-1.5 text-xs max-h-56 overflow-y-auto pr-1">
                 {[
                   { file: "product_front_cover.png", label: "正面透明PNG", role: "transparent_png" },
@@ -350,22 +397,53 @@ export const AssetLibrary: React.FC<AssetLibraryProps> = ({
                   { file: "product_detail_base.png", label: "底座包角防滑", role: "detail_base" },
                   { file: "product_ad_area.png", label: "广告局部槽", role: "ad_area" }
                 ].map((item) => {
-                  const hasAsset = selectedProduct.assets.some((a) => a.assetType === item.role && a.status === "ready");
+                  const asset = selectedProduct.assets.find((a) => a.assetType === item.role && a.status === "ready");
+                  const hasAsset = !!asset;
+                  const isUploadedPng = item.role === "transparent_png" && asset && asset.fileUrl && asset.fileUrl.startsWith("data:");
+
                   return (
-                    <div
-                      key={item.role}
-                      className={`p-2 rounded border flex items-center justify-between text-[11px] ${
-                        hasAsset ? "bg-emerald-50/40 border-emerald-100 text-neutral-800" : "bg-neutral-50 border-neutral-100 text-neutral-400"
-                      }`}
-                    >
-                      <div className="min-w-0">
-                        <p className="font-mono font-bold truncate">{item.file}</p>
-                        <span className="text-[9px] text-neutral-400">{item.label}</span>
+                    <div key={item.role} className="space-y-1 bg-slate-50/40 rounded-lg border border-slate-100 p-1.5 hover:bg-slate-50/80 transition-colors">
+                      <div className="flex items-center justify-between text-[11px]">
+                        <div className="min-w-0 flex-1 text-left">
+                          <p className="font-mono font-bold truncate text-slate-800">
+                            {isUploadedPng ? ((asset as any).fileName || item.file) : item.file}
+                          </p>
+                          <span className="text-[9px] text-neutral-400">
+                            {item.label} {isUploadedPng && <span className="text-emerald-600 font-bold ml-1">(已绑定)</span>}
+                          </span>
+                        </div>
+                        <div className="flex items-center space-x-1.5 shrink-0 ml-1">
+                          {isUploadedPng && (
+                            <span className="text-[9px] text-emerald-600 font-bold bg-emerald-100 px-1 py-0.2 rounded">
+                              {asset.width}×{asset.height}
+                            </span>
+                          )}
+                          {hasAsset ? (
+                            <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                          ) : (
+                            <span className="text-[9px] font-semibold text-neutral-400 bg-neutral-200/50 px-1.5 py-0.5 rounded">未传</span>
+                          )}
+                        </div>
                       </div>
-                      {hasAsset ? (
-                        <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 ml-1" />
-                      ) : (
-                        <span className="text-[9px] font-semibold text-neutral-400 bg-neutral-200/50 px-1.5 py-0.5 rounded">未传</span>
+
+                      {/* Preview for uploaded transparency */}
+                      {isUploadedPng && (
+                        <div className="mt-1.5 p-1.5 bg-white border border-slate-100 rounded flex items-center space-x-2">
+                          <img
+                            src={asset.fileUrl}
+                            alt="uploaded thumbnail"
+                            className="w-10 h-10 object-contain bg-slate-100/50 border rounded"
+                            referrerPolicy="no-referrer"
+                          />
+                          <div className="min-w-0 flex-1 text-[10px] text-slate-500 leading-normal text-left">
+                            <p className="truncate font-semibold text-slate-700">
+                              {(asset as any).fileName || "custom_transparent.png"}
+                            </p>
+                            <p className="font-mono text-[9px]">
+                              {asset.width} x {asset.height} px
+                            </p>
+                          </div>
+                        </div>
                       )}
                     </div>
                   );

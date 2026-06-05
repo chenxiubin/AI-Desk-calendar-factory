@@ -16,6 +16,23 @@ export const VisualCalendar: React.FC<VisualCalendarProps> = ({
 }) => {
   const brandRed = product.themeColor || "#DC2626";
 
+  const realPngAsset = product.assets?.find(
+    (a) => a.assetType === "transparent_png" && a.status === "ready" && a.fileUrl && a.fileUrl.startsWith("data:")
+  );
+
+  if (realPngAsset && (type === "transparent_png" || type === "white_bg" || type === "front_cover")) {
+    return (
+      <div className={`relative flex items-center justify-center ${className}`}>
+        <img
+          src={realPngAsset.fileUrl}
+          alt={product.productName}
+          className="max-w-full max-h-full object-contain"
+          referrerPolicy="no-referrer"
+        />
+      </div>
+    );
+  }
+
   // Different rendering styles based on the catalog choice (dragon pattern, landscape watercolor, calligraphy)
   const renderIllustration = () => {
     switch (product.illustrationType) {

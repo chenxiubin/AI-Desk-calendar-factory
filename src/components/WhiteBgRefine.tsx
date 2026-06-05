@@ -52,12 +52,48 @@ export const WhiteBgRefine: React.FC<WhiteBgRefineProps> = ({
   const [lockText, setLockText] = useState(true);
   const [lockPattern, setLockPattern] = useState(true);
 
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
+
   // Live action generation simulator
   const [isProcessing, setIsProcessing] = useState(false);
   const [processProgress, setProcessProgress] = useState(0);
   const [refineStatus, setRefineStatus] = useState<"idle" | "done">("idle");
 
   const selectedProduct = products.find((p) => p.id === activeProductId) || products[0];
+
+  const existingRealPng = selectedProduct?.assets?.find(
+    (a) => a.assetType === "transparent_png" && a.status === "ready" && a.fileUrl.startsWith("data:")
+  );
+  const hasRealPng = !!existingRealPng;
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !selectedProduct) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const dataUrl = event.target?.result as string;
+      const tempImg = new window.Image();
+      tempImg.onload = () => {
+        const newAsset: ProductAsset = {
+          id: `ast_${selectedProduct.productCode}_uploaded_png_${Date.now()}`,
+          productId: selectedProduct.id,
+          assetType: "transparent_png",
+          fileUrl: dataUrl,
+          width: tempImg.width,
+          height: tempImg.height,
+          status: "ready"
+        };
+        (newAsset as any).fileName = file.name;
+
+        const otherAssets = selectedProduct.assets.filter((a) => a.assetType !== "transparent_png");
+        onUpdateProductStatus(selectedProduct.id, "completed", [...otherAssets, newAsset]);
+        setRefineStatus("done");
+      };
+      tempImg.src = dataUrl;
+    };
+    reader.readAsDataURL(file);
+  };
 
   const handleStartRefine = () => {
     if (!selectedProduct) return;
@@ -82,26 +118,30 @@ export const WhiteBgRefine: React.FC<WhiteBgRefineProps> = ({
     setRefineStatus("done");
 
     // Upgrade this product to "completed" and attach transparent assets
+    const refinedPngAsset = existingRealPng || {
+      id: `ast_${selectedProduct.productCode}_refined_png`,
+      productId: selectedProduct.id,
+      assetType: "transparent_png",
+      fileUrl: "png",
+      width: 1000,
+      height: 1000,
+      status: "ready"
+    };
+
+    const refinedWhiteAsset: ProductAsset = {
+      id: `ast_${selectedProduct.productCode}_refined_white`,
+      productId: selectedProduct.id,
+      assetType: "white_bg",
+      fileUrl: existingRealPng ? existingRealPng.fileUrl : "white_bg",
+      width: 1000,
+      height: 1000,
+      status: "ready"
+    };
+
     const refinedAssets: ProductAsset[] = [
       ...selectedProduct.assets.filter((a) => a.assetType !== "transparent_png" && a.assetType !== "white_bg"),
-      {
-        id: `ast_${selectedProduct.productCode}_refined_png`,
-        productId: selectedProduct.id,
-        assetType: "transparent_png",
-        fileUrl: "png",
-        width: 1000,
-        height: 1000,
-        status: "ready"
-      },
-      {
-        id: `ast_${selectedProduct.productCode}_refined_white`,
-        productId: selectedProduct.id,
-        assetType: "white_bg",
-        fileUrl: "white_bg",
-        width: 1000,
-        height: 1000,
-        status: "ready"
-      }
+      refinedPngAsset,
+      refinedWhiteAsset
     ];
 
     onUpdateProductStatus(selectedProduct.id, "completed", refinedAssets);
@@ -117,12 +157,22 @@ export const WhiteBgRefine: React.FC<WhiteBgRefineProps> = ({
             <p className="text-[10px] text-slate-400 mt-0.5">支持批量拖挂 RAW/JPG 素材</p>
           </div>
 
-          {/* Quick upload mockup button */}
-          <div className="border-2 border-dashed border-slate-200 hover:border-blue-500 rounded-xl p-4 text-center cursor-pointer transition-colors bg-slate-50/50">
+          {/* Quick upload mockup button linked to real input */}
+          <div
+            onClick={() => fileInputRef.current?.click()}
+            className="border-2 border-dashed border-slate-200 hover:border-blue-500 rounded-xl p-4 text-center cursor-pointer transition-colors bg-slate-50/50"
+          >
             <Sparkles className="w-5 h-5 text-blue-600 mx-auto mb-1.5" />
             <span className="text-[11px] font-semibold text-slate-700 block">点击上传实拍原图</span>
-            <span className="text-[9px] text-slate-400 mt-1 block">支持 PNG / JPG / RAW (最大50MB)</span>
+            <span className="text-[9px] text-slate-400 mt-1 block">支持 PNG / JPG / WebP</span>
           </div>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/png,image/jpeg,image/webp"
+            className="hidden"
+            onChange={handleFileChange}
+          />
 
           {/* Target queue scrolling */}
           <h4 className="text-[10px] uppercase font-bold text-slate-400">选择待抠图产品</h4>
@@ -205,7 +255,7 @@ export const WhiteBgRefine: React.FC<WhiteBgRefineProps> = ({
           {selectedProduct ? (
             <div className="w-80 h-80 relative flex items-center justify-center transition-all duration-300">
               {/* If we are idle and raw, render a dark backdrop style simulator */}
-              {refineStatus === "idle" && !isProcessing ? (
+              {refineStatus === "idle" && !isProcessing && !hasRealPng ? (
                 <div className="relative group w-full h-full p-2 bg-slate-900/95 rounded-xl border border-slate-800 flex flex-col justify-between text-slate-400">
                   <div className="absolute top-2 left-2 bg-slate-950 text-[9px] px-1.5 py-0.5 rounded text-amber-400 border border-amber-500/20 font-mono">
                     📷 相机直接实拍 (含不规则自然杂光背景)
@@ -235,7 +285,7 @@ export const WhiteBgRefine: React.FC<WhiteBgRefineProps> = ({
                 <div className="w-full h-full flex flex-col justify-center items-center">
                   <VisualCalendar product={selectedProduct} type="front_cover" isNakedPNG={bgColor === "transparent"} className="scale-100" />
                   <div className="absolute top-2 right-2 bg-emerald-500 text-white text-[9px] px-1.5 py-0.5 rounded-full font-bold flex items-center">
-                    ✓ 去除 100% 混杂背景
+                    ✓ {hasRealPng ? "已载入真实 transparent_png" : "去除 100% 混杂背景"}
                   </div>
                 </div>
               )}

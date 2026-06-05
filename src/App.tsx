@@ -217,6 +217,7 @@ export default function App() {
             products={products}
             onAddProduct={handleAddProduct}
             onNavigateToRefine={handleNavigateToRefine}
+            onUpdateProductStatus={handleUpdateProductStatus}
           />
         );
       case "refine":
