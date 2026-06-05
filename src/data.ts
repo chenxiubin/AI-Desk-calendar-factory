@@ -892,23 +892,6 @@ export const PRESET_RUNNINGHUB_WORKFLOWS: RunningHubWorkflowConfig[] = [
     enabled: true
   },
   {
-    id: "wf_run_workflow_v2",
-    name: "RunningHub 官方 V2 AI 融合工作流 (默认)",
-    workflowId: "2062738205958565890",
-    apiMode: "run_workflow_v2",
-    modelType: "flux_kontext",
-    baseImageNodeId: "",
-    promptNodeId: "",
-    negativePromptNodeId: "",
-    seedNodeId: "",
-    denoiseNodeId: "",
-    outputNodeId: "",
-    defaultPrompt: "将输入图中的台历产品自然融合到低透视新中式空桌面场景中，只增强环境光、接触阴影、桌面氛围和边缘融合。必须保持台历产品主体、红色封面、金色烫印工艺、马图案、产品上的所有中文文字、年份数字、挂环、底座结构完全不变。产品清晰突出，电商主图风格，高级但不过度重绘。",
-    defaultNegativePrompt: "不要修改产品图案，不要修改产品文字，不要改变年份数字，不要重绘马图案，不要改变产品比例，不要替换产品，不要新增台历，不要让产品变形，不要裁切产品，不要生成乱码文字，不要模糊产品主体，不要改变红色封面和金色工艺。",
-    defaultDenoise: 0.22,
-    enabled: true
-  },
-  {
     id: "wf_flux_kontext",
     name: "Flux-Kontext 融合增强 (Legacy V1 模式)",
     workflowId: "wf_preset_flux_2026",
