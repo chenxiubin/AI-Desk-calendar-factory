@@ -583,7 +583,7 @@ export const PRESET_TEMPLATES: Template[] = [
         slotName: "侧面结构/支架展示槽",
         assetType: "side",
         x: 50,
-        y: 50,
+        y: 45,
         maxWidth: 85,
         maxHeight: 48,
         anchor: "bottom_center",
@@ -640,7 +640,7 @@ export const PRESET_TEMPLATES: Template[] = [
       },
       {
         id: "td_line2",
-        content: "📌 内页材质: [materialInner] ([thickness])",
+        content: "📌 内页用纸: [materialInner]",
         fieldName: "参数内页",
         isDynamic: true,
         dataSource: "materialInner",
@@ -654,13 +654,64 @@ export const PRESET_TEMPLATES: Template[] = [
       },
       {
         id: "td_line3",
-        content: "📌 支架底座: 加厚1000g双灰板饰高级漆布，三角站立稳固不塌"      {
+        content: "📌 包装规格: [packageType]",
+        fieldName: "参数包装",
+        isDynamic: true,
+        dataSource: "packageType",
+        x: 10,
+        y: 90,
+        fontFamily: "font-sans",
+        fontSize: 14,
+        fontWeight: "font-medium",
+        align: "left",
+        color: "#374151"
+      }
+    ],
+    exportSettings: {
+      format: "JPG",
+      quality: 92,
+      width: 750,
+      height: 1000
+    }
+  },
+  {
+    id: "DETAIL_002",
+    templateName: "工艺细节品质四宫格",
+    templateType: "detail",
+    productType: "calendar",
+    aspectRatio: "3:4",
+    outputWidth: 750,
+    outputHeight: 1000,
+    background: {
+      type: "scene",
+      sceneStyle: "festive_red"
+    },
+    status: "enabled",
+    slots: [
+      {
+        id: "sub_1",
+        slotId: "CAL_SLOT_007_P1",
+        slotName: "细节1: 封面特写",
+        assetType: "detail_cover",
+        x: 26,
+        y: 32,
+        maxWidth: 42,
+        maxHeight: 25,
+        anchor: "center",
+        scaleMode: "cover",
+        lockAspectRatio: false,
+        allowRotation: false,
+        allowCrop: true,
+        layer: 3,
+        shadowRule: "very_light_shadow_or_none"
+      },
+      {
         id: "sub_2",
         slotId: "CAL_SLOT_007_P2",
-        slotName: "细节2: 五金金属线圈",
+        slotName: "细节2: 线圈环装",
         assetType: "detail_ring",
         x: 74,
-        y: 35,
+        y: 32,
         maxWidth: 42,
         maxHeight: 25,
         anchor: "center",
@@ -674,8 +725,8 @@ export const PRESET_TEMPLATES: Template[] = [
       {
         id: "sub_3",
         slotId: "CAL_SLOT_007_P3",
-        slotName: "细节3: 纸张细节",
-        assetType: "detail_paper",
+        slotName: "细节3: 内页材质",
+        assetType: "detail_page",
         x: 26,
         y: 68,
         maxWidth: 42,
@@ -835,43 +886,4 @@ export const PRESET_RUNNINGHUB_WORKFLOWS: RunningHubWorkflowConfig[] = [
     defaultDenoise: 0.25,
     enabled: true
   }
-];��光、接触阴影、桌面氛围和边缘融合。必须保持台历产品主体、红色封面、金色烫印工艺、马图案、产品上的所有中文文字、年份数字、挂环、底座结构完全不变。产品清晰突出，电商主图风格，高级但不过度重绘。",
-    defaultNegativePrompt: "不要修改产品图案，不要修改产品文字，不要改变年份数字，不要重绘马图案，不要改变产品比例，不要替换产品，不要新增台历，不要让产品变形，不要裁切产品，不要生成乱码文字，不要模糊产品主体，不要改变红色封面和金色工艺。",
-    defaultDenoise: 0.25,
-    enabled: true
-  }
-];�绘。",
-    defaultNegativePrompt: "不要修改产品图案，不要修改产品文字，不要改变年份数字，不要重绘马图案，不要改变产品比例，不要替换产品，不要新增台历，不要让产品变形，不要裁切产品，不要生成乱码文字，不要模糊产品主体，不要改变红色封面和金色工艺。",
-    defaultDenoise: 0.22,
-    enabled: true
-  },
-  {
-    id: "wf_qwen_fusion",
-    name: "Qwen Fusion LoRA 工作流",
-    workflowId: "wf_preset_qwen_2026",
-    modelType: "qwen_fusion_lora",
-    baseImageNodeId: "12",
-    promptNodeId: "23",
-    negativePromptNodeId: "24",
-    seedNodeId: "32",
-    denoiseNodeId: "42",
-    outputNodeId: "9",
-    defaultPrompt: "将输入图中的台历产品自然融合到低透视新中式空桌面场景中，只增强环境光、接触阴影、桌面氛围和边缘融合。必须保持台历产品主体、红色封面、金色烫印工艺、马图案、产品上的所有中文文字、年份数字、挂环、底座结构完全不变。产品清晰突出，电商主图风格，高级但不过度重绘。",
-    defaultNegativePrompt: "不要修改产品图案，不要修改产品文字，不要改变年份数字，不要重绘马图案，不要改变产品比例，不要替换产品，不要新增台历，不要让产品变形，不要裁切产品，不要生成乱码文字，不要模糊产品主体，不要改变红色封面和金色工艺。",
-    defaultDenoise: 0.25,
-    enabled: true
-  }
-];
-�阴影约束层。" },
-  { id: "CAL_SLOT_002", name: "单本台历大主图槽", widthRange: "88% - 94%", heightRange: "55% - 68%", desc: "适用于800x800标准大图，顶部有留白供文案展示。" },
-  { id: "CAL_SLOT_003", name: "SKU单款固定槽", widthRange: "82% - 86%", heightRange: "52% - 58%", desc: "支持底边定位，背景固定微缩轻质纸感质感。" },
-  { id: "CAL_SLOT_004", name: "白底标准产品槽", widthRange: "82% - 88%", heightRange: "72% - 80%", desc: "主打规范图，强制纯白背景，去除一切装饰物。" },
-  { id: "CAL_SLOT_005", name: "双本前后层叠槽", widthRange: "82% - 92%", heightRange: "多层叠", desc: "主副双品阶梯排布，前景产品必须完整展示。" },
-  { id: "CAL_SLOT_006", name: "三本内页阶梯槽", widthRange: "阶梯分布", heightRange: "阶梯分布", desc: "由深至浅、左右拉开的多月份展示槽位。" },
-  { id: "CAL_SLOT_007", name: "工艺细节四宫格", widthRange: "2*2拼图", heightRange: "2*2拼图", desc: "分块对齐裁剪，显示线圈、烫印、纸张细节。" },
-  { id: "CAL_SLOT_008", name: "侧面结构槽", widthRange: "88% - 96%", heightRange: "55% - 68%", desc: "专为45度侧面立体三角架倾斜拍摄而设。" },
-  { id: "CAL_SLOT_009", name: "广告位定制槽", widthRange: "88% - 94%", heightRange: "45% - 55%", desc: "底座局部放大，高亮镂空定制烫金区域。" },
-  { id: "CAL_SLOT_010", name: "尺寸参数展示槽", widthRange: "48% - 58%", heightRange: "35% - 45%", desc: "左对角线缩，配合右侧、底下多行系统参数字。" },
-  { id: "CAL_SLOT_011", name: "款式一览宫格槽", widthRange: "多宫格", heightRange: "多格缩放", desc: "展示2x3（6款）或3x4（12款）的系列总览。" },
-  { id: "CAL_SLOT_012", name: "内页功能互动槽", widthRange: "88% - 96%", heightRange: "52% - 62%", desc: "带握笔手势剪影，凸显格间大间距文字备忘功能。" }
 ];
