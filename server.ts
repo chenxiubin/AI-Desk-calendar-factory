@@ -395,43 +395,54 @@ app.post("/api/runninghub/scene-fusion", async (req, res) => {
     const apiMode = workflowConfig.apiMode || "run_workflow_v2";
     const workflowId = workflowConfig.workflowId;
 
+    const hasBaseImageNode = !!workflowConfig.baseImageNodeId;
+    let warning = "";
+
+    if (!hasBaseImageNode) {
+      warning = "当前未配置 RunningHub 输入图片节点，任务将使用工作流默认参数，无法验证真实 Canvas 图融合。";
+      console.warn(`[RunningHub Warning] ${warning}`);
+    }
+
     if (isApiKeyMissingOrPlaceholder) {
       console.warn("RunningHub API Key is missing. Creating pre-mocked task.");
       const taskId = apiMode === "comfyui_openapi" ? `task_mock_${Date.now()}` : `task_mock_v2_${Date.now()}`;
-      res.json({ taskId });
+      res.json({ taskId, warning: warning || undefined });
       return;
     }
 
-    // Step 2: Upload baseImage to RunningHub
-    const base64Data = baseImageDataUrl.replace(/^data:image\/\w+;base64,/, "");
-    const buffer = Buffer.from(base64Data, "base64");
+    let fileName = "";
+    if (hasBaseImageNode) {
+      // Step 2: Upload baseImage to RunningHub
+      const base64Data = baseImageDataUrl.replace(/^data:image\/\w+;base64,/, "");
+      const buffer = Buffer.from(base64Data, "base64");
 
-    const apiBase = process.env.RUNNINGHUB_API_BASE || "https://www.runninghub.cn";
-    const uploadUrl = `${apiBase}/openapi/v2/media/upload/binary`;
+      const apiBase = process.env.RUNNINGHUB_API_BASE || "https://www.runninghub.cn";
+      const uploadUrl = `${apiBase}/openapi/v2/media/upload/binary`;
 
-    const hubFormData = new FormData();
-    const blob = new Blob([buffer], { type: "image/png" });
-    hubFormData.append("file", blob, `scene_canvas_${Date.now()}.png`);
+      const hubFormData = new FormData();
+      const blob = new Blob([buffer], { type: "image/png" });
+      hubFormData.append("file", blob, `scene_canvas_${Date.now()}.png`);
 
-    const uploadRes = await fetch(uploadUrl, {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${RUNNINGHUB_API_KEY}`
-      },
-      body: hubFormData
-    });
+      const uploadRes = await fetch(uploadUrl, {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${RUNNINGHUB_API_KEY}`
+        },
+        body: hubFormData
+      });
 
-    if (!uploadRes.ok) {
-      const errText = await uploadRes.text();
-      res.status(uploadRes.status).json({ error: `Image upload to RunningHub failed: ${errText}` });
-      return;
-    }
+      if (!uploadRes.ok) {
+        const errText = await uploadRes.text();
+        res.status(uploadRes.status).json({ error: `Image upload to RunningHub failed: ${errText}` });
+        return;
+      }
 
-    const uploadData = await uploadRes.json();
-    const fileName = uploadData.data?.fileName || uploadData.fileName || (uploadData.data && typeof uploadData.data === "string" ? uploadData.data : "");
-    if (!fileName) {
-      res.status(500).json({ error: "Could not retrieve uploaded fileName from RunningHub", details: uploadData });
-      return;
+      const uploadData = await uploadRes.json();
+      fileName = uploadData.data?.fileName || uploadData.fileName || (uploadData.data && typeof uploadData.data === "string" ? uploadData.data : "");
+      if (!fileName) {
+        res.status(500).json({ error: "Could not retrieve uploaded fileName from RunningHub", details: uploadData });
+        return;
+      }
     }
 
     // Step 3: Construct Dynamic nodeInfoList
@@ -439,7 +450,7 @@ app.post("/api/runninghub/scene-fusion", async (req, res) => {
     if (workflowConfig.nodeInfoList && Array.isArray(workflowConfig.nodeInfoList)) {
       nodeInfoList = workflowConfig.nodeInfoList;
     } else {
-      if (workflowConfig.baseImageNodeId) {
+      if (hasBaseImageNode && workflowConfig.baseImageNodeId) {
         nodeInfoList.push({
           nodeId: workflowConfig.baseImageNodeId,
           fieldName: "image",
@@ -480,6 +491,8 @@ app.post("/api/runninghub/scene-fusion", async (req, res) => {
       }
     }
 
+    const apiBase = process.env.RUNNINGHUB_API_BASE || "https://www.runninghub.cn";
+
     if (apiMode === "comfyui_openapi") {
       // Create Task on RunningHub (Legacy mode)
       const createUrl = `${apiBase}/task/openapi/create`;
@@ -513,7 +526,7 @@ app.post("/api/runninghub/scene-fusion", async (req, res) => {
         return;
       }
 
-      res.json({ taskId });
+      res.json({ taskId, warning: warning || undefined });
     } else {
       // API V2 run workflow (Default Mode)
       const createUrl = `${apiBase}/openapi/v2/run/workflow/${workflowId}`;
@@ -547,7 +560,7 @@ app.post("/api/runninghub/scene-fusion", async (req, res) => {
         return;
       }
 
-      res.json({ taskId });
+      res.json({ taskId, warning: warning || undefined });
     }
   } catch (err: any) {
     console.error("Error in /api/runninghub/scene-fusion:", err);

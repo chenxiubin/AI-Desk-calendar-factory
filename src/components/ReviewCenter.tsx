@@ -519,6 +519,11 @@ export const ReviewCenter: React.FC<ReviewCenterProps> = ({
                     </option>
                   ))}
                 </select>
+                {!activeWorkflow?.baseImageNodeId && (
+                  <div className="mt-1.5 p-2 bg-amber-50 rounded-lg text-[9.5px] text-amber-805 border border-amber-200 leading-normal font-medium">
+                    ⚠️ 当前工作流未配置 RunningHub 输入图片节点 (baseImageNodeId 字段未填写)，任务将使用工作流默认参数，无法验证真实 Canvas 图融合。
+                  </div>
+                )}
               </div>
 
               {/* Advanced prompt configuration */}
@@ -596,6 +601,9 @@ export const ReviewCenter: React.FC<ReviewCenterProps> = ({
                     });
                     
                     if (fusionResult && fusionResult.taskId) {
+                      if (fusionResult.warning) {
+                        console.warn("[RunningHub Warning]:", fusionResult.warning);
+                      }
                       // Save taskId to state
                       const updatedImg: GeneratedImage = {
                         ...activeImage,
