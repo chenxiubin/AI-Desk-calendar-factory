@@ -306,7 +306,7 @@ async function drawSlot(
     const isPlaceholder = ["front", "inner", "side", "pdf", "png", "ring", "det_cov", "det_pg", "det_base", "ad", "white_bg"].includes(matchingAsset.fileUrl);
     if (isPlaceholder) {
       if (!DEMO_MODE) {
-        throw new Error("生产模式禁止使用占位产品图，请上传真实产品PNG");
+        console.warn("[RenderWarning] 生产模式使用占位产品图，建议上传真实产品PNG");
       }
       assetUrl = generateDynamicAssetDataUrl(product, matchingAsset.assetType);
     } else {
