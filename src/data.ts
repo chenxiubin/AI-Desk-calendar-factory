@@ -884,9 +884,9 @@ export const PRESET_RUNNINGHUB_WORKFLOWS: RunningHubWorkflowConfig[] = [
 
     outputNodeId: "48",
 
-    defaultPrompt: "产品与背景自然融合，并进行统一重新打光。光影统一，保持产品主体、图案、文字、颜色和结构不变，只增强环境光、接触阴影、边缘融合和整体质感，make image high quality,",
+    defaultPrompt: "产品与背景自然融合，并进行统一重新打光。光影统一，保持产品主体、图案、文字、颜色和结构不变，只增强环境光、接触阴影、边缘融合 and 整体质感，make image high quality,",
     defaultNegativePrompt: "",
-    defaultDenoise: 0.25,
+    defaultDenoise: 1,
     defaultSteps: 4,
     defaultCfg: 1,
     enabled: true

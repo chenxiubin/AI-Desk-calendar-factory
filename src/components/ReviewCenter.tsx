@@ -91,7 +91,7 @@ export const ReviewCenter: React.FC<ReviewCenterProps> = ({
 
   const [promptInput, setPromptInput] = useState<string>("");
   const [negPromptInput, setNegPromptInput] = useState<string>("");
-  const [denoiseInput, setDenoiseInput] = useState<number>(0.25);
+  const [denoiseInput, setDenoiseInput] = useState<number>(defaultWorkflow.defaultDenoise ?? 1);
   const [seedInput, setSeedInput] = useState<number>(12154);
   const [stepsInput, setStepsInput] = useState<number>(4);
   const [cfgInput, setCfgInput] = useState<number>(1);
@@ -565,13 +565,15 @@ export const ReviewCenter: React.FC<ReviewCenterProps> = ({
                   <div>
                     <div className="flex justify-between items-center mb-1">
                       <span className="block text-[8.5px] text-slate-455 font-bold uppercase">重绘强度 (Denoise)</span>
-                      <span className="text-[8px] text-slate-400">建议 0.18-0.35</span>
+                      <span className="text-[8px] text-slate-400">
+                        {activeWorkflow.id === "rh_flux2_klein_light_fusion" ? "建议 0.7 - 1" : "建议 0.18-0.35"}
+                      </span>
                     </div>
                     <input
                       type="number"
                       step="0.01"
-                      min="0.18"
-                      max="0.35"
+                      min={activeWorkflow.id === "rh_flux2_klein_light_fusion" ? 0.7 : 0.18}
+                      max={activeWorkflow.id === "rh_flux2_klein_light_fusion" ? 1.0 : 0.35}
                       value={denoiseInput}
                       onChange={(e) => setDenoiseInput(parseFloat(e.target.value))}
                       className="w-full bg-white border border-slate-200 rounded-lg p-1 font-mono font-bold"
