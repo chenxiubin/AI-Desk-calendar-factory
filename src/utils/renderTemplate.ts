@@ -1,5 +1,5 @@
 /// <reference types="vite/client" />
-import { Product, ProductAsset, Template, TemplateSlot, TextField } from "../types";
+import { Product, ProductAsset, Template, TemplateSlot, TextField, TemplateComponent } from "../types";
 
 export let DEMO_MODE = import.meta.env.VITE_DEMO_MODE === "true";
 
@@ -16,6 +16,11 @@ export interface RenderOffsets {
 /**
  * Main entrance to async render product & template to an HTML5 canvas,
  * returning a high-quality dataURL representing the finished layout.
+ * Supports layered rendering:
+ * - base_only (scene_base + product_slot without drop-shadow)
+ * - overlays_only (text_overlay + decor_overlay + logo_overlay)
+ * - all (full compilation of background + slots + overlays)
+ * - fusedBaseUrl (fused background + slots + overlays)
  */
 export async function renderTemplateToCanvas(
   product: Product,
@@ -24,7 +29,9 @@ export async function renderTemplateToCanvas(
     hOffset?: number;
     vOffset?: number;
     scale?: number;
-  }
+  },
+  renderMode: "all" | "base_only" | "overlays_only" = "all",
+  fusedBaseUrl?: string
 ): Promise<string> {
   const canvas = document.createElement("canvas");
   canvas.width = template.outputWidth || 800;
@@ -38,21 +45,58 @@ export async function renderTemplateToCanvas(
   ctx.imageSmoothingEnabled = true;
   ctx.imageSmoothingQuality = "high";
 
-  // 1. Draw scenery/background layers
-  drawBackground(ctx, template, canvas.width, canvas.height);
+  if (fusedBaseUrl) {
+    // 1. Draw fused background/product composite returned from RunningHub
+    try {
+      const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+        const i = new Image();
+        i.crossOrigin = "anonymous";
+        i.onload = () => resolve(i);
+        i.onerror = (e) => reject(new Error("Failed to load fused runninghub image: " + fusedBaseUrl));
+        i.src = fusedBaseUrl;
+      });
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+    } catch (err) {
+      console.error("Failed to load RunningHub base background image, fallback to standard bg:", err);
+      // Fallback base drawer in case URL is temporarily blocked
+      drawBackground(ctx, template, canvas.width, canvas.height);
+      const sortedSlots = [...template.slots].sort((a, b) => (a.layer || 0) - (b.layer || 0));
+      for (const slot of sortedSlots) {
+        await drawSlot(ctx, product, slot, canvas.width, canvas.height, offsets, "base_only");
+      }
+    }
 
-  // 2. Sort slots by layer index to enforce correct overlay order
-  const sortedSlots = [...template.slots].sort((a, b) => (a.layer || 0) - (b.layer || 0));
+    // 2. Overlay dynamic and text fields
+    drawTextFields(ctx, product, template, canvas.width, canvas.height);
 
-  // 3. Draw each slot
-  for (const slot of sortedSlots) {
-    await drawSlot(ctx, product, slot, canvas.width, canvas.height, offsets);
+    // 3. Overlay branding decorations and custom logo plates (never sent to RH)
+    drawDecorAndLogoOverlays(ctx, template, product, canvas.width, canvas.height);
+
+  } else {
+    // Standard rendering path (supports all / base_only / overlays_only)
+    if (renderMode === "all" || renderMode === "base_only") {
+      // 1. Draw backdrop scenery layers
+      drawBackground(ctx, template, canvas.width, canvas.height);
+
+      // 2. Sort slots by layer index to enforce correct overlay order
+      const sortedSlots = [...template.slots].sort((a, b) => (a.layer || 0) - (b.layer || 0));
+
+      // 3. Draw product slots (shadow is disabled inside DrawSlot when renderMode is "base_only")
+      for (const slot of sortedSlots) {
+        await drawSlot(ctx, product, slot, canvas.width, canvas.height, offsets, renderMode);
+      }
+    }
+
+    if (renderMode === "all" || renderMode === "overlays_only") {
+      // 4. Draw texts
+      drawTextFields(ctx, product, template, canvas.width, canvas.height);
+
+      // 5. Draw decorative layers and logo overlays
+      drawDecorAndLogoOverlays(ctx, template, product, canvas.width, canvas.height);
+    }
   }
 
-  // 4. Draw vector text overlays
-  drawTextFields(ctx, product, template, canvas.width, canvas.height);
-
-  // 5. Output beautiful JPG/PNG based on export settings
+  // Final quality output
   const format = template.exportSettings?.format === "PNG" ? "image/png" : "image/jpeg";
   const quality = (template.exportSettings?.quality || 90) / 100;
   
@@ -278,7 +322,8 @@ async function drawSlot(
   slot: TemplateSlot,
   cw: number,
   ch: number,
-  offsets?: RenderOffsets
+  offsets?: RenderOffsets,
+  renderMode: "all" | "base_only" | "overlays_only" = "all"
 ) {
   // 1. Calculate bounding box from percentages
   const boxW = cw * (slot.maxWidth / 100);
@@ -348,8 +393,8 @@ async function drawSlot(
     drawY = finalY - drawH / 2;
   }
 
-  // 6. Draw Drop Shadow underneath the product
-  if (slot.shadowRule && slot.shadowRule !== "very_light_shadow_or_none") {
+  // 6. Draw Drop Shadow underneath the product (bypassed if renderMode === "base_only")
+  if (renderMode !== "base_only" && slot.shadowRule && slot.shadowRule !== "very_light_shadow_or_none") {
     ctx.save();
     const shadowY = drawY + drawH + 1;
     const shadowX = drawX + drawW / 2;
@@ -891,4 +936,182 @@ function roundRect(
   ctx.lineTo(x, y + radius);
   ctx.quadraticCurveTo(x, y, x + radius, y);
   ctx.closePath();
+}
+
+/**
+ * Draws extra PS decorative ornaments and LOGO overlays (that never go to runninghub)
+ */
+export function drawDecorAndLogoOverlays(ctx: CanvasRenderingContext2D, t: Template, p: Product, cw: number, ch: number) {
+  ctx.save();
+
+  // 1. Draw Decor Overlay (氛围装饰)
+  // Gold thin border inset
+  ctx.strokeStyle = "rgba(217, 119, 6, 0.45)"; // Warm Amber Gold
+  ctx.lineWidth = 1.5;
+  ctx.strokeRect(12, 12, cw - 24, ch - 24);
+
+  // Traditional corner accents in gold
+  const len = Math.round(cw * 0.04);
+  const strokeW = 2.5;
+  ctx.strokeStyle = "#D97706";
+  ctx.lineWidth = strokeW;
+
+  // Top-Left corner
+  ctx.beginPath();
+  ctx.moveTo(12, 12 + len);
+  ctx.lineTo(12, 12);
+  ctx.lineTo(12 + len, 12);
+  ctx.stroke();
+
+  // Top-Right corner
+  ctx.beginPath();
+  ctx.moveTo(cw - 12 - len, 12);
+  ctx.lineTo(cw - 12, 12);
+  ctx.lineTo(cw - 12, 12 + len);
+  ctx.stroke();
+
+  // Bottom-Left corner
+  ctx.beginPath();
+  ctx.moveTo(12, ch - 12 - len);
+  ctx.lineTo(12, ch - 12);
+  ctx.lineTo(12 + len, ch - 12);
+  ctx.stroke();
+
+  // Bottom-Right corner
+  ctx.beginPath();
+  ctx.moveTo(cw - 12 - len, ch - 12);
+  ctx.lineTo(cw - 12, ch - 12);
+  ctx.lineTo(cw - 12, ch - 12 - len);
+  ctx.stroke();
+
+  // Promo Stamp sticker at bottom right corner
+  const badgeX = cw - 70;
+  const badgeY = ch - 70;
+  
+  ctx.fillStyle = "#DC2626"; // red badge circle
+  ctx.beginPath();
+  ctx.arc(badgeX, badgeY, 24, 0, 2 * Math.PI);
+  ctx.fill();
+
+  ctx.strokeStyle = "#FBBF24"; // golden dash outline
+  ctx.lineWidth = 1.5;
+  ctx.setLineDash([3, 2]);
+  ctx.beginPath();
+  ctx.arc(badgeX, badgeY, 21, 0, 2 * Math.PI);
+  ctx.stroke();
+  ctx.setLineDash([]); // clear dash
+
+  // Badge text
+  ctx.fillStyle = "#FEF3C7";
+  ctx.font = "bold 9px sans-serif";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText("新年定制", badgeX, badgeY - 5);
+  ctx.fillText("50本起订", badgeX, badgeY + 6);
+
+  // 2. Draw Logo Overlay (品质顶冠标识)
+  // Draw an elegant ribbon shield badge at top center
+  const logoX = cw / 2;
+  const logoY = 32;
+  
+  ctx.fillStyle = "#D97706"; // gold ribbon body
+  ctx.beginPath();
+  ctx.moveTo(logoX - 35, logoY - 12);
+  ctx.lineTo(logoX + 35, logoY - 12);
+  ctx.lineTo(logoX + 30, logoY + 10);
+  ctx.lineTo(logoX, logoY + 16);
+  ctx.lineTo(logoX - 30, logoY + 10);
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.fillStyle = "#FFFFFF";
+  ctx.font = "bold 8px sans-serif";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText("★ 专属定制 ★", logoX, logoY + 1);
+
+  ctx.restore();
+}
+
+/**
+ * Builds explicit PS-styled TemplateComponent layering list from Template attributes
+ */
+export function getTemplateComponents(template: Template): TemplateComponent[] {
+  const components: TemplateComponent[] = [];
+
+  // 1. scene_base
+  components.push({
+    id: `comp_scene_${template.id}`,
+    name: "场景底图层 (scene_base)",
+    type: "scene_base",
+    x: 0,
+    y: 0,
+    width: template.outputWidth || 800,
+    height: template.outputHeight || 800,
+    zIndex: 1,
+    visible: true,
+    sendToRunningHub: true
+  });
+
+  // 2. product_slot
+  template.slots.forEach((slot, idx) => {
+    components.push({
+      id: `comp_slot_${slot.id || idx}`,
+      name: `${slot.slotName || "产品槽位"} (product_slot)`,
+      type: "product_slot",
+      x: slot.x,
+      y: slot.y,
+      width: slot.maxWidth,
+      height: slot.maxHeight,
+      zIndex: slot.layer || 3,
+      visible: true,
+      sendToRunningHub: true
+    });
+  });
+
+  // 3. text_overlay components for each text rule
+  template.textFields.forEach((field, idx) => {
+    components.push({
+      id: `comp_text_${field.id || idx}`,
+      name: `${field.fieldName || "文案控制"} (text_overlay)`,
+      type: "text_overlay",
+      x: field.x,
+      y: field.y,
+      width: 40,
+      height: 8,
+      zIndex: 10 + idx,
+      visible: true,
+      sendToRunningHub: false
+    });
+  });
+
+  // 4. decorative overlays
+  components.push({
+    id: `comp_decor_${template.id}`,
+    name: "氛围装饰/印记章组件 (decor_overlay)",
+    type: "decor_overlay",
+    x: 88,
+    y: 88,
+    width: 12,
+    height: 12,
+    zIndex: 8,
+    visible: true,
+    sendToRunningHub: false
+  });
+
+  // 5. logo components
+  components.push({
+    id: `comp_logo_${template.id}`,
+    name: "品质金星顶冠Logo组件 (logo_overlay)",
+    type: "logo_overlay",
+    x: 50,
+    y: 4,
+    width: 15,
+    height: 4,
+    zIndex: 9,
+    visible: true,
+    sendToRunningHub: false
+  });
+
+  return components;
 }

@@ -90,6 +90,20 @@ export interface ExportSettings {
   height: number;
 }
 
+export interface TemplateComponent {
+  id: string;
+  name: string;
+  type: "scene_base" | "product_slot" | "text_overlay" | "decor_overlay" | "logo_overlay";
+  imageUrl?: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  zIndex: number;
+  visible: boolean;
+  sendToRunningHub: boolean;
+}
+
 export interface Template {
   id: string;
   templateName: string;
@@ -101,6 +115,7 @@ export interface Template {
   background: TemplateBackground;
   slots: TemplateSlot[];
   textFields: TextField[];
+  components?: TemplateComponent[];
   exportSettings: ExportSettings;
   status: "draft" | "enabled" | "disabled";
 }

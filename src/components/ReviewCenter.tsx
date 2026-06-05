@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { GeneratedImage, Product, Template } from "../types";
 import { VisualCalendar } from "./VisualCalendar";
-import { renderTemplateToCanvas } from "../utils/renderTemplate";
+import { renderTemplateToCanvas, getTemplateComponents } from "../utils/renderTemplate";
 import { PRESET_RUNNINGHUB_WORKFLOWS } from "../data";
 import { queryRunningHubOutputs, runSceneFusion } from "../services/runninghubClient";
 import {
@@ -61,28 +61,46 @@ export const ReviewCenter: React.FC<ReviewCenterProps> = ({
   }, [activeImage]);
 
   const [renderedPreviewUrl, setRenderedPreviewUrl] = useState<string>("");
+  const [finalCompositedUrl, setFinalCompositedUrl] = useState<string>("");
 
   React.useEffect(() => {
     let active = true;
     if (activeImage && activeProduct && activeTemplate) {
+      // 1. Render Base layout (only scene and product, without shadows and texts) for RunningHub API submissions
       renderTemplateToCanvas(activeProduct, activeTemplate, {
         hOffset: currentXOffset,
         vOffset: currentYOffset,
         scale: currentScale
-      })
+      }, "base_only")
         .then((url) => {
           if (active) {
             setRenderedPreviewUrl(url);
           }
         })
         .catch((err) => {
-          console.error("Error drawing on slider change", err);
+          console.error("Error drawing base_only preview:", err);
+        });
+
+      // 2. Render Final layout (integrates Completed RunningHub fused output with high-performance overlay texts and logos)
+      const fusedUrl = activeImage.aiFusionStatus === "completed" ? activeImage.aiFusionUrl : undefined;
+      renderTemplateToCanvas(activeProduct, activeTemplate, {
+        hOffset: currentXOffset,
+        vOffset: currentYOffset,
+        scale: currentScale
+      }, "all", fusedUrl)
+        .then((url) => {
+          if (active) {
+            setFinalCompositedUrl(url);
+          }
+        })
+        .catch((err) => {
+          console.error("Error drawing final composited preview:", err);
         });
     }
     return () => {
       active = false;
     };
-  }, [activeImage, activeProduct, activeTemplate, currentXOffset, currentYOffset, currentScale]);
+  }, [activeImage, activeProduct, activeTemplate, currentXOffset, currentYOffset, currentScale, activeImage?.aiFusionUrl, activeImage?.aiFusionStatus]);
 
   // RunningHub scene-fusion states
   const defaultWorkflow = PRESET_RUNNINGHUB_WORKFLOWS[0];
@@ -431,29 +449,37 @@ export const ReviewCenter: React.FC<ReviewCenterProps> = ({
               </span>
             </div>
 
-            {/* Side-by-side Canvas Original vs AI Fusion Comparison */}
-            <div className="grid grid-cols-2 gap-4 h-56 w-full">
-              {/* Left Column: Canvas Original */}
+            {/* Comparative Canvas Original vs AI Fusion vs Final Layered Layout */}
+            <div className="text-left mb-1 flex justify-between items-center">
+              <span className="text-[9px] tracking-wider uppercase font-black text-slate-450">
+                分层设计及融合审查 (Composed Layers Audit)
+              </span>
+              <span className="text-[8.5px] text-indigo-600 font-bold bg-indigo-50 px-1.5 py-0.5 rounded">
+                免AI重绘文字
+              </span>
+            </div>
+            <div className="grid grid-cols-3 gap-2.5 h-48 w-full">
+              {/* Card 1: Canvas 场景底图 + 产品 */}
               <div className="border border-slate-150 rounded-xl relative flex flex-col items-center justify-center overflow-hidden p-1.5 bg-slate-50">
-                <span className="absolute top-1 left-1.5 z-10 bg-slate-700/85 backdrop-blur-xs text-white font-bold text-[8.5px] px-1.5 py-0.5 rounded shadow-xs">
-                  左: Canvas原图
+                <span className="absolute top-1 left-1 z-10 bg-slate-700/85 backdrop-blur-xs text-white font-bold text-[7.5px] px-1 py-0.5 rounded shadow-xs scale-90 origin-top-left">
+                  1. 基础排版底图
                 </span>
                 <div className="w-full flex-grow flex items-center justify-center overflow-hidden min-h-0">
                   {renderedPreviewUrl ? (
                     <img src={renderedPreviewUrl} className="max-w-full max-h-full object-contain rounded shadow-xs" alt="Live Original Canvas" />
                   ) : (
-                    <div className="text-[10px] text-zinc-400">正在生成...</div>
+                    <div className="text-[9px] text-zinc-400">正在生成...</div>
                   )}
                 </div>
-                <div className="absolute bottom-1 right-1 text-[7.5px] text-zinc-450 font-semibold truncate max-w-[120px]">
-                  {activeProduct.productName}
+                <div className="absolute bottom-1 left-1.5 text-[7px] text-zinc-450 font-bold truncate max-w-[120px] scale-90 origin-bottom-left">
+                  底图+产品槽(去阴影)
                 </div>
               </div>
 
-              {/* Right Column: AI Fusion Image */}
+              {/* Card 2: RunningHub 融合底图 */}
               <div className="border border-slate-150 rounded-xl relative flex flex-col items-center justify-center overflow-hidden p-1.5 bg-slate-50">
-                <span className="absolute top-1 left-1.5 z-10 bg-indigo-650/85 backdrop-blur-xs text-white font-bold text-[8.5px] px-1.5 py-0.5 rounded shadow-xs">
-                  右: AI融合图
+                <span className="absolute top-1 left-1 z-10 bg-indigo-650/85 backdrop-blur-xs text-white font-bold text-[7.5px] px-1 py-0.5 rounded shadow-xs scale-90 origin-top-left">
+                  2. RH融合底图
                 </span>
                 
                 <div className="w-full flex-grow flex items-center justify-center overflow-hidden min-h-0">
@@ -462,26 +488,42 @@ export const ReviewCenter: React.FC<ReviewCenterProps> = ({
                   ) : activeImage.aiFusionStatus === "running" || activeImage.aiFusionStatus === "queued" ? (
                     <div className="flex flex-col items-center justify-center text-center p-2 space-y-1">
                       <RefreshCw className="w-4 h-4 animate-spin text-blue-500" />
-                      <span className="text-[9px] text-slate-500 font-bold animate-pulse">RunningHub融合中...</span>
+                      <span className="text-[8px] text-slate-500 font-bold animate-pulse">融合进行中...</span>
                     </div>
                   ) : activeImage.aiFusionStatus === "failed" ? (
                     <div className="flex flex-col items-center justify-center text-center p-2 space-y-1">
                       <XCircle className="w-4 h-4 text-rose-500" />
-                      <span className="text-[9px] text-rose-600 font-bold">融合失败</span>
-                      <span className="text-[8px] text-slate-400 select-all truncate max-w-[150px]" title={activeImage.aiFusionError}>{activeImage.aiFusionError}</span>
+                      <span className="text-[8px] text-rose-600 font-bold">融合失败</span>
                     </div>
                   ) : (
                     <div className="flex flex-col justify-center items-center text-center p-2">
-                      <HelpCircle className="w-4.5 h-4.5 text-slate-355 mr-1" />
-                      <span className="text-[9px] text-slate-400 mt-1 font-semibold text-center">尚未启动 AI 融合</span>
+                      <HelpCircle className="w-4 h-4 text-slate-350" />
+                      <span className="text-[8px] text-zinc-400 mt-1 font-semibold">未启动</span>
                     </div>
                   )}
                 </div>
                 {activeImage.aiFusionStatus === "completed" && activeImage.aiFusionUrl && (
-                  <div className="absolute bottom-1 right-1 text-[7.5px] text-emerald-600 font-bold">
-                    完成
+                  <div className="absolute bottom-1 right-1 text-[7px] text-emerald-600 font-bold scale-90 origin-bottom-right">
+                    ✓ 完成融合
                   </div>
                 )}
+              </div>
+
+              {/* Card 3: 最终电商图 */}
+              <div className="border-2 border-indigo-500 rounded-xl relative flex flex-col items-center justify-center overflow-hidden p-1.5 bg-indigo-50/10">
+                <span className="absolute top-1 left-1 z-10 bg-indigo-600 text-white font-bold text-[7.5px] px-1 py-0.5 rounded shadow-xs scale-90 origin-top-left">
+                  ★ 3. 最终电商图
+                </span>
+                <div className="w-full flex-grow flex items-center justify-center overflow-hidden min-h-0">
+                  {finalCompositedUrl ? (
+                    <img src={finalCompositedUrl} className="max-w-full max-h-full object-contain rounded shadow-xs cursor-zoom-in" alt="Final Overlay Composited" onClick={() => window.open(finalCompositedUrl, "_blank")} />
+                  ) : (
+                    <div className="text-[9px] text-zinc-400">正在渲染...</div>
+                  )}
+                </div>
+                <div className="absolute bottom-1 right-1.5 text-[7px] text-indigo-600 font-black scale-90 origin-bottom-right">
+                  融合底图+PS文案组件
+                </div>
               </div>
             </div>
 
@@ -770,6 +812,44 @@ export const ReviewCenter: React.FC<ReviewCenterProps> = ({
                   onChange={(e) => setCurrentScale(parseInt(e.target.value) / 100)}
                   className="w-full h-1 bg-slate-150 rounded appearance-none cursor-pointer accent-indigo-600"
                 />
+              </div>
+            </div>
+
+            {/* PS template component layering panel */}
+            <div className="border-t border-slate-100 pt-3 text-xs text-left space-y-2">
+              <h5 className="text-[9px] tracking-wider uppercase font-black text-slate-500 flex items-center">
+                <FolderLock className="w-3.5 h-3.5 mr-1 text-indigo-600 shrink-0" />
+                PS 导入模板图层分层 (PSD Layer Components)
+              </h5>
+              <div className="bg-slate-50/70 p-2.5 rounded-xl border border-slate-200 text-[10px] space-y-1">
+                {(() => {
+                  try {
+                    const comps = getTemplateComponents(activeTemplate);
+                    return comps.map((comp) => {
+                      const isSendRH = comp.sendToRunningHub; // scene_base, product_slot
+                      return (
+                        <div key={comp.id} className="flex justify-between items-center py-1 border-b border-dashed border-slate-150 last:border-0">
+                          <span className="font-semibold text-slate-700 truncate max-w-[210px] flex items-center gap-1">
+                            <span className={`w-1.5 h-1.5 rounded-full ${isSendRH ? "bg-indigo-500" : "bg-amber-500"}`} />
+                            {comp.name}
+                          </span>
+                          <div className="flex items-center gap-1 font-mono text-[8.5px]">
+                            <span className={`px-1 py-0.2 rounded font-bold uppercase ${
+                              isSendRH 
+                                ? "bg-indigo-100 text-indigo-700 border border-indigo-200" 
+                                : "bg-amber-100 text-amber-700 border border-amber-200"
+                            }`}>
+                              {isSendRH ? "→ 场景融合" : "叠加(免AI)"}
+                            </span>
+                            <span className="text-slate-400">z:{comp.zIndex}</span>
+                          </div>
+                        </div>
+                      );
+                    });
+                  } catch (err) {
+                    return <div className="text-slate-400 text-[9px]">加载组件失败</div>;
+                  }
+                })()}
               </div>
             </div>
 
