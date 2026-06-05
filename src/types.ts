@@ -146,6 +146,7 @@ export interface RunningHubWorkflowConfig {
   id: string;
   name: string;
   workflowId: string;
+  apiMode?: "comfyui_openapi" | "run_workflow_v2";
   modelType: "flux_kontext" | "qwen_fusion_lora" | "qwen_image_edit";
   baseImageNodeId: string;
   maskNodeId?: string;

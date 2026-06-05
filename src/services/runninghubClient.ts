@@ -37,7 +37,10 @@ export async function createRunningHubTask(payload: {
   return res.json();
 }
 
-export async function queryRunningHubOutputs(taskId: string): Promise<{
+export async function queryRunningHubOutputs(
+  taskId: string,
+  apiMode?: "comfyui_openapi" | "run_workflow_v2"
+): Promise<{
   status: "idle" | "uploading" | "queued" | "running" | "completed" | "failed";
   outputUrl?: string;
   errorMessage?: string;
@@ -47,7 +50,7 @@ export async function queryRunningHubOutputs(taskId: string): Promise<{
     headers: {
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ taskId }),
+    body: JSON.stringify({ taskId, apiMode }),
   });
 
   if (!res.ok) {

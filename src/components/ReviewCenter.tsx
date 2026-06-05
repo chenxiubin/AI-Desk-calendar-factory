@@ -2,6 +2,8 @@ import React, { useState } from "react";
 import { GeneratedImage, Product, Template } from "../types";
 import { VisualCalendar } from "./VisualCalendar";
 import { renderTemplateToCanvas } from "../utils/renderTemplate";
+import { PRESET_RUNNINGHUB_WORKFLOWS } from "../data";
+import { queryRunningHubOutputs, runSceneFusion } from "../services/runninghubClient";
 import {
   ShieldCheck,
   CheckCircle,
@@ -81,6 +83,101 @@ export const ReviewCenter: React.FC<ReviewCenterProps> = ({
       active = false;
     };
   }, [activeImage, activeProduct, activeTemplate, currentXOffset, currentYOffset, currentScale]);
+
+  // RunningHub scene-fusion states
+  const defaultWorkflow = PRESET_RUNNINGHUB_WORKFLOWS[0];
+  const [selectedWorkflowId, setSelectedWorkflowId] = useState<string>(defaultWorkflow.id);
+  const activeWorkflow = PRESET_RUNNINGHUB_WORKFLOWS.find((w) => w.id === selectedWorkflowId) || defaultWorkflow;
+
+  const [promptInput, setPromptInput] = useState<string>("");
+  const [negPromptInput, setNegPromptInput] = useState<string>("");
+  const [denoiseInput, setDenoiseInput] = useState<number>(0.22);
+  const [seedInput, setSeedInput] = useState<number>(12154);
+
+  // Initialize input values when active image or workflow changes
+  React.useEffect(() => {
+    if (activeWorkflow) {
+      setPromptInput(activeWorkflow.defaultPrompt);
+      setNegPromptInput(activeWorkflow.defaultNegativePrompt);
+      setDenoiseInput(activeWorkflow.defaultDenoise);
+    }
+  }, [selectedWorkflowId, activeImage?.id]);
+
+  // Track polling tasks registry
+  const [pollingTasks, setPollingTasks] = useState<Record<string, boolean>>({});
+
+  React.useEffect(() => {
+    generatedImages.forEach((img) => {
+      if (
+        (img.aiFusionStatus === "running" || img.aiFusionStatus === "queued") &&
+        img.aiFusionTaskId &&
+        !pollingTasks[img.aiFusionTaskId]
+      ) {
+        setPollingTasks((prev) => ({ ...prev, [img.aiFusionTaskId!]: true }));
+        let attempts = 0;
+        const maxAttempts = 50; // ~2.5 mins
+        
+        const poll = setInterval(async () => {
+          attempts++;
+          if (attempts > maxAttempts) {
+            clearInterval(poll);
+            const updated = {
+              ...img,
+              aiFusionStatus: "failed" as const,
+              aiFusionError: "轮询超时(2.5分钟)"
+            };
+            onUpdateImage(updated);
+            setPollingTasks((prev) => {
+              const clone = { ...prev };
+              delete clone[img.aiFusionTaskId!];
+              return clone;
+            });
+            return;
+          }
+
+          try {
+            const mode = img.aiFusionWorkflowId === "comfyui_openapi" ? "comfyui_openapi" : "run_workflow_v2";
+            const res = await queryRunningHubOutputs(img.aiFusionTaskId!, mode);
+            
+            if (res.status === "completed" && res.outputUrl) {
+              clearInterval(poll);
+              const updated = {
+                ...img,
+                aiFusionStatus: "completed" as const,
+                aiFusionUrl: res.outputUrl,
+                aiFusionError: undefined
+              };
+              onUpdateImage(updated);
+              setPollingTasks((prev) => {
+                const clone = { ...prev };
+                delete clone[img.aiFusionTaskId!];
+                return clone;
+              });
+            } else if (res.status === "failed") {
+              clearInterval(poll);
+              const updated = {
+                ...img,
+                aiFusionStatus: "failed" as const,
+                aiFusionError: res.errorMessage || "RunningHub 任务执行失败"
+              };
+              onUpdateImage(updated);
+              setPollingTasks((prev) => {
+                const clone = { ...prev };
+                delete clone[img.aiFusionTaskId!];
+                return clone;
+              });
+            }
+          } catch (err: any) {
+            console.error("Polling error for image taskId:", img.aiFusionTaskId, err);
+          }
+        }, 3000);
+
+        return () => {
+          clearInterval(poll);
+        };
+      }
+    });
+  }, [generatedImages, pollingTasks]);
 
   // Filter matrix execution
   const filtered = generatedImages.filter((img) => {
@@ -318,99 +415,283 @@ export const ReviewCenter: React.FC<ReviewCenterProps> = ({
 
       {/* 2. Right Section: Detailed Single check and manual Fine-Tune reposition knobs */}
       {activeImage && activeProduct && activeTemplate && (
-        <div className="w-full lg:w-80 bg-white border border-slate-150 rounded-2xl p-5 overflow-y-auto shrink-0 flex flex-col justify-between shadow-xs">
+        <div className="w-full lg:w-[460px] bg-white border border-slate-150 rounded-2xl p-5 overflow-y-auto shrink-0 flex flex-col justify-between shadow-xs">
           <div className="space-y-4">
             <div className="border-b border-slate-100 pb-3.5 flex justify-between items-center">
               <div>
                 <h4 className="text-xs font-black text-slate-800 tracking-tight">精修矢量位精调台</h4>
-                <p className="text-[10px] text-slate-400 mt-0.5">通过人工拖拽对准铁圈边框位置</p>
+                <p className="text-[10px] text-slate-400 mt-0.5 font-medium">拖拽对准铁圈边框位置 / AI场景融合</p>
               </div>
               <span className="text-[10px] bg-slate-100 font-mono font-black px-2.5 py-1 rounded-lg text-slate-600">
                 {activeProduct.productCode}
               </span>
             </div>
 
-            {/* Sandbox single mock item layout */}
-            <div
-              className={`h-48 w-full rounded-xl border border-slate-150 relative flex items-center justify-center overflow-hidden p-2 bg-slate-100/50`}
-            >
-              {renderedPreviewUrl ? (
-                <img src={renderedPreviewUrl} className="max-w-full max-h-full object-contain rounded shadow-sm" alt="Live Canvas Render" />
-              ) : (
-                <div className="flex flex-col items-center justify-center text-slate-405 space-y-2 text-xs">
-                  <RefreshCw className="w-5 h-5 animate-spin text-blue-500" />
-                  <span>像素微移合成中...</span>
+            {/* Side-by-side Canvas Original vs AI Fusion Comparison */}
+            <div className="grid grid-cols-2 gap-4 h-56 w-full">
+              {/* Left Column: Canvas Original */}
+              <div className="border border-slate-150 rounded-xl relative flex flex-col items-center justify-center overflow-hidden p-1.5 bg-slate-50">
+                <span className="absolute top-1 left-1.5 z-10 bg-slate-700/85 backdrop-blur-xs text-white font-bold text-[8.5px] px-1.5 py-0.5 rounded shadow-xs">
+                  左: Canvas原图
+                </span>
+                <div className="w-full flex-grow flex items-center justify-center overflow-hidden min-h-0">
+                  {renderedPreviewUrl ? (
+                    <img src={renderedPreviewUrl} className="max-w-full max-h-full object-contain rounded shadow-xs" alt="Live Original Canvas" />
+                  ) : (
+                    <div className="text-[10px] text-zinc-400">正在生成...</div>
+                  )}
                 </div>
-              )}
-
-              {/* Variable overlay text demo */}
-              <div className="absolute bottom-1.5 right-1.5 text-[8.5px] font-mono text-slate-200 select-none bg-slate-900/70 backdrop-blur-xs px-2 py-0.5 rounded-md">
-                实时图层拼合检视: {activeProduct.productName}
+                <div className="absolute bottom-1 right-1 text-[7.5px] text-zinc-450 font-semibold truncate max-w-[120px]">
+                  {activeProduct.productName}
+                </div>
               </div>
+
+              {/* Right Column: AI Fusion Image */}
+              <div className="border border-slate-150 rounded-xl relative flex flex-col items-center justify-center overflow-hidden p-1.5 bg-slate-50">
+                <span className="absolute top-1 left-1.5 z-10 bg-indigo-650/85 backdrop-blur-xs text-white font-bold text-[8.5px] px-1.5 py-0.5 rounded shadow-xs">
+                  右: AI融合图
+                </span>
+                
+                <div className="w-full flex-grow flex items-center justify-center overflow-hidden min-h-0">
+                  {activeImage.aiFusionStatus === "completed" && activeImage.aiFusionUrl ? (
+                    <img src={activeImage.aiFusionUrl} className="max-w-full max-h-full object-contain rounded shadow-xs cursor-zoom-in" alt="AI Fusion Completed" onClick={() => window.open(activeImage.aiFusionUrl, "_blank")} />
+                  ) : activeImage.aiFusionStatus === "running" || activeImage.aiFusionStatus === "queued" ? (
+                    <div className="flex flex-col items-center justify-center text-center p-2 space-y-1">
+                      <RefreshCw className="w-4 h-4 animate-spin text-blue-500" />
+                      <span className="text-[9px] text-slate-500 font-bold animate-pulse">RunningHub融合中...</span>
+                    </div>
+                  ) : activeImage.aiFusionStatus === "failed" ? (
+                    <div className="flex flex-col items-center justify-center text-center p-2 space-y-1">
+                      <XCircle className="w-4 h-4 text-rose-500" />
+                      <span className="text-[9px] text-rose-600 font-bold">融合失败</span>
+                      <span className="text-[8px] text-slate-400 select-all truncate max-w-[150px]" title={activeImage.aiFusionError}>{activeImage.aiFusionError}</span>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col justify-center items-center text-center p-2">
+                      <HelpCircle className="w-4.5 h-4.5 text-slate-355 mr-1" />
+                      <span className="text-[9px] text-slate-400 mt-1 font-semibold text-center">尚未启动 AI 融合</span>
+                    </div>
+                  )}
+                </div>
+                {activeImage.aiFusionStatus === "completed" && activeImage.aiFusionUrl && (
+                  <div className="absolute bottom-1 right-1 text-[7.5px] text-emerald-600 font-bold">
+                    完成
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* AI Fusion triggering controls */}
+            <div className="bg-slate-50/70 p-3 rounded-xl border border-slate-150 space-y-3 text-xs text-left">
+              <div className="flex justify-between items-center border-b border-slate-150 pb-1.5">
+                <span className="font-bold text-slate-700 flex items-center gap-1">
+                  ✨ RunningHub 智能场景融合 v2
+                </span>
+                <span className={`text-[8.5px] px-2 py-0.5 rounded-full font-black uppercase ${
+                  activeImage.aiFusionStatus === "completed" 
+                    ? "bg-emerald-100 text-emerald-850" 
+                    : activeImage.aiFusionStatus === "running" || activeImage.aiFusionStatus === "queued"
+                    ? "bg-blue-100 text-blue-850 animate-pulse"
+                    : activeImage.aiFusionStatus === "failed"
+                    ? "bg-rose-100 text-rose-850"
+                    : "bg-slate-200 text-slate-650"
+                }`}>
+                  状态: {
+                    activeImage.aiFusionStatus === "completed" ? "完成" : 
+                    activeImage.aiFusionStatus === "running" || activeImage.aiFusionStatus === "queued" ? "融合中" : 
+                    activeImage.aiFusionStatus === "failed" ? "失败" : "空闲"
+                  }
+                </span>
+              </div>
+
+              {/* Workflow selection block */}
+              <div className="space-y-1">
+                <span className="block text-[8.5px] text-slate-450 font-bold uppercase">选择融合工作流</span>
+                <select
+                  value={selectedWorkflowId}
+                  onChange={(e) => setSelectedWorkflowId(e.target.value)}
+                  className="w-full bg-white border border-slate-200 rounded-lg p-1.5 font-medium focus:ring-1 focus:ring-blue-500 cursor-pointer"
+                  disabled={activeImage.aiFusionStatus === "running" || activeImage.aiFusionStatus === "queued"}
+                >
+                  {PRESET_RUNNINGHUB_WORKFLOWS.map((wf) => (
+                    <option key={wf.id} value={wf.id}>
+                      {wf.name} ({wf.apiMode === "run_workflow_v2" ? "V2" : "Legacy V1"})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Advanced prompt configuration */}
+              <div className="space-y-2">
+                <div className="space-y-1">
+                  <span className="block text-[8.5px] text-slate-450 font-bold uppercase">AI 创意增强提示词 (Prompt)</span>
+                  <textarea
+                    rows={2}
+                    value={promptInput}
+                    onChange={(e) => setPromptInput(e.target.value)}
+                    className="w-full bg-white border border-slate-200 font-medium rounded-lg p-1.5 leading-relaxed text-[10.5px]"
+                    disabled={activeImage.aiFusionStatus === "running" || activeImage.aiFusionStatus === "queued"}
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-2 text-[10.5px]">
+                  <div>
+                    <span className="block text-[8.5px] text-slate-450 font-bold uppercase mb-1">重绘强度 (Denoise)</span>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0.05"
+                      max="0.95"
+                      value={denoiseInput}
+                      onChange={(e) => setDenoiseInput(parseFloat(e.target.value))}
+                      className="w-full bg-white border border-slate-200 rounded-lg p-1 font-mono font-bold"
+                      disabled={activeImage.aiFusionStatus === "running" || activeImage.aiFusionStatus === "queued"}
+                    />
+                  </div>
+                  <div>
+                    <span className="block text-[8.5px] text-slate-450 font-bold uppercase mb-1">随机种子 (Seed)</span>
+                    <input
+                      type="number"
+                      value={seedInput}
+                      onChange={(e) => setSeedInput(parseInt(e.target.value))}
+                      className="w-full bg-white border border-slate-200 rounded-lg p-1 font-mono font-bold"
+                      disabled={activeImage.aiFusionStatus === "running" || activeImage.aiFusionStatus === "queued"}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Trigger button */}
+              <button
+                type="button"
+                onClick={async () => {
+                  try {
+                    if (!renderedPreviewUrl) {
+                      alert("Canvas 尚未生成完毕，无法触发融合。");
+                      return;
+                    }
+                    
+                    // Mark as running
+                    const runningImg: GeneratedImage = {
+                      ...activeImage,
+                      aiFusionStatus: "running",
+                      aiFusionError: undefined,
+                      aiFusionWorkflowId: activeWorkflow.id
+                    };
+                    onUpdateImage(runningImg);
+                    
+                    // Trigger scene-fusion api (defaults to v2 upload and run_workflow_v2)
+                    const fusionResult = await runSceneFusion({
+                      baseImageDataUrl: renderedPreviewUrl,
+                      workflowConfig: {
+                        ...activeWorkflow,
+                        defaultPrompt: promptInput,
+                        defaultNegativePrompt: negPromptInput,
+                        defaultDenoise: denoiseInput
+                      },
+                      prompt: promptInput,
+                      negativePrompt: negPromptInput,
+                      denoise: denoiseInput,
+                      seed: seedInput
+                    });
+                    
+                    if (fusionResult && fusionResult.taskId) {
+                      // Save taskId to state
+                      const updatedImg: GeneratedImage = {
+                        ...activeImage,
+                        aiFusionTaskId: fusionResult.taskId,
+                        aiFusionStatus: "running",
+                        aiFusionWorkflowId: activeWorkflow.id
+                      };
+                      onUpdateImage(updatedImg);
+                    } else {
+                      throw new Error("接口未返回有效 taskId");
+                    }
+                  } catch (err: any) {
+                    console.error("AI Scene fusion failure:", err);
+                    const failedImg: GeneratedImage = {
+                      ...activeImage,
+                      aiFusionStatus: "failed",
+                      aiFusionError: err.message || "请求启动场景融合失败"
+                    };
+                    onUpdateImage(failedImg);
+                  }
+                }}
+                disabled={activeImage.aiFusionStatus === "running" || activeImage.aiFusionStatus === "queued"}
+                className="w-full py-2 px-3 bg-indigo-600 font-bold hover:bg-indigo-700 disabled:bg-slate-350 text-white rounded-lg flex justify-center items-center gap-1 shadow-xs transition-all focus:outline-none cursor-pointer"
+              >
+                <RefreshCw className={`w-3 h-3 ${
+                  activeImage.aiFusionStatus === "running" || activeImage.aiFusionStatus === "queued" ? "animate-spin" : ""
+                }`} />
+                <span>
+                  {activeImage.aiFusionStatus === "running" || activeImage.aiFusionStatus === "queued" 
+                    ? "云端工作流融合运算中..." 
+                    : "一键提交 RunningHub V2 融合"}
+                </span>
+              </button>
             </div>
 
             {/* Quality issue warn lists */}
             {activeImage.qualityIssues.length > 0 ? (
-              <div className="p-3 bg-amber-50/60 text-amber-900 text-[10px] rounded-xl border border-amber-200/80 leading-normal">
-                <span className="font-bold block flex items-center text-amber-800">
+              <div className="p-2.5 bg-amber-50 text-amber-900 text-[10px] rounded-xl border border-amber-200 leading-normal">
+                <span className="font-bold block flex items-center text-amber-805">
                   <AlertTriangle className="w-3.5 h-3.5 text-amber-600 mr-1 shrink-0" />
-                  云渲染物理安全层报警：
+                  设计规范安全层预警：
                 </span>
-                <ul className="list-disc pl-4 mt-1.5 space-y-1 font-medium text-amber-700">
+                <ul className="list-disc pl-4 mt-1 font-medium text-amber-700 space-y-0.5">
                   {activeImage.qualityIssues.map((issue, idx) => (
                     <li key={idx}>{issue}</li>
                   ))}
                 </ul>
               </div>
             ) : (
-              <div className="p-3 bg-emerald-55/40 text-emerald-800 text-[10px] rounded-xl border border-emerald-150 font-semibold leading-relaxed">
-                ✓ 智能物理检测完毕：该台历在模板中线圈完美契合，文案无重叠，适合100%全保真打印。
+              <div className="p-2.5 bg-emerald-50 text-emerald-800 text-[10px] rounded-xl border border-emerald-150 font-semibold leading-relaxed">
+                ✓ 智能印画检测通过：各槽位完美契合，文案安全，100% 打印保真。
               </div>
             )}
 
             {/* Manual reposition sliders sliders */}
-            <div className="space-y-4 border-t border-slate-100 pt-4 flex-1 flex flex-col min-h-0 text-left text-xs">
-              <h5 className="text-[10px] tracking-wider uppercase font-bold text-slate-400 block flex items-center">
-                <Sliders className="w-3.5 h-3.5 mr-1.5 text-slate-450" />
-                产品槽相对坐标/比例物理修饰
+            <div className="space-y-2 border-t border-slate-100 pt-3 text-xs text-left">
+              <h5 className="text-[9px] tracking-wider uppercase font-bold text-slate-450 flex items-center">
+                <Sliders className="w-3.5 h-3.5 mr-1 text-slate-450" />
+                产品槽位置物理微调
               </h5>
 
-              {/* Adjust horizontal X relative Offset Slider */}
-              <div className="space-y-1">
-                <div className="flex justify-between text-[11px] text-slate-650">
-                  <span>水平位置 X 轴修正偏移</span>
-                  <span className="font-mono font-bold text-blue-600">{currentXOffset > 0 ? `+${currentXOffset}` : currentXOffset}%</span>
+              <div className="grid grid-cols-2 gap-3 mt-1.5 text-[10.5px]">
+                <div className="space-y-0.5">
+                  <div className="flex justify-between text-[10px] text-slate-600">
+                    <span>水平 X 轴修正</span>
+                    <span className="font-mono font-bold text-blue-600">{currentXOffset > 0 ? `+${currentXOffset}` : currentXOffset}%</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="-15"
+                    max="15"
+                    value={currentXOffset}
+                    onChange={(e) => setCurrentXOffset(parseInt(e.target.value))}
+                    className="w-full h-1 bg-slate-150 rounded appearance-none cursor-pointer accent-blue-600"
+                  />
                 </div>
-                <input
-                  type="range"
-                  min="-15"
-                  max="15"
-                  value={currentXOffset}
-                  onChange={(e) => setCurrentXOffset(parseInt(e.target.value))}
-                  className="w-full h-1 bg-slate-150 rounded appearance-none cursor-pointer accent-blue-600"
-                />
+
+                <div className="space-y-0.5">
+                  <div className="flex justify-between text-[10px] text-slate-600">
+                    <span>垂直 Y 轴修正</span>
+                    <span className="font-mono font-bold text-blue-600">{currentYOffset > 0 ? `+${currentYOffset}` : currentYOffset}%</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="-15"
+                    max="15"
+                    value={currentYOffset}
+                    onChange={(e) => setCurrentYOffset(parseInt(e.target.value))}
+                    className="w-full h-1 bg-slate-150 rounded appearance-none cursor-pointer accent-blue-600"
+                  />
+                </div>
               </div>
 
-              {/* Adjust vertical Y relative Offset Slider */}
-              <div className="space-y-1">
-                <div className="flex justify-between text-[11px] text-slate-650">
-                  <span>垂直高度 Y 轴修切偏移</span>
-                  <span className="font-mono font-bold text-blue-600">{currentYOffset > 0 ? `+${currentYOffset}` : currentYOffset}%</span>
-                </div>
-                <input
-                  type="range"
-                  min="-15"
-                  max="15"
-                  value={currentYOffset}
-                  onChange={(e) => setCurrentYOffset(parseInt(e.target.value))}
-                  className="w-full h-1 bg-slate-150 rounded appearance-none cursor-pointer accent-blue-600"
-                />
-              </div>
-
-              {/* Adjust scale sizing slider */}
-              <div className="space-y-1">
-                <div className="flex justify-between text-[11px] text-slate-650">
-                  <span>产品主体大小缩放因子</span>
+              <div className="space-y-0.5">
+                <div className="flex justify-between text-[10px] text-slate-600">
+                  <span>产品图层缩放比例</span>
                   <span className="font-mono font-bold text-indigo-650">{Math.round(currentScale * 100)}%</span>
                 </div>
                 <input
@@ -426,29 +707,29 @@ export const ReviewCenter: React.FC<ReviewCenterProps> = ({
             </div>
 
             {/* Quality Standard list (checklist in specs) */}
-            <div className="border-t border-slate-100 pt-4 text-[10px] text-slate-500 space-y-1 bg-slate-50/50 p-2.5 rounded-lg border border-slate-100/80">
-              <span className="font-bold text-slate-700 block mb-1">人工复核规程 checklist：</span>
-              <div className="grid grid-cols-2 gap-2 text-slate-550 font-medium">
-                <div>🎨 产品清晰：一致</div>
-                <div>📏 比例正常：防畸变</div>
-                <div>🚫 线圈防遮：查coil孔</div>
-                <div>✏️ 文案完整：防裁切</div>
+            <div className="border-t border-slate-100 pt-3 text-[9px] text-slate-500 space-y-1 bg-slate-50/50 p-2 rounded-lg border border-slate-100">
+              <span className="font-bold text-slate-700 block mb-0.5">人工复排 checklist：</span>
+              <div className="grid grid-cols-2 gap-1 text-slate-550 font-medium">
+                <div>🎨 场景自然：AI增强</div>
+                <div>🚫 反白溢出：不穿模</div>
+                <div>🚫 安全遮挡：线圈完美</div>
+                <div>✏️ 细节完整：不重绘</div>
               </div>
             </div>
           </div>
 
           {/* Quick decisions triggers */}
-          <div className="grid grid-cols-2 gap-3 mt-4 pt-4 border-t border-slate-100 shrink-0">
+          <div className="grid grid-cols-2 gap-3 mt-4 pt-3 border-t border-slate-100 shrink-0">
             <button
               onClick={() => saveAuditChange("approved")}
-              className="px-3 py-2 bg-emerald-600 hover:bg-emerald-700 font-bold text-white rounded-lg text-xs flex justify-center items-center gap-1.5 shadow-sm transition-all hover:scale-[1.01] cursor-pointer"
+              className="px-3 py-2 bg-emerald-600 hover:bg-emerald-700 font-bold text-white rounded-lg text-xs flex justify-center items-center gap-1 shadow-sm transition-all hover:scale-[1.01] cursor-pointer"
             >
               <CheckSquare className="w-3.5 h-3.5 shrink-0" />
               <span>通过审核</span>
             </button>
             <button
               onClick={() => saveAuditChange("rejected")}
-              className="px-3 py-2 bg-rose-600 hover:bg-rose-700 font-bold text-white rounded-lg text-xs flex justify-center items-center gap-1.5 shadow-sm transition-all hover:scale-[1.01] cursor-pointer"
+              className="px-3 py-2 bg-rose-600 hover:bg-rose-700 font-bold text-white rounded-lg text-xs flex justify-center items-center gap-1 shadow-sm transition-all hover:scale-[1.01] cursor-pointer"
             >
               <XCircle className="w-3.5 h-3.5 shrink-0" />
               <span>拦截退回</span>

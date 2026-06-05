@@ -89,53 +89,89 @@ app.post("/api/runninghub/upload", upload.single("file"), async (req, res) => {
 // 2. POST /api/runninghub/create-task
 app.post("/api/runninghub/create-task", async (req, res) => {
   try {
-    const { workflowId, nodeInfoList } = req.body;
+    const { workflowId, nodeInfoList, apiMode = "run_workflow_v2" } = req.body;
 
     if (isApiKeyMissingOrPlaceholder) {
       console.warn("RunningHub API Key is missing. Simulating task creation.");
       res.json({
-        taskId: `task_mock_${Date.now()}`,
+        taskId: apiMode === "comfyui_openapi" ? `task_mock_${Date.now()}` : `task_mock_v2_${Date.now()}`,
         taskStatus: "queued"
       });
       return;
     }
 
     const apiBase = process.env.RUNNINGHUB_API_BASE || "https://www.runninghub.cn";
-    const createUrl = `${apiBase}/task/openapi/create`;
 
-    const payload = {
-      apikey: RUNNINGHUB_API_KEY,
-      workflowId,
-      nodeInfoList
-    };
+    if (apiMode === "comfyui_openapi") {
+      const createUrl = `${apiBase}/task/openapi/create`;
+      const payload = {
+        apikey: RUNNINGHUB_API_KEY,
+        workflowId,
+        nodeInfoList
+      };
 
-    const hubRes = await fetch(createUrl, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "apikey": RUNNINGHUB_API_KEY,
-        "api-key": RUNNINGHUB_API_KEY
-      },
-      body: JSON.stringify(payload)
-    });
+      const hubRes = await fetch(createUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "apikey": RUNNINGHUB_API_KEY,
+          "api-key": RUNNINGHUB_API_KEY
+        },
+        body: JSON.stringify(payload)
+      });
 
-    if (!hubRes.ok) {
-      const errText = await hubRes.text();
-      res.status(hubRes.status).json({ error: `RunningHub task create failure: ${errText}` });
-      return;
+      if (!hubRes.ok) {
+        const errText = await hubRes.text();
+        res.status(hubRes.status).json({ error: `RunningHub task create failure: ${errText}` });
+        return;
+      }
+
+      const data = await hubRes.json();
+      const taskId = data.data?.taskId || data.taskId;
+      const taskStatus = data.data?.taskStatus || data.taskStatus || "queued";
+
+      if (!taskId) {
+        res.status(500).json({ error: "Failed to extract taskId from RunningHub response", details: data });
+        return;
+      }
+
+      res.json({ taskId, taskStatus });
+    } else {
+      // API V2 run workflow
+      const createUrl = `${apiBase}/openapi/v2/run/workflow/${workflowId}`;
+      const payload = {
+        addMetadata: true,
+        nodeInfoList,
+        instanceType: "default",
+        usePersonalQueue: false
+      };
+
+      const hubRes = await fetch(createUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${RUNNINGHUB_API_KEY}`
+        },
+        body: JSON.stringify(payload)
+      });
+
+      if (!hubRes.ok) {
+        const errText = await hubRes.text();
+        res.status(hubRes.status).json({ error: `RunningHub task create V2 failure: ${errText}` });
+        return;
+      }
+
+      const data = await hubRes.json();
+      const taskId = data?.taskId || data?.data?.taskId || (data?.data && typeof data?.data === "string" ? data?.data : "");
+      const taskStatus = data?.status || data?.data?.status || "queued";
+
+      if (!taskId) {
+        res.status(500).json({ error: "Failed to extract taskId from RunningHub V2 response", details: data });
+        return;
+      }
+
+      res.json({ taskId, taskStatus });
     }
-
-    const data = await hubRes.json();
-    // Expected structure: { code: 0, msg: "success", data: { taskId: "...", taskStatus: "..." } }
-    const taskId = data.data?.taskId || data.taskId;
-    const taskStatus = data.data?.taskStatus || data.taskStatus || "queued";
-
-    if (!taskId) {
-      res.status(500).json({ error: "Failed to extract taskId from RunningHub response", details: data });
-      return;
-    }
-
-    res.json({ taskId, taskStatus });
   } catch (err: any) {
     console.error("Error in /api/runninghub/create-task:", err);
     res.status(500).json({ error: err.message || "Internal Server Error" });
@@ -145,7 +181,7 @@ app.post("/api/runninghub/create-task", async (req, res) => {
 // 3. POST /api/runninghub/query-result
 app.post("/api/runninghub/query-result", async (req, res) => {
   try {
-    const { taskId } = req.body;
+    const { taskId, apiMode = "run_workflow_v2" } = req.body;
 
     if (!taskId) {
       res.status(400).json({ error: "Missing taskId" });
@@ -154,7 +190,9 @@ app.post("/api/runninghub/query-result", async (req, res) => {
 
     if (taskId.startsWith("task_mock_")) {
       // Simulate polling progress
-      const elapsed = Date.now() - parseInt(taskId.split("_")[2] || "0");
+      const isV2 = taskId.startsWith("task_mock_v2_");
+      const timePart = isV2 ? taskId.split("_")[3] : taskId.split("_")[2];
+      const elapsed = Date.now() - parseInt(timePart || "0");
       if (elapsed < 3000) {
         res.json({ status: "running", progress: 40 });
       } else {
@@ -169,59 +207,104 @@ app.post("/api/runninghub/query-result", async (req, res) => {
     }
 
     const apiBase = process.env.RUNNINGHUB_API_BASE || "https://www.runninghub.cn";
-    const queryUrl = `${apiBase}/task/openapi/outputs`;
 
-    const hubRes = await fetch(queryUrl, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "apikey": RUNNINGHUB_API_KEY,
-        "api-key": RUNNINGHUB_API_KEY
-      },
-      body: JSON.stringify({
-        apikey: RUNNINGHUB_API_KEY,
-        taskId
-      })
-    });
+    if (apiMode === "comfyui_openapi") {
+      const queryUrl = `${apiBase}/task/openapi/outputs`;
 
-    if (!hubRes.ok) {
-      const errText = await hubRes.text();
-      res.status(hubRes.status).json({ error: `RunningHub query failure: ${errText}` });
-      return;
-    }
+      const hubRes = await fetch(queryUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "apikey": RUNNINGHUB_API_KEY,
+          "api-key": RUNNINGHUB_API_KEY
+        },
+        body: JSON.stringify({
+          apikey: RUNNINGHUB_API_KEY,
+          taskId
+        })
+      });
 
-    const result = await hubRes.json();
-    // Structure: { code: 0, msg: "...", data: { taskStatus: "completed", outputs: [ ... ] or outputUrl: "..." } }
-    const fileStatus = result.data?.taskStatus || result.taskStatus || "running";
-    
-    let status: "idle" | "uploading" | "queued" | "running" | "completed" | "failed" = "running";
-    if (fileStatus === "completed" || fileStatus === "success" || fileStatus === "done") {
-      status = "completed";
-    } else if (fileStatus === "failed" || fileStatus === "fail" || fileStatus === "error") {
-      status = "failed";
-    } else if (fileStatus === "queued" || fileStatus === "waiting") {
-      status = "queued";
-    }
-
-    let outputUrl = "";
-    if (result.data?.outputs && Array.isArray(result.data.outputs)) {
-      const firstOut = result.data.outputs[0];
-      if (typeof firstOut === "string") {
-        outputUrl = firstOut;
-      } else if (firstOut && typeof firstOut === "object") {
-        outputUrl = firstOut.imageUrl || firstOut.fileUrl || firstOut.url || "";
+      if (!hubRes.ok) {
+        const errText = await hubRes.text();
+        res.status(hubRes.status).json({ error: `RunningHub query failure: ${errText}` });
+        return;
       }
-    } else if (result.data?.outputUrl) {
-      outputUrl = result.data.outputUrl;
-    } else if (typeof result.data === "string" && result.data.startsWith("http")) {
-      outputUrl = result.data;
-    }
 
-    res.json({
-      status,
-      outputUrl,
-      errorMessage: result.data?.error || result.msg || ""
-    });
+      const result = await hubRes.json();
+      const fileStatus = result.data?.taskStatus || result.taskStatus || "running";
+      
+      let status: "idle" | "uploading" | "queued" | "running" | "completed" | "failed" = "running";
+      if (fileStatus === "completed" || fileStatus === "success" || fileStatus === "done") {
+        status = "completed";
+      } else if (fileStatus === "failed" || fileStatus === "fail" || fileStatus === "error") {
+        status = "failed";
+      } else if (fileStatus === "queued" || fileStatus === "waiting") {
+        status = "queued";
+      }
+
+      let outputUrl = "";
+      if (result.data?.outputs && Array.isArray(result.data.outputs)) {
+        const firstOut = result.data.outputs[0];
+        if (typeof firstOut === "string") {
+          outputUrl = firstOut;
+        } else if (firstOut && typeof firstOut === "object") {
+          outputUrl = firstOut.imageUrl || firstOut.fileUrl || firstOut.url || "";
+        }
+      } else if (result.data?.outputUrl) {
+        outputUrl = result.data.outputUrl;
+      } else if (typeof result.data === "string" && result.data.startsWith("http")) {
+        outputUrl = result.data;
+      }
+
+      res.json({
+        status,
+        outputUrl,
+        errorMessage: result.data?.error || result.msg || ""
+      });
+    } else {
+      // API V2 query
+      const queryUrl = `${apiBase}/openapi/v2/query`;
+
+      const hubRes = await fetch(queryUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${RUNNINGHUB_API_KEY}`
+        },
+        body: JSON.stringify({
+          taskId
+        })
+      });
+
+      if (!hubRes.ok) {
+        const errText = await hubRes.text();
+        res.status(hubRes.status).json({ error: `RunningHub V2 query failure: ${errText}` });
+        return;
+      }
+
+      const result = await hubRes.json();
+      // Parsing response
+      const statusValue = result.status;
+      const outputUrl = result.results?.[0]?.url || "";
+
+      let status: "idle" | "uploading" | "queued" | "running" | "completed" | "failed" = "running";
+      let errorMessage = "";
+
+      if (statusValue === "SUCCESS" && outputUrl) {
+        status = "completed";
+      } else if (statusValue === "RUNNING" || statusValue === "QUEUED") {
+        status = "running";
+      } else if (statusValue === "FAILED" || result.errorCode) {
+        status = "failed";
+        errorMessage = result.errorMessage || "RunningHub任务失败";
+      }
+
+      res.json({
+        status,
+        outputUrl,
+        errorMessage
+      });
+    }
   } catch (err: any) {
     console.error("Error in /api/runninghub/query-result:", err);
     res.status(500).json({ error: err.message || "Internal Server Error" });
@@ -243,12 +326,13 @@ app.post("/api/runninghub/scene-fusion", async (req, res) => {
       return;
     }
 
-    let fileName = "";
+    const apiMode = workflowConfig.apiMode || "run_workflow_v2";
+    const workflowId = workflowConfig.workflowId;
 
     if (isApiKeyMissingOrPlaceholder) {
       console.warn("RunningHub API Key is missing. Creating pre-mocked task.");
-      fileName = `simulated_file_canvas_${Date.now()}.png`;
-      res.json({ taskId: `task_mock_${Date.now()}` });
+      const taskId = apiMode === "comfyui_openapi" ? `task_mock_${Date.now()}` : `task_mock_v2_${Date.now()}`;
+      res.json({ taskId });
       return;
     }
 
@@ -274,7 +358,8 @@ app.post("/api/runninghub/scene-fusion", async (req, res) => {
       method: "POST",
       headers: {
         "apikey": RUNNINGHUB_API_KEY,
-        "api-key": RUNNINGHUB_API_KEY
+        "api-key": RUNNINGHUB_API_KEY,
+        "Authorization": `Bearer ${RUNNINGHUB_API_KEY}`
       },
       body: hubFormData
     });
@@ -286,25 +371,30 @@ app.post("/api/runninghub/scene-fusion", async (req, res) => {
     }
 
     const uploadData = await uploadRes.json();
-    fileName = uploadData.data?.fileName || uploadData.fileName || (uploadData.data && typeof uploadData.data === "string" ? uploadData.data : "");
+    const fileName = uploadData.data?.fileName || uploadData.fileName || (uploadData.data && typeof uploadData.data === "string" ? uploadData.data : "");
     if (!fileName) {
       res.status(500).json({ error: "Could not retrieve uploaded fileName from RunningHub", details: uploadData });
       return;
     }
 
     // Step 3: Construct Dynamic nodeInfoList
-    const nodeInfoList = [
-      {
+    const nodeInfoList = [];
+
+    if (workflowConfig.baseImageNodeId) {
+      nodeInfoList.push({
         nodeId: workflowConfig.baseImageNodeId,
         fieldName: "image",
         fieldValue: fileName
-      },
-      {
+      });
+    }
+
+    if (workflowConfig.promptNodeId) {
+      nodeInfoList.push({
         nodeId: workflowConfig.promptNodeId,
         fieldName: "text",
         fieldValue: prompt
-      }
-    ];
+      });
+    }
 
     if (workflowConfig.negativePromptNodeId) {
       nodeInfoList.push({
@@ -330,39 +420,75 @@ app.post("/api/runninghub/scene-fusion", async (req, res) => {
       });
     }
 
-    // Step 4: Create Task on RunningHub
-    const createUrl = `${apiBase}/task/openapi/create`;
-    const taskPayload = {
-      apikey: RUNNINGHUB_API_KEY,
-      workflowId: workflowConfig.workflowId,
-      nodeInfoList
-    };
+    if (apiMode === "comfyui_openapi") {
+      // Step 4: Create Task on RunningHub
+      const createUrl = `${apiBase}/task/openapi/create`;
+      const taskPayload = {
+        apikey: RUNNINGHUB_API_KEY,
+        workflowId,
+        nodeInfoList
+      };
 
-    const taskRes = await fetch(createUrl, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "apikey": RUNNINGHUB_API_KEY,
-        "api-key": RUNNINGHUB_API_KEY
-      },
-      body: JSON.stringify(taskPayload)
-    });
+      const taskRes = await fetch(createUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "apikey": RUNNINGHUB_API_KEY,
+          "api-key": RUNNINGHUB_API_KEY
+        },
+        body: JSON.stringify(taskPayload)
+      });
 
-    if (!taskRes.ok) {
-      const errText = await taskRes.text();
-      res.status(taskRes.status).json({ error: `Task creation on RunningHub failed: ${errText}` });
-      return;
+      if (!taskRes.ok) {
+        const errText = await taskRes.text();
+        res.status(taskRes.status).json({ error: `Task creation on RunningHub failed: ${errText}` });
+        return;
+      }
+
+      const taskData = await taskRes.json();
+      const taskId = taskData.data?.taskId || taskData.taskId;
+
+      if (!taskId) {
+        res.status(500).json({ error: "Task created but no taskId was returned", details: taskData });
+        return;
+      }
+
+      res.json({ taskId });
+    } else {
+      // API V2 run workflow
+      const createUrl = `${apiBase}/openapi/v2/run/workflow/${workflowId}`;
+      const taskPayload = {
+        addMetadata: true,
+        nodeInfoList,
+        instanceType: "default",
+        usePersonalQueue: false
+      };
+
+      const taskRes = await fetch(createUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${RUNNINGHUB_API_KEY}`
+        },
+        body: JSON.stringify(taskPayload)
+      });
+
+      if (!taskRes.ok) {
+        const errText = await taskRes.text();
+        res.status(taskRes.status).json({ error: `V2 Task creation on RunningHub failed: ${errText}` });
+        return;
+      }
+
+      const taskData = await taskRes.json();
+      const taskId = taskData?.taskId || taskData?.data?.taskId || (taskData?.data && typeof taskData?.data === "string" ? taskData.data : "");
+
+      if (!taskId) {
+        res.status(500).json({ error: "V2 Task created but no taskId was returned", details: taskData });
+        return;
+      }
+
+      res.json({ taskId });
     }
-
-    const taskData = await taskRes.json();
-    const taskId = taskData.data?.taskId || taskData.taskId;
-
-    if (!taskId) {
-      res.status(500).json({ error: "Task created but no taskId was returned", details: taskData });
-      return;
-    }
-
-    res.json({ taskId });
   } catch (err: any) {
     console.error("Error in /api/runninghub/scene-fusion:", err);
     res.status(500).json({ error: err.message || "Internal Server Error" });
