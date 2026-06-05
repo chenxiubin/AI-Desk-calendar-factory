@@ -134,4 +134,36 @@ export interface GeneratedImage {
   horizontalOffset?: number;
   verticalOffset?: number;
   scaleFactor?: number;
+  // RunningHub AI Fusion extensions
+  aiFusionUrl?: string;
+  aiFusionTaskId?: string;
+  aiFusionStatus?: "none" | "queued" | "running" | "completed" | "failed";
+  aiFusionError?: string;
+  aiFusionWorkflowId?: string;
+}
+
+export interface RunningHubWorkflowConfig {
+  id: string;
+  name: string;
+  workflowId: string;
+  modelType: "flux_kontext" | "qwen_fusion_lora" | "qwen_image_edit";
+  baseImageNodeId: string;
+  maskNodeId?: string;
+  promptNodeId: string;
+  negativePromptNodeId?: string;
+  seedNodeId?: string;
+  denoiseNodeId?: string;
+  outputNodeId?: string;
+  defaultPrompt: string;
+  defaultNegativePrompt: string;
+  defaultDenoise: number;
+  enabled: boolean;
+}
+
+export interface RunningHubTaskState {
+  taskId: string;
+  status: "idle" | "uploading" | "queued" | "running" | "completed" | "failed";
+  progress?: number;
+  errorMessage?: string;
+  outputUrl?: string;
 }
