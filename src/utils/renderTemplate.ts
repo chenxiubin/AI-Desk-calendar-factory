@@ -1115,3 +1115,60 @@ export function getTemplateComponents(template: Template): TemplateComponent[] {
 
   return components;
 }
+
+/**
+ * 1. Only renders: scene_base, product_slot. No shadows, text, badges.
+ */
+export async function renderFusionBaseImage(
+  product: Product,
+  template: Template,
+  offsets?: { hOffset?: number; vOffset?: number; scale?: number }
+): Promise<string> {
+  return renderTemplateToCanvas(product, template, offsets, "base_only");
+}
+
+/**
+ * 2. Renders: aiFusionUrl base image first, then overlays text, badges, headers.
+ */
+export async function renderFinalCompositeImage(
+  aiFusionUrl: string,
+  template: Template,
+  product?: Product,
+  offsets?: { hOffset?: number; vOffset?: number; scale?: number }
+): Promise<string> {
+  const dummyProduct = product || {
+    id: "temp",
+    productCode: "TEMP-001",
+    productName: "台历/挂历",
+    productType: "calendar",
+    seriesName: "新中式",
+    year: "2026",
+    size: "240x170mm",
+    innerPageSize: "240x135mm",
+    adAreaSize: "240x35mm",
+    materialCover: "铜版纸",
+    materialInner: "超感纸",
+    thickness: "12mm",
+    pageCount: 13,
+    packageType: "彩盒",
+    weight: "0.45kg",
+    boxQuantity: 40,
+    assets: [],
+    status: "completed",
+    themeColor: "#854D0E",
+    illustrationType: "landscape"
+  } as Product;
+  return renderTemplateToCanvas(dummyProduct, template, offsets, "all", aiFusionUrl);
+}
+
+/**
+ * 3. Renders: full standard layout including base, product, text and decor components together.
+ */
+export async function renderFullPreviewImage(
+  product: Product,
+  template: Template,
+  offsets?: { hOffset?: number; vOffset?: number; scale?: number }
+): Promise<string> {
+  return renderTemplateToCanvas(product, template, offsets, "all");
+}
+

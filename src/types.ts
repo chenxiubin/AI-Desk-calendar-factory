@@ -90,10 +90,17 @@ export interface ExportSettings {
   height: number;
 }
 
+export type TemplateComponentType =
+  | "scene_base"
+  | "product_slot"
+  | "text_overlay"
+  | "decor_overlay"
+  | "logo_overlay";
+
 export interface TemplateComponent {
   id: string;
   name: string;
-  type: "scene_base" | "product_slot" | "text_overlay" | "decor_overlay" | "logo_overlay";
+  type: TemplateComponentType;
   imageUrl?: string;
   x: number;
   y: number;
@@ -150,7 +157,9 @@ export interface GeneratedImage {
   verticalOffset?: number;
   scaleFactor?: number;
   // RunningHub AI Fusion extensions
+  aiFusionBaseUrl?: string;
   aiFusionUrl?: string;
+  finalCompositeUrl?: string;
   aiFusionTaskId?: string;
   aiFusionStatus?: "none" | "queued" | "running" | "completed" | "failed";
   aiFusionError?: string;

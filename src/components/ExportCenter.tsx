@@ -92,10 +92,11 @@ export const ExportCenter: React.FC<ExportCenterProps> = ({
 
           // Physically trigger sequential downloads of all true dynamically-generated images in parallel/staggered layout!
           exportableImages.forEach((img, idx) => {
-            if (img.fileUrl && img.fileUrl !== "url") {
+            const targetDownloadUrl = img.finalCompositeUrl || img.aiFusionUrl || img.fileUrl;
+            if (targetDownloadUrl && targetDownloadUrl !== "url") {
               setTimeout(() => {
                 const link = document.createElement("a");
-                link.href = img.fileUrl;
+                link.href = targetDownloadUrl;
                 link.download = getCompiledFileName(img);
                 document.body.appendChild(link);
                 link.click();
@@ -255,16 +256,19 @@ export const ExportCenter: React.FC<ExportCenterProps> = ({
                     <span className="text-[9px] bg-emerald-50 text-emerald-800 border-emerald-100 border px-1.5 py-0.5 rounded-full font-bold">
                       质检通过
                     </span>
-                    {img.fileUrl && img.fileUrl !== "url" && (
-                      <a
-                        href={img.fileUrl}
-                        download={getCompiledFileName(img)}
-                        className="p-1 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded transition-all cursor-pointer"
-                        title="下载此张"
-                      >
-                        <FileDown className="w-4 h-4" />
-                      </a>
-                    )}
+                    {(() => {
+                      const targetImgUrl = img.finalCompositeUrl || img.aiFusionUrl || img.fileUrl;
+                      return targetImgUrl && targetImgUrl !== "url" ? (
+                        <a
+                          href={targetImgUrl}
+                          download={getCompiledFileName(img)}
+                          className="p-1 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded transition-all cursor-pointer"
+                          title="下载此张"
+                        >
+                          <FileDown className="w-4 h-4" />
+                        </a>
+                      ) : null;
+                    })()}
                   </div>
                 </div>
               ))}

@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { GeneratedImage, Product, Template } from "../types";
 import { VisualCalendar } from "./VisualCalendar";
-import { renderTemplateToCanvas, getTemplateComponents } from "../utils/renderTemplate";
+import { renderTemplateToCanvas, getTemplateComponents, renderFusionBaseImage, renderFinalCompositeImage, renderFullPreviewImage } from "../utils/renderTemplate";
 import { PRESET_RUNNINGHUB_WORKFLOWS } from "../data";
 import { queryRunningHubOutputs, runSceneFusion } from "../services/runninghubClient";
 import {
@@ -16,7 +16,8 @@ import {
   CheckSquare,
   HelpCircle,
   RefreshCw,
-  FolderLock
+  FolderLock,
+  Layers
 } from "lucide-react";
 
 interface ReviewCenterProps {
@@ -67,11 +68,11 @@ export const ReviewCenter: React.FC<ReviewCenterProps> = ({
     let active = true;
     if (activeImage && activeProduct && activeTemplate) {
       // 1. Render Base layout (only scene and product, without shadows and texts) for RunningHub API submissions
-      renderTemplateToCanvas(activeProduct, activeTemplate, {
+      renderFusionBaseImage(activeProduct, activeTemplate, {
         hOffset: currentXOffset,
         vOffset: currentYOffset,
         scale: currentScale
-      }, "base_only")
+      })
         .then((url) => {
           if (active) {
             setRenderedPreviewUrl(url);
@@ -83,11 +84,19 @@ export const ReviewCenter: React.FC<ReviewCenterProps> = ({
 
       // 2. Render Final layout (integrates Completed RunningHub fused output with high-performance overlay texts and logos)
       const fusedUrl = activeImage.aiFusionStatus === "completed" ? activeImage.aiFusionUrl : undefined;
-      renderTemplateToCanvas(activeProduct, activeTemplate, {
-        hOffset: currentXOffset,
-        vOffset: currentYOffset,
-        scale: currentScale
-      }, "all", fusedUrl)
+      const renderPromise = fusedUrl 
+        ? renderFinalCompositeImage(fusedUrl, activeTemplate, activeProduct, {
+            hOffset: currentXOffset,
+            vOffset: currentYOffset,
+            scale: currentScale
+          })
+        : renderFullPreviewImage(activeProduct, activeTemplate, {
+            hOffset: currentXOffset,
+            vOffset: currentYOffset,
+            scale: currentScale
+          });
+
+      renderPromise
         .then((url) => {
           if (active) {
             setFinalCompositedUrl(url);
@@ -163,10 +172,21 @@ export const ReviewCenter: React.FC<ReviewCenterProps> = ({
             
             if (res.status === "completed" && res.outputUrl) {
               clearInterval(poll);
+              const matchedTemplate = templates.find((t) => t.id === img.templateId);
+              const matchedProduct = products.find((p) => p.id === img.productId);
+              let finalComp = "";
+              if (matchedTemplate) {
+                try {
+                  finalComp = await renderFinalCompositeImage(res.outputUrl, matchedTemplate, matchedProduct);
+                } catch (err) {
+                  console.error("Auto renderFinalCompositeImage on complete failed:", err);
+                }
+              }
               const updated = {
                 ...img,
                 aiFusionStatus: "completed" as const,
                 aiFusionUrl: res.outputUrl,
+                finalCompositeUrl: finalComp || res.outputUrl,
                 aiFusionError: undefined
               };
               onUpdateImage(updated);
@@ -465,14 +485,14 @@ export const ReviewCenter: React.FC<ReviewCenterProps> = ({
                   1. 基础排版底图
                 </span>
                 <div className="w-full flex-grow flex items-center justify-center overflow-hidden min-h-0">
-                  {renderedPreviewUrl ? (
-                    <img src={renderedPreviewUrl} className="max-w-full max-h-full object-contain rounded shadow-xs" alt="Live Original Canvas" />
+                  {activeImage.aiFusionBaseUrl || renderedPreviewUrl ? (
+                    <img src={activeImage.aiFusionBaseUrl || renderedPreviewUrl} className="max-w-full max-h-full object-contain rounded shadow-xs" alt="Fusion Base Canvas" />
                   ) : (
                     <div className="text-[9px] text-zinc-400">正在生成...</div>
                   )}
                 </div>
-                <div className="absolute bottom-1 left-1.5 text-[7px] text-zinc-450 font-bold truncate max-w-[120px] scale-90 origin-bottom-left">
-                  底图+产品槽(去阴影)
+                <div className="absolute bottom-1 left-1.5 text-[7px] text-zinc-455 font-bold truncate max-w-[125px] scale-90 origin-bottom-left">
+                  场景+产品槽(去阴影)
                 </div>
               </div>
 
@@ -515,8 +535,8 @@ export const ReviewCenter: React.FC<ReviewCenterProps> = ({
                   ★ 3. 最终电商图
                 </span>
                 <div className="w-full flex-grow flex items-center justify-center overflow-hidden min-h-0">
-                  {finalCompositedUrl ? (
-                    <img src={finalCompositedUrl} className="max-w-full max-h-full object-contain rounded shadow-xs cursor-zoom-in" alt="Final Overlay Composited" onClick={() => window.open(finalCompositedUrl, "_blank")} />
+                  {activeImage.finalCompositeUrl || finalCompositedUrl ? (
+                    <img src={activeImage.finalCompositeUrl || finalCompositedUrl} className="max-w-full max-h-full object-contain rounded shadow-xs cursor-zoom-in" alt="Final Overlay Composited" onClick={() => window.open(activeImage.finalCompositeUrl || finalCompositedUrl, "_blank")} />
                   ) : (
                     <div className="text-[9px] text-zinc-400">正在渲染...</div>
                   )}
@@ -663,81 +683,198 @@ export const ReviewCenter: React.FC<ReviewCenterProps> = ({
                 </div>
               </div>
 
-              {/* Trigger button */}
-              <button
-                type="button"
-                onClick={async () => {
-                  try {
-                    if (!renderedPreviewUrl) {
-                      alert("Canvas 尚未生成完毕，无法触发融合。");
-                      return;
-                    }
-                    
-                    // Mark as running
-                    const runningImg: GeneratedImage = {
-                      ...activeImage,
-                      aiFusionStatus: "running",
-                      aiFusionError: undefined,
-                      aiFusionWorkflowId: activeWorkflow.id
-                    };
-                    onUpdateImage(runningImg);
-                    
-                    // Trigger scene-fusion api (defaults to v2 upload and run_workflow_v2)
-                    const fusionResult = await runSceneFusion({
-                      baseImageDataUrl: renderedPreviewUrl,
-                      workflowConfig: {
-                        ...activeWorkflow,
-                        defaultPrompt: promptInput,
-                        defaultNegativePrompt: negPromptInput,
-                        defaultDenoise: denoiseInput,
-                        defaultSteps: stepsInput,
-                        defaultCfg: cfgInput
-                      },
-                      prompt: promptInput,
-                      negativePrompt: negPromptInput,
-                      denoise: denoiseInput,
-                      seed: seedInput,
-                      steps: stepsInput,
-                      cfg: cfgInput
-                    });
-                    
-                    if (fusionResult && fusionResult.taskId) {
-                      if (fusionResult.warning) {
-                        console.warn("[RunningHub Warning]:", fusionResult.warning);
-                      }
-                      // Save taskId to state
-                      const updatedImg: GeneratedImage = {
-                        ...activeImage,
-                        aiFusionTaskId: fusionResult.taskId,
-                        aiFusionStatus: "running",
-                        aiFusionWorkflowId: activeWorkflow.id
-                      };
-                      onUpdateImage(updatedImg);
-                    } else {
-                      throw new Error("接口未返回有效 taskId");
-                    }
-                  } catch (err: any) {
-                    console.error("AI Scene fusion failure:", err);
-                    const failedImg: GeneratedImage = {
-                      ...activeImage,
-                      aiFusionStatus: "failed",
-                      aiFusionError: err.message || "请求启动场景融合失败"
-                    };
-                    onUpdateImage(failedImg);
-                  }
-                }}
-                disabled={activeImage.aiFusionStatus === "running" || activeImage.aiFusionStatus === "queued"}
-                className="w-full py-2 px-3 bg-indigo-600 font-bold hover:bg-indigo-700 disabled:bg-slate-350 text-white rounded-lg flex justify-center items-center gap-1 shadow-xs transition-all focus:outline-none cursor-pointer"
-              >
-                <RefreshCw className={`w-3 h-3 ${
-                  activeImage.aiFusionStatus === "running" || activeImage.aiFusionStatus === "queued" ? "animate-spin" : ""
-                }`} />
-                <span>
-                  {activeImage.aiFusionStatus === "running" || activeImage.aiFusionStatus === "queued" 
-                    ? "云端工作流融合运算中..." 
-                    : "一键提交 RunningHub V2 融合"}
+              {/* 批量生产合图与校验工具箱 */}
+              <div className="bg-slate-50/70 p-3.5 rounded-xl border border-slate-150 space-y-3.5 text-xs text-left">
+                <span className="font-bold text-slate-700 flex items-center gap-1 uppercase tracking-wider text-[9px]">
+                  ⚙️ 生产交付与融合工具箱 (Production & Fusion Toolbox)
                 </span>
-              </button>
+                
+                <div className="grid grid-cols-2 gap-2 text-[10.5px]">
+                  {/* 1. 生成基础底图 */}
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      try {
+                        const baseUrl = await renderFusionBaseImage(activeProduct, activeTemplate, {
+                          hOffset: currentXOffset,
+                          vOffset: currentYOffset,
+                          scale: currentScale
+                        });
+                        onUpdateImage({
+                          ...activeImage,
+                          aiFusionBaseUrl: baseUrl
+                        });
+                        alert("【成功】基础底图已生成并保存到资产字段！");
+                      } catch (err) {
+                        console.error("生成基础底图失败:", err);
+                        alert("生成基础底图失败，请核对控制台报错。");
+                      }
+                    }}
+                    className="py-1.5 px-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-lg border border-slate-200 transition-all flex items-center justify-center gap-0.5 cursor-pointer text-center"
+                  >
+                    <Layers className="w-3.5 h-3.5 text-slate-500 shrink-0" />
+                    <span>生成基础底图</span>
+                  </button>
+
+                  {/* 2. 提交 RunningHub 光影融合 */}
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      try {
+                        if (!renderedPreviewUrl) {
+                          alert("Canvas 尚未生成完毕，无法触发融合。");
+                          return;
+                        }
+                        
+                        // Mark as running
+                        const runningImg: GeneratedImage = {
+                          ...activeImage,
+                          aiFusionStatus: "running",
+                          aiFusionError: undefined,
+                          aiFusionWorkflowId: activeWorkflow.id,
+                          aiFusionBaseUrl: activeImage.aiFusionBaseUrl || renderedPreviewUrl
+                        };
+                        onUpdateImage(runningImg);
+                        
+                        // Trigger scene-fusion api (defaults to v2 upload and run_workflow_v2)
+                        const fusionResult = await runSceneFusion({
+                          baseImageDataUrl: activeImage.aiFusionBaseUrl || renderedPreviewUrl,
+                          workflowConfig: {
+                            ...activeWorkflow,
+                            defaultPrompt: promptInput,
+                            defaultNegativePrompt: negPromptInput,
+                            defaultDenoise: denoiseInput,
+                            defaultSteps: stepsInput,
+                            defaultCfg: cfgInput
+                          },
+                          prompt: promptInput,
+                          negativePrompt: negPromptInput,
+                          denoise: denoiseInput,
+                          seed: seedInput,
+                          steps: stepsInput,
+                          cfg: cfgInput
+                        });
+                        
+                        if (fusionResult && fusionResult.taskId) {
+                          if (fusionResult.warning) {
+                            console.warn("[RunningHub Warning]:", fusionResult.warning);
+                          }
+                          // Save taskId to state
+                          const updatedImg: GeneratedImage = {
+                            ...activeImage,
+                            aiFusionTaskId: fusionResult.taskId,
+                            aiFusionStatus: "running",
+                            aiFusionWorkflowId: activeWorkflow.id,
+                            aiFusionBaseUrl: activeImage.aiFusionBaseUrl || renderedPreviewUrl
+                          };
+                          onUpdateImage(updatedImg);
+                        } else {
+                          throw new Error("接口未返回有效 taskId");
+                        }
+                      } catch (err: any) {
+                        console.error("AI Scene fusion failure:", err);
+                        const failedImg: GeneratedImage = {
+                          ...activeImage,
+                          aiFusionStatus: "failed",
+                          aiFusionError: err.message || "请求启动场景融合失败"
+                        };
+                        onUpdateImage(failedImg);
+                      }
+                    }}
+                    disabled={activeImage.aiFusionStatus === "running" || activeImage.aiFusionStatus === "queued"}
+                    className="py-1.5 px-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold rounded-lg border border-indigo-205 transition-all disabled:bg-slate-100 disabled:text-slate-400 disabled:border-slate-200 flex items-center justify-center gap-0.5 cursor-pointer text-center"
+                  >
+                    <RefreshCw className={`w-3.5 h-3.5 shrink-0 ${activeImage.aiFusionStatus === "running" ? "animate-spin text-indigo-500" : "text-indigo-600"}`} />
+                    <span>提交 RH 融合</span>
+                  </button>
+
+                  {/* 3. 生成最终合成图 */}
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      try {
+                        const finalUrl = await renderFinalCompositeImage(
+                          activeImage.aiFusionUrl || "",
+                          activeTemplate,
+                          activeProduct,
+                          {
+                            hOffset: currentXOffset,
+                            vOffset: currentYOffset,
+                            scale: currentScale
+                          }
+                        );
+                        onUpdateImage({
+                          ...activeImage,
+                          finalCompositeUrl: finalUrl
+                        });
+                        alert("【成功】重新合成最终图完成！已更新并覆盖 finalCompositeUrl 字段。");
+                      } catch (err) {
+                        console.error("生成最终电商合图失败:", err);
+                        alert("生成最终电商合图失败，请先获取 RH 融合图或 Canvas 默认排版！");
+                      }
+                    }}
+                    className="py-1.5 px-2 bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 font-bold rounded-lg transition-all flex items-center justify-center gap-0.5 cursor-pointer text-center"
+                  >
+                    <Sliders className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                    <span>生成最终合成图</span>
+                  </button>
+
+                  {/* 4. 使用 Canvas 版本 */}
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      try {
+                        const cleanCanvasUrl = await renderFullPreviewImage(activeProduct, activeTemplate, {
+                          hOffset: currentXOffset,
+                          vOffset: currentYOffset,
+                          scale: currentScale
+                        });
+                        onUpdateImage({
+                          ...activeImage,
+                          finalCompositeUrl: cleanCanvasUrl,
+                          aiFusionStatus: "none",
+                          aiFusionUrl: undefined
+                        });
+                        alert("【重置】已切换为纯 Canvas 精细排版渲染主图！");
+                      } catch (err) {
+                        console.error("使用 Canvas 版本失败:", err);
+                      }
+                    }}
+                    className="py-1.5 px-2 bg-slate-100 hover:bg-slate-205 text-slate-600 border border-slate-200 font-bold rounded-lg transition-all flex items-center justify-center gap-0.5 cursor-pointer text-center text-[10.5px]"
+                  >
+                    <RotateCcw className="w-3.5 h-3.5 text-slate-500 shrink-0" />
+                    <span>使用 Canvas 版本</span>
+                  </button>
+
+                  {/* 5. 重新融合 */}
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      onUpdateImage({
+                        ...activeImage,
+                        aiFusionStatus: "none",
+                        aiFusionUrl: undefined,
+                        finalCompositeUrl: undefined
+                      });
+                      alert("已为您重置融合状态。现在可以再次发起提交融合及合图。");
+                    }}
+                    className="py-1.5 px-2 bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 font-bold rounded-lg transition-all flex items-center justify-center gap-0.5 cursor-pointer text-center"
+                  >
+                    <RefreshCw className="w-3.5 h-3.5 text-rose-500 shrink-0" />
+                    <span>重新融合</span>
+                  </button>
+
+                  {/* 6. 通过审核 */}
+                  <button
+                    type="button"
+                    onClick={() => saveAuditChange("approved")}
+                    className="py-1.5 px-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg transition-all flex items-center justify-center gap-0.5 cursor-pointer text-center shadow-xs"
+                  >
+                    <CheckSquare className="w-3.5 h-3.5 shrink-0" />
+                    <span>通过审核</span>
+                  </button>
+                </div>
+              </div>
             </div>
 
             {/* Quality issue warn lists */}

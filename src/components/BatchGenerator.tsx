@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Product, Template, GenerationTask, GeneratedImage } from "../types";
-import { renderTemplateToCanvas, setDemoMode, DEMO_MODE } from "../utils/renderTemplate";
+import { renderTemplateToCanvas, renderFusionBaseImage, renderFullPreviewImage, setDemoMode, DEMO_MODE } from "../utils/renderTemplate";
 import {
   CheckCircle,
   FolderOpen,
@@ -129,15 +129,23 @@ export const BatchGenerator: React.FC<BatchGeneratorProps> = ({
 
         // Render actual Canvas JPG dataURL!
         let renderedUrl = "";
+        let aiFusionBaseUrl = "";
         let reviewStatus: GeneratedImage["reviewStatus"] = "pending";
         let renderFailed = false;
 
         try {
-          renderedUrl = await renderTemplateToCanvas(prod, temp);
+          renderedUrl = await renderFullPreviewImage(prod, temp);
+          try {
+            aiFusionBaseUrl = await renderFusionBaseImage(prod, temp);
+          } catch (err) {
+            console.warn("Base fusion pre-render failed, fallback to main standard URL:", err);
+            aiFusionBaseUrl = renderedUrl;
+          }
         } catch (err) {
           console.error("Template rendering to canvas failed: ", err);
           renderFailed = true;
           renderedUrl = "";
+          aiFusionBaseUrl = "";
           reviewStatus = "needs_adjustment";
           qualityIssues.push("Canvas渲染失败");
           qualityIssues.push("产品资产缺失或加载失败");
@@ -149,6 +157,7 @@ export const BatchGenerator: React.FC<BatchGeneratorProps> = ({
           templateId: temp.id,
           imageType: temp.templateType,
           fileUrl: renderedUrl, // REAL CANVAS IMAGES
+          aiFusionBaseUrl: aiFusionBaseUrl,
           width: temp.outputWidth,
           height: temp.outputHeight,
           reviewStatus: reviewStatus,
