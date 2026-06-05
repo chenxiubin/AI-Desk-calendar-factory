@@ -380,7 +380,7 @@ app.post("/api/runninghub/query-result", async (req, res) => {
 // 5. POST /api/runninghub/scene-fusion (V2 Default Mode)
 app.post("/api/runninghub/scene-fusion", async (req, res) => {
   try {
-    const { baseImageDataUrl, workflowConfig, prompt, negativePrompt, denoise, seed } = req.body;
+    const { baseImageDataUrl, workflowConfig, prompt, negativePrompt, denoise, seed, steps, cfg } = req.body;
 
     if (!baseImageDataUrl) {
       res.status(400).json({ error: "Missing baseImageDataUrl" });
@@ -402,35 +402,61 @@ app.post("/api/runninghub/scene-fusion", async (req, res) => {
     if (workflowConfig.nodeInfoList && Array.isArray(workflowConfig.nodeInfoList)) {
       nodeInfoList = [...workflowConfig.nodeInfoList];
     } else {
-      if (workflowConfig.promptNodeId && prompt) {
+      // 1. Positive Prompt Node
+      if (workflowConfig.promptNodeId) {
         nodeInfoList.push({
           nodeId: workflowConfig.promptNodeId,
-          fieldName: "text",
-          fieldValue: prompt
+          fieldName: workflowConfig.promptFieldName || "text",
+          fieldValue: prompt || workflowConfig.defaultPrompt || ""
         });
       }
 
-      if (workflowConfig.negativePromptNodeId && negativePrompt) {
+      // 2. Negative Prompt Node (only if negativePromptNodeId is configured and not empty)
+      if (workflowConfig.negativePromptNodeId && workflowConfig.negativePromptNodeId.trim() !== "") {
         nodeInfoList.push({
           nodeId: workflowConfig.negativePromptNodeId,
-          fieldName: "text",
-          fieldValue: negativePrompt
+          fieldName: workflowConfig.negativePromptFieldName || "text",
+          fieldValue: negativePrompt || workflowConfig.defaultNegativePrompt || ""
         });
       }
 
-      if (workflowConfig.seedNodeId && seed !== undefined) {
+      // 3. Seed Node
+      if (workflowConfig.seedNodeId) {
+        let finalSeed = seed;
+        if (finalSeed === undefined || finalSeed === null || finalSeed === 0) {
+          finalSeed = Math.floor(Math.random() * 1000000000);
+        }
         nodeInfoList.push({
           nodeId: workflowConfig.seedNodeId,
-          fieldName: "seed",
-          fieldValue: seed
+          fieldName: workflowConfig.seedFieldName || "seed",
+          fieldValue: Number(finalSeed)
         });
       }
 
-      if (workflowConfig.denoiseNodeId && denoise !== undefined) {
+      // 4. Denoise Node
+      if (workflowConfig.denoiseNodeId) {
         nodeInfoList.push({
           nodeId: workflowConfig.denoiseNodeId,
-          fieldName: "denoise",
-          fieldValue: denoise
+          fieldName: workflowConfig.denoiseFieldName || "denoise",
+          fieldValue: typeof denoise === "number" ? denoise : (workflowConfig.defaultDenoise ?? 0.25)
+        });
+      }
+
+      // 5. Steps Node
+      if (workflowConfig.stepsNodeId) {
+        nodeInfoList.push({
+          nodeId: workflowConfig.stepsNodeId,
+          fieldName: workflowConfig.stepsFieldName || "steps",
+          fieldValue: typeof steps === "number" ? steps : (workflowConfig.defaultSteps ?? 4)
+        });
+      }
+
+      // 6. CFG Node
+      if (workflowConfig.cfgNodeId) {
+        nodeInfoList.push({
+          nodeId: workflowConfig.cfgNodeId,
+          fieldName: workflowConfig.cfgFieldName || "cfg",
+          fieldValue: typeof cfg === "number" ? cfg : (workflowConfig.defaultCfg ?? 1)
         });
       }
     }
@@ -439,13 +465,23 @@ app.post("/api/runninghub/scene-fusion", async (req, res) => {
     const expectedFinalLength = hasBaseImageNode ? (nodeInfoList.length + 1) : nodeInfoList.length;
 
     let warning = "";
-    if (!hasBaseImageNode || expectedFinalLength === 0) {
+    if (!workflowConfig.baseImageNodeId || expectedFinalLength === 0) {
       warning = "当前未配置 RunningHub 输入图片节点，任务将使用工作流默认参数，无法验证真实 Canvas 图融合。";
       console.warn(`[RunningHub Warning] ${warning}`);
     }
 
     if (isApiKeyMissingOrPlaceholder) {
       console.warn("RunningHub API Key is missing. Creating pre-mocked task.");
+      // Ensure we push a dummy base node into temporary mock so logging looks real
+      if (hasBaseImageNode && !workflowConfig.nodeInfoList) {
+        nodeInfoList.push({
+          nodeId: workflowConfig.baseImageNodeId,
+          fieldName: workflowConfig.baseImageFieldName || "image",
+          fieldValue: "simulated_base_image_name.png"
+        });
+      }
+      console.log("=== FINAL RunningHub nodeInfoList ===", JSON.stringify(nodeInfoList, null, 2));
+
       const taskId = apiMode === "comfyui_openapi" ? `task_mock_${Date.now()}` : `task_mock_v2_${Date.now()}`;
       res.json({ taskId, warning: warning || undefined });
       return;
@@ -489,11 +525,13 @@ app.post("/api/runninghub/scene-fusion", async (req, res) => {
       if (!workflowConfig.nodeInfoList) {
         nodeInfoList.push({
           nodeId: workflowConfig.baseImageNodeId,
-          fieldName: "image",
+          fieldName: workflowConfig.baseImageFieldName || "image",
           fieldValue: fileName
         });
       }
     }
+
+    console.log("=== FINAL RunningHub nodeInfoList ===", JSON.stringify(nodeInfoList, null, 2));
 
     const apiBase = process.env.RUNNINGHUB_API_BASE || "https://www.runninghub.cn";
 

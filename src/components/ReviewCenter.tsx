@@ -91,15 +91,19 @@ export const ReviewCenter: React.FC<ReviewCenterProps> = ({
 
   const [promptInput, setPromptInput] = useState<string>("");
   const [negPromptInput, setNegPromptInput] = useState<string>("");
-  const [denoiseInput, setDenoiseInput] = useState<number>(0.22);
+  const [denoiseInput, setDenoiseInput] = useState<number>(0.25);
   const [seedInput, setSeedInput] = useState<number>(12154);
+  const [stepsInput, setStepsInput] = useState<number>(4);
+  const [cfgInput, setCfgInput] = useState<number>(1);
 
   // Initialize input values when active image or workflow changes
   React.useEffect(() => {
     if (activeWorkflow) {
       setPromptInput(activeWorkflow.defaultPrompt);
       setNegPromptInput(activeWorkflow.defaultNegativePrompt);
-      setDenoiseInput(activeWorkflow.defaultDenoise);
+      setDenoiseInput(activeWorkflow.defaultDenoise ?? 0.25);
+      setStepsInput(activeWorkflow.defaultSteps ?? 4);
+      setCfgInput(activeWorkflow.defaultCfg ?? 1);
     }
   }, [selectedWorkflowId, activeImage?.id]);
 
@@ -539,14 +543,35 @@ export const ReviewCenter: React.FC<ReviewCenterProps> = ({
                   />
                 </div>
 
+                <div className="space-y-1">
+                  <div className="flex justify-between items-center">
+                    <span className="block text-[8.5px] text-slate-450 font-bold uppercase">反向提示词 (Negative Prompt)</span>
+                    <span className="text-[8px] text-amber-600 font-medium">暂不生效</span>
+                  </div>
+                  <textarea
+                    rows={1}
+                    value={negPromptInput}
+                    onChange={(e) => setNegPromptInput(e.target.value)}
+                    className="w-full bg-white border border-slate-200 font-medium rounded-lg p-1.5 leading-relaxed text-[10.5px]"
+                    placeholder="例如: blurry, bad quality, deformed..."
+                    disabled={activeImage.aiFusionStatus === "running" || activeImage.aiFusionStatus === "queued"}
+                  />
+                  <p className="text-[8.5px] text-slate-400 select-none">
+                    ⚠️ 当前工作流暂未配置独立负面提示词节点，负面提示词暂不生效。
+                  </p>
+                </div>
+
                 <div className="grid grid-cols-2 gap-2 text-[10.5px]">
                   <div>
-                    <span className="block text-[8.5px] text-slate-450 font-bold uppercase mb-1">重绘强度 (Denoise)</span>
+                    <div className="flex justify-between items-center mb-1">
+                      <span className="block text-[8.5px] text-slate-455 font-bold uppercase">重绘强度 (Denoise)</span>
+                      <span className="text-[8px] text-slate-400">建议 0.18-0.35</span>
+                    </div>
                     <input
                       type="number"
                       step="0.01"
-                      min="0.05"
-                      max="0.95"
+                      min="0.18"
+                      max="0.35"
                       value={denoiseInput}
                       onChange={(e) => setDenoiseInput(parseFloat(e.target.value))}
                       className="w-full bg-white border border-slate-200 rounded-lg p-1 font-mono font-bold"
@@ -554,11 +579,39 @@ export const ReviewCenter: React.FC<ReviewCenterProps> = ({
                     />
                   </div>
                   <div>
-                    <span className="block text-[8.5px] text-slate-450 font-bold uppercase mb-1">随机种子 (Seed)</span>
+                    <span className="block text-[8.5px] text-slate-455 font-bold uppercase mb-1">随机种子 (Seed)</span>
                     <input
                       type="number"
                       value={seedInput}
                       onChange={(e) => setSeedInput(parseInt(e.target.value))}
+                      className="w-full bg-white border border-slate-200 rounded-lg p-1 font-mono font-bold"
+                      disabled={activeImage.aiFusionStatus === "running" || activeImage.aiFusionStatus === "queued"}
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2 text-[10.5px]">
+                  <div>
+                    <span className="block text-[8.5px] text-slate-455 font-bold uppercase mb-1">迭代步数 (Steps)</span>
+                    <input
+                      type="number"
+                      min={1}
+                      max={50}
+                      value={stepsInput}
+                      onChange={(e) => setStepsInput(parseInt(e.target.value))}
+                      className="w-full bg-white border border-slate-200 rounded-lg p-1 font-mono font-bold"
+                      disabled={activeImage.aiFusionStatus === "running" || activeImage.aiFusionStatus === "queued"}
+                    />
+                  </div>
+                  <div>
+                    <span className="block text-[8.5px] text-slate-455 font-bold uppercase mb-1">无分类指导 (CFG)</span>
+                    <input
+                      type="number"
+                      step="0.1"
+                      min={0.1}
+                      max={20}
+                      value={cfgInput}
+                      onChange={(e) => setCfgInput(parseFloat(e.target.value))}
                       className="w-full bg-white border border-slate-200 rounded-lg p-1 font-mono font-bold"
                       disabled={activeImage.aiFusionStatus === "running" || activeImage.aiFusionStatus === "queued"}
                     />
@@ -592,12 +645,16 @@ export const ReviewCenter: React.FC<ReviewCenterProps> = ({
                         ...activeWorkflow,
                         defaultPrompt: promptInput,
                         defaultNegativePrompt: negPromptInput,
-                        defaultDenoise: denoiseInput
+                        defaultDenoise: denoiseInput,
+                        defaultSteps: stepsInput,
+                        defaultCfg: cfgInput
                       },
                       prompt: promptInput,
                       negativePrompt: negPromptInput,
                       denoise: denoiseInput,
-                      seed: seedInput
+                      seed: seedInput,
+                      steps: stepsInput,
+                      cfg: cfgInput
                     });
                     
                     if (fusionResult && fusionResult.taskId) {

@@ -149,15 +149,26 @@ export interface RunningHubWorkflowConfig {
   apiMode?: "comfyui_openapi" | "run_workflow_v2";
   modelType: "flux_kontext" | "qwen_fusion_lora" | "qwen_image_edit";
   baseImageNodeId: string;
+  baseImageFieldName?: string;
   maskNodeId?: string;
   promptNodeId: string;
+  promptFieldName?: string;
   negativePromptNodeId?: string;
+  negativePromptFieldName?: string;
   seedNodeId?: string;
+  seedFieldName?: string;
   denoiseNodeId?: string;
+  denoiseFieldName?: string;
+  stepsNodeId?: string;
+  stepsFieldName?: string;
+  cfgNodeId?: string;
+  cfgFieldName?: string;
   outputNodeId?: string;
   defaultPrompt: string;
   defaultNegativePrompt: string;
   defaultDenoise: number;
+  defaultSteps?: number;
+  defaultCfg?: number;
   enabled: boolean;
 }
 

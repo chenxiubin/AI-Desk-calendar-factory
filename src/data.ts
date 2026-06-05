@@ -855,6 +855,43 @@ export const SLOT_DEFINITIONS = [
 
 export const PRESET_RUNNINGHUB_WORKFLOWS: RunningHubWorkflowConfig[] = [
   {
+    id: "rh_flux2_klein_light_fusion",
+    name: "Flux2-Klein 产品光影融合",
+    workflowId: "2062738205958565890",
+    apiMode: "run_workflow_v2",
+    modelType: "flux_kontext",
+
+    baseImageNodeId: "77",
+    baseImageFieldName: "image",
+
+    promptNodeId: "68",
+    promptFieldName: "text",
+
+    negativePromptNodeId: "",
+    negativePromptFieldName: "",
+
+    seedNodeId: "49",
+    seedFieldName: "seed",
+
+    denoiseNodeId: "49",
+    denoiseFieldName: "denoise",
+
+    stepsNodeId: "49",
+    stepsFieldName: "steps",
+
+    cfgNodeId: "49",
+    cfgFieldName: "cfg",
+
+    outputNodeId: "48",
+
+    defaultPrompt: "产品与背景自然融合，并进行统一重新打光。光影统一，保持产品主体、图案、文字、颜色和结构不变，只增强环境光、接触阴影、边缘融合和整体质感，make image high quality,",
+    defaultNegativePrompt: "",
+    defaultDenoise: 0.25,
+    defaultSteps: 4,
+    defaultCfg: 1,
+    enabled: true
+  },
+  {
     id: "wf_run_workflow_v2",
     name: "RunningHub 官方 V2 AI 融合工作流 (默认)",
     workflowId: "2062738205958565890",

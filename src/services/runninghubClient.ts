@@ -97,6 +97,8 @@ export async function runSceneFusion(payload: {
   negativePrompt: string;
   denoise: number;
   seed: number;
+  steps?: number;
+  cfg?: number;
 }): Promise<{ taskId: string; warning?: string }> {
   // Ensure we default apiMode to run_workflow_v2
   const enrichedPayload = {
