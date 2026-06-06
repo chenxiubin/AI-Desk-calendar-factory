@@ -1,3 +1,4 @@
+// AI Studio Git Synchronization Force Update - 2026-06-06T02:50Z
 import React, { useState } from "react";
 import { Template, Product, TemplateSlot, TextField, TemplateBackground, TemplateComponent, TemplateComponentType } from "../types";
 import { VisualCalendar } from "./VisualCalendar";

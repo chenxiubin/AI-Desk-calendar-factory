@@ -1,3 +1,4 @@
+// AI Studio Git Synchronization Force Update - src/App.tsx
 import React, { useState } from "react";
 import { motion } from "motion/react";
 import { Sidebar } from "./components/Sidebar";
