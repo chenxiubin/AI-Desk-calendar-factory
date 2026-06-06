@@ -1,3 +1,18 @@
+export type ProductAssetRole =
+  | "main_product"
+  | "sku_product"
+  | "front"
+  | "left_3_4"
+  | "right_3_4"
+  | "top"
+  | "side"
+  | "back"
+  | "package"
+  | "combo"
+  | "detail_part"
+  | "mask"
+  | "white_bg";
+
 export interface ProductAsset {
   id: string;
   productId: string;
@@ -17,6 +32,11 @@ export interface ProductAsset {
   width: number;
   height: number;
   status: "pending" | "ready" | "failed";
+  assetRole?: ProductAssetRole;
+  viewType?: "front" | "left_3_4" | "right_3_4" | "top" | "side" | "back" | "detail";
+  perspectiveType?: "front" | "left_3_4" | "right_3_4" | "top_45" | "detail";
+  isPrimary?: boolean;
+  qualityStatus?: "ready" | "need_adjustment" | "failed";
 }
 
 export interface Product {
@@ -207,4 +227,103 @@ export interface RunningHubTaskState {
   progress?: number;
   errorMessage?: string;
   outputUrl?: string;
+}
+
+export type TemplatePageType =
+  | "main"
+  | "sku"
+  | "detail"
+  | "package"
+  | "size_material"
+  | "scene"
+  | "detail_closeup"
+  | "parameter";
+
+export interface TemplatePage {
+  id: string;
+  pageName: string;
+  pageType: TemplatePageType;
+  templateId: string;
+  order: number;
+  requiredAssetRoles: string[];
+  enabled: boolean;
+}
+
+export interface TemplateSuite {
+  id: string;
+  suiteName: string;
+  styleName: string;
+  category: "new_chinese" | "business" | "festive_red" | "minimal" | "gift" | "children" | "custom";
+  productType: "calendar" | "wall_calendar" | "gift_box";
+  coverImage?: string;
+  pages: TemplatePage[];
+  globalStyle: {
+    colorPalette: string[];
+    fontStyle: string;
+    sceneStyle: string;
+    lightDirection: string;
+    description?: string;
+  };
+  status: "draft" | "enabled" | "disabled";
+}
+
+export interface ProductAssetPack {
+  id: string;
+  productId: string;
+  productName: string;
+  productCode: string;
+  assets: ProductAsset[];
+  analysis?: {
+    hasPackage: boolean;
+    hasCombo: boolean;
+    hasDetail: boolean;
+    dominantColor?: string;
+    recommendedStyle?: string;
+    missingAssetRoles?: ProductAssetRole[];
+  };
+  status: "incomplete" | "ready" | "needs_adjustment";
+}
+
+export interface GeneratedPage {
+  id: string;
+  projectId: string;
+  templateSuiteId: string;
+  templatePageId: string;
+  templateId: string;
+  pageType: TemplatePageType;
+  productId: string;
+  assignedAssetIds: string[];
+  fileUrl?: string;
+  aiFusionBaseUrl?: string;
+  aiFusionUrl?: string;
+  finalCompositeUrl?: string;
+  status:
+    | "draft"
+    | "base_ready"
+    | "fusion_ready"
+    | "final_ready"
+    | "approved"
+    | "rejected"
+    | "needs_adjustment";
+  reviewNote?: string;
+  order: number;
+}
+
+export interface GenerationProject {
+  id: string;
+  projectName: string;
+  productAssetPackId: string;
+  templateSuiteId: string;
+  pages: GeneratedPage[];
+  status:
+    | "asset_preparing"
+    | "template_matched"
+    | "layout_ready"
+    | "fusion_running"
+    | "reviewing"
+    | "partially_rejected"
+    | "approved"
+    | "exported";
+  createdAt: string;
+  updatedAt: string;
 }

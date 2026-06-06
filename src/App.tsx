@@ -3,6 +3,7 @@ import React, { useState } from "react";
 import { motion } from "motion/react";
 import { Sidebar } from "./components/Sidebar";
 import { Workspace } from "./components/Workspace";
+import { SuiteWorkbench } from "./components/SuiteWorkbench";
 import { AssetLibrary } from "./components/AssetLibrary";
 import { WhiteBgRefine } from "./components/WhiteBgRefine";
 import { TemplateLibrary } from "./components/TemplateLibrary";
@@ -210,6 +211,13 @@ export default function App() {
             tasks={tasks}
             onNavigate={(id) => setActiveTab(id)}
             reviewCount={generatedImages.filter((img) => img.reviewStatus === "pending").length}
+          />
+        );
+      case "project_suite":
+        return (
+          <SuiteWorkbench
+            products={products}
+            templates={templates}
           />
         );
       case "assets":
