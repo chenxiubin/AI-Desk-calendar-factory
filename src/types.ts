@@ -1,3 +1,6 @@
+import { ProductArchetype, BusinessRatioType, PageRole, ExportFolderKey } from "./domain/calendarTaxonomy";
+export { ProductArchetype, BusinessRatioType, PageRole, ExportFolderKey };
+
 export type ProductAssetRole =
   | "main_product"
   | "sku_product"
@@ -11,7 +14,13 @@ export type ProductAssetRole =
   | "combo"
   | "detail_part"
   | "mask"
-  | "white_bg";
+  | "white_bg"
+  | "transparent_png"
+  | "primary_main_square"
+  | "primary_main_vertical"
+  | "sample_book_mockup"
+  | "customization_detail"
+  | "ad_custom_effect";
 
 export interface ProductAsset {
   id: string;
@@ -237,7 +246,9 @@ export type TemplatePageType =
   | "size_material"
   | "scene"
   | "detail_closeup"
-  | "parameter";
+  | "parameter"
+  | "white_bg"
+  | "transparent_png";
 
 export interface TemplatePage {
   id: string;
@@ -247,6 +258,15 @@ export interface TemplatePage {
   order: number;
   requiredAssetRoles: string[];
   enabled: boolean;
+  pageRole?: PageRole;
+  businessRatioType?: BusinessRatioType;
+  actualAspectRatio?: string;
+  isDeliverable?: boolean;
+  isRunningHubRecommended?: boolean;
+  isCanvasOnly?: boolean;
+  outputFolder?: ExportFolderKey;
+  outputFileNamePattern?: string;
+  groupKey?: string;
 }
 
 export interface TemplateSuite {
@@ -265,6 +285,28 @@ export interface TemplateSuite {
     description?: string;
   };
   status: "draft" | "enabled" | "disabled";
+  productArchetype?: ProductArchetype;
+  expectedSliceCounts?: {
+    mainSquareMinCount?: number;
+    mainVerticalMinCount?: number;
+    mainMarketingTotalMinCount?: number;
+    skuMinCount?: number;
+    detailMinCount?: number;
+    sampleBookRequired?: boolean;
+    customizationRequired?: boolean;
+    adCustomEffectRequired?: boolean;
+    whiteBgRequired?: boolean;
+    transparentPngRequired?: boolean;
+  };
+  exportProfile?: {
+    folders: ExportFolderKey[];
+    namingRule?: string;
+  };
+  reviewPolicy?: {
+    runningHubPageRoles: PageRole[];
+    canvasOnlyPageRoles: PageRole[];
+    manualReviewRequiredPageRoles: PageRole[];
+  };
 }
 
 export interface ProductAssetPack {

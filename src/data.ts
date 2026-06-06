@@ -1,4 +1,4 @@
-import { Product, Template, TemplateSlot, TextField, RunningHubWorkflowConfig, TemplateSuite, ProductAssetPack, ProductAsset, ProductAssetRole } from "./types";
+import { Product, Template, TemplateSlot, TextField, RunningHubWorkflowConfig, TemplateSuite, ProductAssetPack, ProductAsset, ProductAssetRole, ProductArchetype, BusinessRatioType, PageRole, ExportFolderKey } from "./types";
 
 // Seed 8 realistic, beautifully distinct products representing our 300+ portfolio
 export const INITIAL_PRODUCTS: Product[] = [
@@ -914,74 +914,126 @@ export const PRESET_RUNNINGHUB_WORKFLOWS: RunningHubWorkflowConfig[] = [
 export const PRESET_TEMPLATE_SUITES: TemplateSuite[] = [
   {
     id: "suite_nc_001",
-    suiteName: "新中式商务台历套系",
+    suiteName: "桌面台历标准套系",
     styleName: "新中式 / 商务 / 暖色场景",
     category: "new_chinese",
     productType: "calendar",
+    productArchetype: ProductArchetype.desk_calendar,
     coverImage: "https://images.unsplash.com/photo-1579783902614-a3fb3927b6a5?q=80&w=600&auto=format&fit=crop",
+    expectedSliceCounts: {
+      mainSquareMinCount: 10,
+      mainVerticalMinCount: 10,
+      mainMarketingTotalMinCount: 20,
+      skuMinCount: 5,
+      detailMinCount: 8,
+      whiteBgRequired: true,
+      transparentPngRequired: true
+    },
+    exportProfile: {
+      folders: [
+        ExportFolderKey.main_square,
+        ExportFolderKey.main_vertical,
+        ExportFolderKey.sku,
+        ExportFolderKey.detail,
+        ExportFolderKey.white_bg,
+        ExportFolderKey.transparent_png
+      ],
+      namingRule: "{productCode}_{pageRole}_{index}"
+    },
     pages: [
       {
         id: "tp_nc_001_main",
-        pageName: "品牌主视觉首图 (main)",
+        pageName: "方形主视觉首图 (方形主图)",
         pageType: "main",
         templateId: "MAIN_001",
         order: 1,
         requiredAssetRoles: ["main_product", "front"],
-        enabled: true
+        enabled: true,
+        pageRole: PageRole.primary_main_square,
+        businessRatioType: BusinessRatioType.square,
+        actualAspectRatio: "1:1",
+        isDeliverable: true,
+        isRunningHubRecommended: true,
+        outputFolder: ExportFolderKey.main_square,
+        outputFileNamePattern: "{productCode}_main_square_800.jpg"
+      },
+      {
+        id: "tp_nc_001_main_v",
+        pageName: "竖版主视觉首图 (长图主图)",
+        pageType: "main",
+        templateId: "MAIN_001",
+        order: 2,
+        requiredAssetRoles: ["main_product", "front"],
+        enabled: true,
+        pageRole: PageRole.primary_main_vertical,
+        businessRatioType: BusinessRatioType.vertical,
+        actualAspectRatio: "3:4",
+        isDeliverable: true,
+        isRunningHubRecommended: true,
+        outputFolder: ExportFolderKey.main_vertical,
+        outputFileNamePattern: "{productCode}_main_vertical_750.jpg"
       },
       {
         id: "tp_nc_001_sku",
         pageName: "款式分类SKU主图 (sku)",
         pageType: "sku",
         templateId: "SKU_001",
-        order: 2,
+        order: 3,
         requiredAssetRoles: ["sku_product", "left_3_4"],
-        enabled: true
+        enabled: true,
+        pageRole: PageRole.sku_variant,
+        businessRatioType: BusinessRatioType.square,
+        actualAspectRatio: "1:1",
+        isDeliverable: true,
+        outputFolder: ExportFolderKey.sku,
+        outputFileNamePattern: "{productCode}_sku_var.jpg"
       },
       {
         id: "tp_nc_001_det_01",
         pageName: "详情页：精美内页展示",
         pageType: "detail",
         templateId: "DETAIL_001",
-        order: 3,
-        requiredAssetRoles: ["front"],
-        enabled: true
-      },
-      {
-        id: "tp_nc_001_det_02",
-        pageName: "详情页：特写工艺细节",
-        pageType: "detail_closeup",
-        templateId: "DETAIL_002",
         order: 4,
-        requiredAssetRoles: ["detail_part"],
-        enabled: true
+        requiredAssetRoles: ["front"],
+        enabled: true,
+        pageRole: PageRole.detail_inner_page,
+        businessRatioType: BusinessRatioType.long_vertical,
+        actualAspectRatio: "3:4",
+        isDeliverable: true,
+        outputFolder: ExportFolderKey.detail,
+        outputFileNamePattern: "{productCode}_detail_page.jpg"
       },
       {
-        id: "tp_nc_001_scene",
-        pageName: "详情页：书房场景摆放图",
-        pageType: "scene",
-        templateId: "MAIN_002",
+        id: "tp_nc_001_white",
+        pageName: "商运白底精修图 (white_bg)",
+        pageType: "white_bg",
+        templateId: "DETAIL_002",
         order: 5,
-        requiredAssetRoles: ["main_product", "left_3_4"],
-        enabled: true
+        requiredAssetRoles: ["white_bg"],
+        enabled: true,
+        pageRole: PageRole.white_bg,
+        businessRatioType: BusinessRatioType.square,
+        actualAspectRatio: "1:1",
+        isDeliverable: true,
+        isCanvasOnly: true,
+        outputFolder: ExportFolderKey.white_bg,
+        outputFileNamePattern: "{productCode}_whitebg.jpg"
       },
       {
-        id: "tp_nc_001_size",
-        pageName: "详情页：规格尺寸与用料",
-        pageType: "size_material",
+        id: "tp_nc_001_trans",
+        pageName: "商运透明底成品图 (transparent_png)",
+        pageType: "white_bg",
         templateId: "DETAIL_002",
         order: 6,
-        requiredAssetRoles: ["white_bg"],
-        enabled: true
-      },
-      {
-        id: "tp_nc_001_pkg",
-        pageName: "详情页：礼盒包装演示",
-        pageType: "package",
-        templateId: "DETAIL_001",
-        order: 7,
-        requiredAssetRoles: ["package"],
-        enabled: true
+        requiredAssetRoles: ["main_product"],
+        enabled: true,
+        pageRole: PageRole.transparent_png,
+        businessRatioType: BusinessRatioType.square,
+        actualAspectRatio: "1:1",
+        isDeliverable: true,
+        isCanvasOnly: true,
+        outputFolder: ExportFolderKey.transparent_png,
+        outputFileNamePattern: "{productCode}_transparent.png"
       }
     ],
     globalStyle: {
@@ -989,52 +1041,144 @@ export const PRESET_TEMPLATE_SUITES: TemplateSuite[] = [
       fontStyle: "Space Grotesk & Inter Mono",
       sceneStyle: "暖色调新中式高档家居场景",
       lightDirection: "右上45度柔和侧光",
-      description: "专为高端电商产品打造的新中式套系，色调古朴高雅，凸显礼品台历的材质质感与国风雅韵。"
+      description: "专为桌面台历打造的高端国风商务套系，保障方形主图最少10张、竖版主图最少10张，完备输出白底精修与透明PNG正式交付成品。"
     },
     status: "enabled"
   },
   {
-    id: "suite_bus_002",
-    suiteName: "极简科技商务办公套系",
-    styleName: "现代 / 商务 / 冷灰色调",
-    category: "business",
-    productType: "calendar",
+    id: "suite_wall_002",
+    suiteName: "挂历/月历标准套系",
+    styleName: "中式典雅 / 宣纸彩印 / 卷轴金饰",
+    category: "new_chinese",
+    productType: "wall_calendar",
+    productArchetype: ProductArchetype.wall_calendar,
     coverImage: "https://images.unsplash.com/photo-1497366216548-37526070297c?q=80&w=600&auto=format&fit=crop",
+    expectedSliceCounts: {
+      mainSquareMinCount: 12,
+      mainVerticalMinCount: 12,
+      mainMarketingTotalMinCount: 24,
+      skuMinCount: 6,
+      detailMinCount: 10,
+      whiteBgRequired: true,
+      transparentPngRequired: true
+    },
+    exportProfile: {
+      folders: [
+        ExportFolderKey.main_square,
+        ExportFolderKey.main_vertical,
+        ExportFolderKey.sku,
+        ExportFolderKey.detail,
+        ExportFolderKey.white_bg,
+        ExportFolderKey.transparent_png
+      ],
+      namingRule: "{productCode}_{pageRole}_{index}"
+    },
     pages: [
       {
-        id: "tp_bus_002_main",
-        pageName: "极简首图 (main)",
+        id: "tp_wall_main_sq",
+        pageName: "挂历方形主视觉图 (方形主图)",
         pageType: "main",
-        templateId: "MAIN_003",
+        templateId: "MAIN_001",
         order: 1,
         requiredAssetRoles: ["main_product", "front"],
-        enabled: true
+        enabled: true,
+        pageRole: PageRole.primary_main_square,
+        businessRatioType: BusinessRatioType.square,
+        actualAspectRatio: "1:1",
+        isDeliverable: true,
+        isRunningHubRecommended: true,
+        outputFolder: ExportFolderKey.main_square,
+        outputFileNamePattern: "{productCode}_wall_square_800.jpg"
       },
       {
-        id: "tp_bus_002_sku",
-        pageName: "多属性款式展示 (sku)",
+        id: "tp_wall_main_vt",
+        pageName: "挂历竖版主视觉图 (长图主图)",
+        pageType: "main",
+        templateId: "MAIN_001",
+        order: 2,
+        requiredAssetRoles: ["main_product", "front"],
+        enabled: true,
+        pageRole: PageRole.primary_main_vertical,
+        businessRatioType: BusinessRatioType.vertical,
+        actualAspectRatio: "3:4",
+        isDeliverable: true,
+        isRunningHubRecommended: true,
+        outputFolder: ExportFolderKey.main_vertical,
+        outputFileNamePattern: "{productCode}_wall_vertical_750.jpg"
+      },
+      {
+        id: "tp_wall_sku",
+        pageName: "挂历SKU多款展示",
         pageType: "sku",
         templateId: "SKU_001",
-        order: 2,
+        order: 3,
         requiredAssetRoles: ["sku_product", "left_3_4"],
-        enabled: true
+        enabled: true,
+        pageRole: PageRole.sku_variant,
+        businessRatioType: BusinessRatioType.square,
+        actualAspectRatio: "1:1",
+        isDeliverable: true,
+        outputFolder: ExportFolderKey.sku,
+        outputFileNamePattern: "{productCode}_wall_sku.jpg"
       },
       {
-        id: "tp_bus_002_det",
-        pageName: "详情页：办公桌应用场景",
-        pageType: "scene",
-        templateId: "DETAIL_001",
-        order: 3,
-        requiredAssetRoles: ["front"],
-        enabled: true
+        id: "tp_wall_white",
+        pageName: "挂历白底图 (white_bg)",
+        pageType: "white_bg",
+        templateId: "DETAIL_002",
+        order: 4,
+        requiredAssetRoles: ["white_bg"],
+        enabled: true,
+        pageRole: PageRole.white_bg,
+        businessRatioType: BusinessRatioType.square,
+        actualAspectRatio: "1:1",
+        isDeliverable: true,
+        isCanvasOnly: true,
+        outputFolder: ExportFolderKey.white_bg,
+        outputFileNamePattern: "{productCode}_wall_whitebg.jpg"
       }
     ],
     globalStyle: {
-      colorPalette: ["#1E3A8A", "#64748B", "#F1F5F9"],
-      fontStyle: "JetBrains Mono & Inter Sans",
-      sceneStyle: "现代极简办公室日光场景",
-      lightDirection: "左侧高位漫反射光",
-      description: "契合商业巨擘与初创团队风格的整套商务套系，高级性冷淡冷灰主基调。"
+      colorPalette: ["#1e293b", "#3b82f6", "#111827"],
+      fontStyle: "Modern Elegance Serif",
+      sceneStyle: "中式典雅红木卷轴挂墙场景",
+      lightDirection: "垂直高透漫射光",
+      description: "挂历标准生产套系。包含最少方形12张、竖版12张主图卖点图，配备高解析度白底精修与透明PNG成品，完全面向最终交付。"
+    },
+    status: "enabled"
+  },
+  {
+    id: "suite_fu_003",
+    suiteName: "工艺福牌/挂件年历套系",
+    styleName: "镂空精雕 / 丝绸红结 / 尊贵木座",
+    category: "custom",
+    productType: "calendar",
+    productArchetype: ProductArchetype.fu_plaque_calendar,
+    coverImage: "https://images.unsplash.com/photo-1549465220-1a8b9238cd48?q=80&w=600&auto=format&fit=crop",
+    expectedSliceCounts: {},
+    pages: [
+      {
+        id: "tp_fu_main",
+        pageName: "工艺福牌尊贵首图",
+        pageType: "main",
+        templateId: "MAIN_002",
+        order: 1,
+        requiredAssetRoles: ["main_product", "front"],
+        enabled: true,
+        pageRole: PageRole.primary_main_square,
+        businessRatioType: BusinessRatioType.square,
+        actualAspectRatio: "1:1",
+        isDeliverable: true,
+        outputFolder: ExportFolderKey.main_square,
+        outputFileNamePattern: "{productCode}_fu_main.jpg"
+      }
+    ],
+    globalStyle: {
+      colorPalette: ["#DC2626", "#F59E0B"],
+      fontStyle: "NianHuo Brush & Chinese Serif",
+      sceneStyle: "尊贵雕镂艺术底座展台场景",
+      lightDirection: "多维偏斜聚光射灯",
+      description: "专为工艺福牌年雕及各类挂折艺术年卡设计的挂件套系产品，工艺细节精致。"
     },
     status: "enabled"
   }
