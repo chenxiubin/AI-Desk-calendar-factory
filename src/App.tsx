@@ -18,6 +18,7 @@ import { Product, Template, GenerationTask, GeneratedImage, ProductAsset } from 
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<string>("workspace");
+  const [pendingTemplateSuiteId, setPendingTemplateSuiteId] = useState<string | null>(null);
 
   // Core Global States
   const [products, setProducts] = useState<Product[]>(INITIAL_PRODUCTS);
@@ -219,6 +220,8 @@ export default function App() {
           <SuiteWorkbench
             products={products}
             templates={templates}
+            initialTemplateSuiteId={pendingTemplateSuiteId}
+            onClearInitialSuiteId={() => setPendingTemplateSuiteId(null)}
           />
         );
       case "assets":
@@ -245,6 +248,10 @@ export default function App() {
             onSelectTemplateForEditor={handleSelectTemplateForEditor}
             onNavigate={(id) => setActiveTab(id)}
             onCloneTemplate={handleCloneTemplate}
+            onUseSuiteForNewProject={(suiteId) => {
+              setPendingTemplateSuiteId(suiteId);
+              setActiveTab("project_suite");
+            }}
           />
         );
       case "editor":
@@ -264,7 +271,7 @@ export default function App() {
             </div>
             <h3 className="text-lg font-bold text-slate-800 mb-2">服务合并迁移通知</h3>
             <p className="text-sm text-slate-500 max-w-md leading-relaxed mb-6">
-              旧版批量套版已合并到套系生产工作台，请前往套系生产工作台继续操作。
+              旧版批量套版已合并到项目工作台，请前往项目工作台继续操作。
             </p>
             <button
               id="goto-suite-workbench-from-batch"
@@ -272,7 +279,7 @@ export default function App() {
               onClick={() => setActiveTab("project_suite")}
               className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs px-6 py-2.5 rounded-lg shadow-md active:scale-95 transition-all"
             >
-              前往套系生产工作台
+              前往项目工作台
             </button>
           </div>
         );

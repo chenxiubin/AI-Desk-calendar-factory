@@ -44,9 +44,16 @@ import { LayeredCanvasWorkbench } from "./LayeredCanvasWorkbench";
 interface SuiteWorkbenchProps {
   products: Product[];
   templates: Template[];
+  initialTemplateSuiteId?: string | null;
+  onClearInitialSuiteId?: () => void;
 }
 
-export const SuiteWorkbench: React.FC<SuiteWorkbenchProps> = ({ products, templates }) => {
+export const SuiteWorkbench: React.FC<SuiteWorkbenchProps> = ({
+  products,
+  templates,
+  initialTemplateSuiteId = null,
+  onClearInitialSuiteId
+}) => {
   // Preset references
   const [suites] = useState<TemplateSuite[]>(PRESET_TEMPLATE_SUITES);
   const [assetPacks, setAssetPacks] = useState<ProductAssetPack[]>(PRESET_PRODUCT_ASSET_PACKS);
@@ -77,6 +84,26 @@ export const SuiteWorkbench: React.FC<SuiteWorkbenchProps> = ({ products, templa
   // Export Modal view
   const [exportModalOpen, setExportModalOpen] = useState(false);
   const [manifestData, setManifestData] = useState<any>(null);
+
+  // Auto-respond when coming from Template Library with a pending template suite ID
+  useEffect(() => {
+    if (initialTemplateSuiteId && assetPacks.length > 0) {
+      setSelectedSuiteId(initialTemplateSuiteId);
+      setIsCreatingProject(true);
+      
+      // Auto-pre-select the first product pack assets if nothing is chosen yet
+      if (!selectedPackId && assetPacks.length > 0) {
+        setSelectedPackId(assetPacks[0].id);
+        const specPack = assetPacks[0];
+        setNewProjectName(`【项目-新品组装】${specPack.productName}`);
+      }
+      
+      // Clean up the parent hook state immediately is crucial to avoid repeating dialog open
+      if (onClearInitialSuiteId) {
+        onClearInitialSuiteId();
+      }
+    }
+  }, [initialTemplateSuiteId, assetPacks, onClearInitialSuiteId, selectedPackId]);
 
   // Initialize with a beautiful demo project so the UI doesn't look blank on load
   useEffect(() => {
@@ -510,11 +537,11 @@ export const SuiteWorkbench: React.FC<SuiteWorkbenchProps> = ({ products, templa
         <div className="space-y-1">
           <div className="flex items-center space-x-2 text-indigo-600">
             <Sparkles className="w-4 h-4" />
-            <span className="text-xs font-bold uppercase tracking-wider">批量套系生产方案 (Beta V2)</span>
+            <span className="text-xs font-bold uppercase tracking-wider">项目工作台</span>
           </div>
           <div className="flex items-center space-x-2">
             <h2 className="text-lg font-black tracking-tight text-slate-900">
-              {activeProject ? activeProject.projectName : "没有选中的套套生产项目"}
+              {activeProject ? activeProject.projectName : "没有选中的生产项目"}
             </h2>
             {activeProject && (
               <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
@@ -553,7 +580,7 @@ export const SuiteWorkbench: React.FC<SuiteWorkbenchProps> = ({ products, templa
             onClick={() => setIsCreatingProject(true)}
             className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-1.5 px-3.5 rounded-lg text-xs flex items-center gap-1 cursor-pointer transition-colors"
           >
-            <span>新建套系项目</span>
+            <span>新建生产项目</span>
           </button>
         </div>
       </div>
@@ -771,7 +798,7 @@ export const SuiteWorkbench: React.FC<SuiteWorkbenchProps> = ({ products, templa
                       : "text-slate-500 hover:text-slate-800"
                   }`}
                 >
-                  🛠️ 单页装配工作台
+                  🛠️ 单页画布编辑
                 </button>
                 <button
                   type="button"
@@ -782,7 +809,7 @@ export const SuiteWorkbench: React.FC<SuiteWorkbenchProps> = ({ products, templa
                       : "text-slate-500 hover:text-slate-800"
                   }`}
                 >
-                  👁️ 整套总预览 & 审核
+                  👁️ 整套总预览与审核
                 </button>
               </div>
 

@@ -28,13 +28,15 @@ interface TemplateLibraryProps {
   onSelectTemplateForEditor: (template: Template) => void;
   onNavigate: (tab: string) => void;
   onCloneTemplate: (template: Template) => void;
+  onUseSuiteForNewProject?: (suiteId: string) => void;
 }
 
 export const TemplateLibrary: React.FC<TemplateLibraryProps> = ({
   templates,
   onSelectTemplateForEditor,
   onNavigate,
-  onCloneTemplate
+  onCloneTemplate,
+  onUseSuiteForNewProject
 }) => {
   // Local list of suites initialized with PRESET_TEMPLATE_SUITES + 3 more gorgeous preset suites
   const [suites, setSuites] = useState<TemplateSuite[]>(() => {
@@ -360,7 +362,11 @@ export const TemplateLibrary: React.FC<TemplateLibraryProps> = ({
   const handleUseSuiteForNewProject = (suite: TemplateSuite) => {
     showToast(`🚀 已生成应用 [${suite.suiteName}] 的全新生产项目，正在为您跳转至项目工作台...`);
     setTimeout(() => {
-      onNavigate("project_suite");
+      if (onUseSuiteForNewProject) {
+        onUseSuiteForNewProject(suite.id);
+      } else {
+        onNavigate("project_suite");
+      }
     }, 1200);
   };
 
@@ -622,7 +628,7 @@ export const TemplateLibrary: React.FC<TemplateLibraryProps> = ({
               <button
                 id="create-new-suite-btn"
                 onClick={() => {
-                  showToast("正在建立全新模板套系规划框架...");
+                  showToast("已创建本地草稿套系，刷新页面后不会保留，后续将接入模板资产库保存。");
                   const newSuite: TemplateSuite = {
                     id: `suite_${Date.now()}`,
                     suiteName: "全新自定义企划套系",
