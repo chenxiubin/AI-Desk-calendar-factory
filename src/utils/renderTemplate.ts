@@ -1,5 +1,5 @@
 /// <reference types="vite/client" />
-import { Product, ProductAsset, Template, TemplateSlot, TextField, TemplateComponent } from "../types";
+import { Product, ProductAsset, Template, TemplateSlot, TextField, TemplateComponent, PageLayerInstance } from "../types";
 
 export let DEMO_MODE = import.meta.env.VITE_DEMO_MODE === "true";
 
@@ -1409,6 +1409,208 @@ export async function renderFullPreviewImage(
     }
     drawTextFields(ctx, product, template, canvas.width, canvas.height);
     drawDecorAndLogoOverlays(ctx, template, product, canvas.width, canvas.height);
+  }
+
+  const format = template.exportSettings?.format === "PNG" ? "image/png" : "image/jpeg";
+  return canvas.toDataURL(format, 0.95);
+}
+
+// ==========================================
+// NEW: Layered Canvas Workbench Rendering Helpers
+// ==========================================
+
+async function drawSingleLayer(
+  ctx: CanvasRenderingContext2D,
+  layer: PageLayerInstance,
+  product: Product,
+  cw: number,
+  ch: number,
+  drawShadow: boolean = true
+) {
+  if (!layer.visible) return;
+
+  const x = cw * (layer.x / 100);
+  const y = ch * (layer.y / 100);
+  const w = cw * (layer.width / 100);
+  const h = ch * (layer.height / 100);
+
+  let imgUrl = layer.imageUrl || "";
+
+  // For product, find the asset file url or generate standard fallback placeholder
+  if (layer.layerType === "product") {
+    if (layer.assetId) {
+      const asset = product.assets.find((as) => as.id === layer.assetId);
+      if (asset && asset.fileUrl) {
+        const isPlaceholder = ["front", "inner", "side", "pdf", "png", "ring", "det_cov", "det_pg", "det_base", "ad", "white_bg"].includes(asset.fileUrl);
+        if (isPlaceholder) {
+          imgUrl = generateDynamicAssetDataUrl(product, "transparent_png");
+        } else {
+          imgUrl = asset.fileUrl;
+        }
+      }
+    }
+    if (!imgUrl) {
+      imgUrl = generateDynamicAssetDataUrl(product, "transparent_png");
+    }
+  }
+
+  if (!imgUrl) return;
+
+  try {
+    const img = await loadImage(imgUrl);
+    ctx.save();
+    ctx.globalAlpha = layer.opacity !== undefined ? layer.opacity : 1.0;
+
+    let drawW = w;
+    let drawH = h;
+
+    if (layer.lockAspectRatio) {
+      const scale = Math.min(w / img.width, h / img.height);
+      drawW = img.width * scale;
+      drawH = img.height * scale;
+    }
+
+    const anchorNode = layer.anchor || "center";
+    let drawX = x - drawW / 2;
+    let drawY = anchorNode === "center" ? y - drawH / 2 : y - drawH;
+
+    // Draw drop shadow if requested for product layers
+    if (layer.layerType === "product" && drawShadow) {
+      ctx.save();
+      const shadowY = drawY + drawH + 1;
+      const shadowX = drawX + drawW / 2;
+      const shadowRadiusX = drawW * 0.45;
+      const shadowRadiusY = drawH * 0.08;
+      ctx.translate(shadowX, shadowY);
+      ctx.scale(1, shadowRadiusY / shadowRadiusX);
+      const grad = ctx.createRadialGradient(0, 0, 0, 0, 0, shadowRadiusX);
+      grad.addColorStop(0, "rgba(0, 0, 0, 0.22)");
+      grad.addColorStop(0.4, "rgba(0, 0, 0, 0.1)");
+      grad.addColorStop(1, "rgba(0, 0, 0, 0)");
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.arc(0, 0, shadowRadiusX, 0, 2 * Math.PI);
+      ctx.fill();
+      ctx.restore();
+    }
+
+    // Apply rotation
+    if (layer.rotation && layer.rotation !== 0) {
+      ctx.translate(x, y);
+      ctx.rotate((layer.rotation * Math.PI) / 180);
+      ctx.drawImage(img, -drawW / 2, anchorNode === "center" ? -drawH / 2 : -drawH, drawW, drawH);
+    } else {
+      ctx.drawImage(img, drawX, drawY, drawW, drawH);
+    }
+
+    ctx.restore();
+  } catch (err) {
+    console.error("Failed to load/draw page canvas layer:", layer.name, err);
+  }
+}
+
+/**
+ * Renders ONLY layers with sendToRunningHub === true (typically scene_base and product)
+ */
+export async function renderFusionBaseFromLayers(
+  layers: PageLayerInstance[],
+  product: Product,
+  template: Template
+): Promise<string> {
+  const canvas = document.createElement("canvas");
+  canvas.width = template.outputWidth || 800;
+  canvas.height = template.outputHeight || 800;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) throw new Error("Could not construct 2D canvas context");
+
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = "high";
+
+  // Renders standard background canvas color/fallback if no scene_base is drawn
+  const hasSceneBase = layers.some(l => l.visible && l.layerType === "scene_base" && l.sendToRunningHub);
+  if (!hasSceneBase) {
+    drawBackground(ctx, template, canvas.width, canvas.height);
+  }
+
+  // Draw layers where sendToRunningHub is true, sorted by zIndex
+  const eligibleLayers = [...layers]
+    .filter((l) => l.visible && l.sendToRunningHub)
+    .sort((a, b) => a.zIndex - b.zIndex);
+
+  for (const layer of eligibleLayers) {
+    await drawSingleLayer(ctx, layer, product, canvas.width, canvas.height, false);
+  }
+
+  const format = template.exportSettings?.format === "PNG" ? "image/png" : "image/jpeg";
+  return canvas.toDataURL(format, 0.95);
+}
+
+/**
+ * Draws the aiFusionUrl output, then overlays layers where sendToRunningHub === false
+ */
+export async function renderFinalCompositeFromLayers(
+  aiFusionUrl: string | undefined,
+  layers: PageLayerInstance[],
+  product: Product,
+  template: Template
+): Promise<string> {
+  const canvas = document.createElement("canvas");
+  canvas.width = template.outputWidth || 800;
+  canvas.height = template.outputHeight || 800;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) throw new Error("Could not construct 2D canvas context");
+
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = "high";
+
+  // 1. Draw RunningHub fused image backdrop first if available
+  if (aiFusionUrl) {
+    try {
+      const img = await loadImage(aiFusionUrl);
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+    } catch (err) {
+      console.error("Failed to load aiFusionUrl backdrop, rendering manual bases:", err);
+      // Fallback base render from layers
+      const baseLayers = [...layers]
+        .filter((l) => l.visible && l.sendToRunningHub)
+        .sort((a, b) => a.zIndex - b.zIndex);
+      
+      const hasSceneBase = layers.some(l => l.visible && l.layerType === "scene_base" && l.sendToRunningHub);
+      if (!hasSceneBase) {
+        drawBackground(ctx, template, canvas.width, canvas.height);
+      }
+      for (const bL of baseLayers) {
+        await drawSingleLayer(ctx, bL, product, canvas.width, canvas.height, true);
+      }
+    }
+  } else {
+    // Standard drawing of scene_base and products
+    const baseLayers = [...layers]
+      .filter((l) => l.visible && l.sendToRunningHub)
+      .sort((a, b) => a.zIndex - b.zIndex);
+    
+    const hasSceneBase = layers.some(l => l.visible && l.layerType === "scene_base" && l.sendToRunningHub);
+    if (!hasSceneBase) {
+      drawBackground(ctx, template, canvas.width, canvas.height);
+    }
+    for (const bL of baseLayers) {
+      await drawSingleLayer(ctx, bL, product, canvas.width, canvas.height, true);
+    }
+  }
+
+  // 2. Draw non-RunningHub overlays on top, sorted by zIndex
+  const overlayLayers = [...layers]
+    .filter((l) => l.visible && !l.sendToRunningHub)
+    .sort((a, b) => a.zIndex - b.zIndex);
+
+  for (const oL of overlayLayers) {
+    await drawSingleLayer(ctx, oL, product, canvas.width, canvas.height, false);
+  }
+
+  // 3. Optional classic dynamic text labels draw fallback if no text overlay exists in layers
+  const hasTextOverlay = layers.some(l => l.visible && l.layerType === "text_overlay");
+  if (!hasTextOverlay) {
+    drawTextFields(ctx, product, template, canvas.width, canvas.height);
   }
 
   const format = template.exportSettings?.format === "PNG" ? "image/png" : "image/jpeg";

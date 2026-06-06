@@ -284,6 +284,37 @@ export interface ProductAssetPack {
   status: "incomplete" | "ready" | "needs_adjustment";
 }
 
+export type PageLayerType =
+  | "scene_base"
+  | "product"
+  | "text_overlay"
+  | "decor_overlay"
+  | "logo_overlay"
+  | "custom_asset";
+
+export interface PageLayerInstance {
+  id: string;
+  pageId: string;
+  sourceComponentId?: string;
+  layerType: PageLayerType;
+  assetId?: string;
+  imageUrl?: string;
+  name: string;
+  x: number; // percentage coordinate 0-100
+  y: number; // percentage coordinate 0-100
+  width: number; // percentage width 0-100
+  height: number; // percentage height 0-100
+  rotation: number; // degrees 0-360
+  zIndex: number;
+  visible: boolean;
+  locked: boolean;
+  opacity: number; // 0-1
+  anchor: "center" | "bottom_center";
+  scaleMode?: "contain" | "cover";
+  lockAspectRatio: boolean;
+  sendToRunningHub: boolean;
+}
+
 export interface GeneratedPage {
   id: string;
   projectId: string;
@@ -293,6 +324,7 @@ export interface GeneratedPage {
   pageType: TemplatePageType;
   productId: string;
   assignedAssetIds: string[];
+  layers?: PageLayerInstance[];
   fileUrl?: string;
   aiFusionBaseUrl?: string;
   aiFusionUrl?: string;

@@ -34,10 +34,12 @@ import {
   GenerationProject,
   TemplatePageType,
   ProductAsset,
-  ProductAssetRole
+  ProductAssetRole,
+  PageLayerInstance
 } from "../types";
 import { PRESET_TEMPLATE_SUITES, PRESET_PRODUCT_ASSET_PACKS } from "../data";
 import { renderFullPreviewImage } from "../utils/renderTemplate";
+import { LayeredCanvasWorkbench } from "./LayeredCanvasWorkbench";
 
 interface SuiteWorkbenchProps {
   products: Product[];
@@ -160,6 +162,49 @@ export const SuiteWorkbench: React.FC<SuiteWorkbenchProps> = ({ products, templa
   const activeProject = projects.find((p) => p.id === selectedProjectId);
   const activeSuite = activeProject ? suites.find((s) => s.id === activeProject.templateSuiteId) : null;
   const activePack = activeProject ? assetPacks.find((p) => p.id === activeProject.productAssetPackId) : null;
+
+  const editingPage = activeProject?.pages.find((p) => p.id === editingPageId);
+
+  const handleSavePageLayers = (
+    pageId: string,
+    layers: PageLayerInstance[],
+    fileUrl?: string,
+    status?: any
+  ) => {
+    setProjects((prev) =>
+      prev.map((proj) => {
+        if (proj.id === selectedProjectId) {
+          const updatedPages = proj.pages.map((p) => {
+            if (p.id === pageId) {
+              const updated = { ...p, layers };
+              if (fileUrl) updated.fileUrl = fileUrl;
+              if (status) updated.status = status;
+              return updated;
+            }
+            return p;
+          });
+          return { ...proj, pages: updatedPages, updatedAt: new Date().toISOString() };
+        }
+        return proj;
+      })
+    );
+  };
+
+  if (editingPageId && editingPage && activeProject && activePack) {
+    const targetProduct = products.find((p) => p.id === activePack.productId) || products[0];
+    return (
+      <LayeredCanvasWorkbench
+        page={editingPage}
+        allPages={activeProject.pages}
+        productPack={activePack}
+        templates={templates}
+        product={targetProduct}
+        onSavePageLayers={handleSavePageLayers}
+        onClose={() => setEditingPageId(null)}
+        onSwitchPage={(pageId) => setEditingPageId(pageId)}
+      />
+    );
+  }
 
   // Handles creating a new project
   const handleCreateProject = (e: React.FormEvent) => {
@@ -755,7 +800,6 @@ export const SuiteWorkbench: React.FC<SuiteWorkbenchProps> = ({ products, templa
               <div className="space-y-4">
                 {activeProject.pages.map((page, pIdx) => {
                   const targetTemplate = templates.find((t) => t.id === page.templateId);
-                  const isEditing = editingPageId === page.id;
                   
                   return (
                     <div
@@ -796,10 +840,10 @@ export const SuiteWorkbench: React.FC<SuiteWorkbenchProps> = ({ products, templa
                       <div className="flex-1 space-y-4 text-left">
                         <div className="flex flex-col md:flex-row justify-between items-start md:items-center border-b pb-2 gap-2">
                           <div>
-                            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 bg-slate-100 px-2 py-0.5 rounded">
-                              {page.pageType}
+                            <span className="text-[10px] font-extrabold uppercase tracking-wider text-indigo-700 bg-indigo-50 px-2.5 py-0.5 rounded">
+                              {page.pageType.toUpperCase()}
                             </span>
-                            <h4 className="text-sm font-extrabold text-slate-900 mt-1">
+                            <h4 className="text-sm font-black text-slate-900 mt-1.5">
                               {page.pageName}
                             </h4>
                           </div>
@@ -807,30 +851,18 @@ export const SuiteWorkbench: React.FC<SuiteWorkbenchProps> = ({ products, templa
                           <div className="flex items-center space-x-2">
                             <button
                               type="button"
-                              onClick={() => {
-                                if (isEditing) {
-                                  // Save coordinates
-                                  handleSaveTweaks(page.id);
-                                } else {
-                                  setEditingPageId(page.id);
-                                  // Initialize coordinate offsets
-                                  setEditingXOffset(0);
-                                  setEditingYOffset(0);
-                                  setEditingScale(1);
-                                }
-                              }}
-                              className={`py-1 px-2.5 rounded text-[10.5px] font-bold cursor-pointer transition-colors ${
-                                isEditing ? "bg-indigo-600 text-white" : "border bg-slate-50 text-slate-600 hover:bg-slate-150"
-                              }`}
+                              onClick={() => setEditingPageId(page.id)}
+                              className="bg-indigo-600 hover:bg-indigo-500 text-white py-1.5 px-3.5 rounded-lg text-xs font-black cursor-pointer flex items-center gap-1 shadow transition-all active:scale-95"
                             >
-                              {isEditing ? "保存微调 (Save)" : "📐 位置微调及参数"}
+                              <Layers className="w-3.5 h-3.5" />
+                              <span>进入分层工作台 (PS / Canva)</span>
                             </button>
 
                             <button
                               type="button"
                               disabled={isRenderingPageId === page.id}
                               onClick={() => handleRenderBaseImage(page.id)}
-                              className="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 py-1 px-3 rounded text-[11px] font-bold cursor-pointer flex items-center space-x-1"
+                              className="bg-slate-100 hover:bg-slate-200 text-slate-800 py-1.5 px-3.5 rounded-lg text-xs font-extrabold cursor-pointer flex items-center space-x-1 transition-colors"
                             >
                               {isRenderingPageId === page.id ? (
                                 <>
@@ -839,60 +871,13 @@ export const SuiteWorkbench: React.FC<SuiteWorkbenchProps> = ({ products, templa
                                 </>
                               ) : (
                                 <>
-                                  <Play className="w-3 h-3" />
-                                  <span>渲染本页</span>
+                                  <Play className="w-3.5 h-3.5" />
+                                  <span>一键离线合成</span>
                                 </>
                               )}
                             </button>
                           </div>
                         </div>
-
-                        {isEditing ? (
-                          <div className="p-3 bg-slate-50 border rounded-xl grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
-                            <div className="space-y-1">
-                              <div className="flex justify-between">
-                                <span className="text-slate-500">水平偏移 (x): {editingXOffset}%</span>
-                              </div>
-                              <input
-                                type="range"
-                                min="-40"
-                                max="40"
-                                value={editingXOffset}
-                                onChange={(e) => setEditingXOffset(Number(e.target.value))}
-                                className="w-full accent-indigo-600 cursor-pointer"
-                              />
-                            </div>
-
-                            <div className="space-y-1">
-                              <div className="flex justify-between">
-                                <span className="text-slate-500">垂直偏移 (y): {editingYOffset}%</span>
-                              </div>
-                              <input
-                                type="range"
-                                min="-40"
-                                max="40"
-                                value={editingYOffset}
-                                onChange={(e) => setEditingYOffset(Number(e.target.value))}
-                                className="w-full accent-indigo-600 cursor-pointer"
-                              />
-                            </div>
-
-                            <div className="space-y-1">
-                              <div className="flex justify-between">
-                                <span className="text-slate-500">缩放倍率: {editingScale.toFixed(2)}x</span>
-                              </div>
-                              <input
-                                type="range"
-                                min="0.4"
-                                max="2"
-                                step="0.05"
-                                value={editingScale}
-                                onChange={(e) => setEditingScale(Number(e.target.value))}
-                                className="w-full accent-indigo-600 cursor-pointer"
-                              />
-                            </div>
-                          </div>
-                        ) : null}
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
                           {/* Template Swapper */}
