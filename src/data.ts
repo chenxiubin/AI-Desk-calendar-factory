@@ -935,6 +935,9 @@ export const PRESET_TEMPLATE_SUITES: TemplateSuite[] = [
         ExportFolderKey.main_vertical,
         ExportFolderKey.sku,
         ExportFolderKey.detail,
+        ExportFolderKey.sample_book,
+        ExportFolderKey.customization_detail,
+        ExportFolderKey.ad_custom_effect,
         ExportFolderKey.white_bg,
         ExportFolderKey.transparent_png
       ],
@@ -1068,6 +1071,9 @@ export const PRESET_TEMPLATE_SUITES: TemplateSuite[] = [
         ExportFolderKey.main_vertical,
         ExportFolderKey.sku,
         ExportFolderKey.detail,
+        ExportFolderKey.sample_book,
+        ExportFolderKey.customization_detail,
+        ExportFolderKey.ad_custom_effect,
         ExportFolderKey.white_bg,
         ExportFolderKey.transparent_png
       ],
