@@ -252,7 +252,7 @@ export const LayeredCanvasWorkbench: React.FC<LayeredCanvasWorkbenchProps> = ({
   const [isRendering, setIsRendering] = useState(false);
   const [renderMessage, setRenderMessage] = useState("");
 
-  const containerRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement | null>(null);
 
   // Load or generate layers on mount/page change
   useEffect(() => {

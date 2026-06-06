@@ -57,13 +57,14 @@ export const SuiteWorkbench: React.FC<SuiteWorkbenchProps> = ({ products, templa
 
   // UI state
   const [subTab, setSubTab] = useState<"workspace" | "preview">("workspace");
-  const [isCreatingProject, setIsCreatingProject] = useState(boolean => false);
+  const [isCreatingProject, setIsCreatingProject] = useState(false);
   const [newProjectName, setNewProjectName] = useState("");
   const [selectedPackId, setSelectedPackId] = useState("");
   const [selectedSuiteId, setSelectedSuiteId] = useState("");
 
   // Editing single page variables
   const [editingPageId, setEditingPageId] = useState<string | null>(null);
+  const [canvasEditingPageId, setCanvasEditingPageId] = useState<string | null>(null);
   const [editingXOffset, setEditingXOffset] = useState<number>(0);
   const [editingYOffset, setEditingYOffset] = useState<number>(0);
   const [editingScale, setEditingScale] = useState<number>(1);
@@ -164,6 +165,7 @@ export const SuiteWorkbench: React.FC<SuiteWorkbenchProps> = ({ products, templa
   const activePack = activeProject ? assetPacks.find((p) => p.id === activeProject.productAssetPackId) : null;
 
   const editingPage = activeProject?.pages.find((p) => p.id === editingPageId);
+  const canvasEditingPage = activeProject?.pages.find((p) => p.id === canvasEditingPageId);
 
   const handleSavePageLayers = (
     pageId: string,
@@ -176,7 +178,7 @@ export const SuiteWorkbench: React.FC<SuiteWorkbenchProps> = ({ products, templa
         if (proj.id === selectedProjectId) {
           const updatedPages = proj.pages.map((p) => {
             if (p.id === pageId) {
-              const updated = { ...p, layers };
+              const updated: GeneratedPage = { ...p, layers };
               if (fileUrl) updated.fileUrl = fileUrl;
               if (status) updated.status = status;
               return updated;
@@ -190,18 +192,18 @@ export const SuiteWorkbench: React.FC<SuiteWorkbenchProps> = ({ products, templa
     );
   };
 
-  if (editingPageId && editingPage && activeProject && activePack) {
+  if (canvasEditingPageId && canvasEditingPage && activeProject && activePack) {
     const targetProduct = products.find((p) => p.id === activePack.productId) || products[0];
     return (
       <LayeredCanvasWorkbench
-        page={editingPage}
+        page={canvasEditingPage}
         allPages={activeProject.pages}
         productPack={activePack}
         templates={templates}
         product={targetProduct}
         onSavePageLayers={handleSavePageLayers}
-        onClose={() => setEditingPageId(null)}
-        onSwitchPage={(pageId) => setEditingPageId(pageId)}
+        onClose={() => setCanvasEditingPageId(null)}
+        onSwitchPage={(pageId) => setCanvasEditingPageId(pageId)}
       />
     );
   }
@@ -336,7 +338,7 @@ export const SuiteWorkbench: React.FC<SuiteWorkbenchProps> = ({ products, templa
         templatePageId: page.id,
         templateId: page.templateId,
         pageType: page.pageType,
-        productId: activeProject.productAssetPackId,
+        productId: activePack.productId,
         assignedAssetIds: assignedIds,
         status: assignedIds.length > 0 ? "base_ready" : "needs_adjustment",
         order: page.order
@@ -851,18 +853,37 @@ export const SuiteWorkbench: React.FC<SuiteWorkbenchProps> = ({ products, templa
                           <div className="flex items-center space-x-2">
                             <button
                               type="button"
-                              onClick={() => setEditingPageId(page.id)}
-                              className="bg-indigo-600 hover:bg-indigo-500 text-white py-1.5 px-3.5 rounded-lg text-xs font-black cursor-pointer flex items-center gap-1 shadow transition-all active:scale-95"
+                              onClick={() => setCanvasEditingPageId(page.id)}
+                              className="bg-indigo-650 hover:bg-indigo-600 text-white py-1.5 px-3 rounded-lg text-xs font-black cursor-pointer flex items-center gap-1 shadow transition-all active:scale-95"
                             >
                               <Layers className="w-3.5 h-3.5" />
-                              <span>进入分层工作台 (PS / Canva)</span>
+                              <span>进入分层画布编辑</span>
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (editingPageId === page.id) {
+                                  handleSaveTweaks(page.id);
+                                } else {
+                                  setEditingPageId(page.id);
+                                  setEditingXOffset(0);
+                                  setEditingYOffset(0);
+                                  setEditingScale(1.0);
+                                }
+                              }}
+                              className={`py-1.5 px-3 rounded-lg text-xs font-extrabold cursor-pointer transition-colors ${
+                                editingPageId === page.id ? "bg-slate-700 text-white" : "bg-slate-100 hover:bg-slate-200 text-slate-800"
+                              }`}
+                            >
+                              {editingPageId === page.id ? "保存微调" : "位置微调旧面板"}
                             </button>
 
                             <button
                               type="button"
                               disabled={isRenderingPageId === page.id}
                               onClick={() => handleRenderBaseImage(page.id)}
-                              className="bg-slate-100 hover:bg-slate-200 text-slate-800 py-1.5 px-3.5 rounded-lg text-xs font-extrabold cursor-pointer flex items-center space-x-1 transition-colors"
+                              className="bg-slate-100 hover:bg-slate-200 text-slate-800 py-1.5 px-3 rounded-lg text-xs font-extrabold cursor-pointer flex items-center space-x-1 transition-colors"
                             >
                               {isRenderingPageId === page.id ? (
                                 <>
@@ -878,6 +899,47 @@ export const SuiteWorkbench: React.FC<SuiteWorkbenchProps> = ({ products, templa
                             </button>
                           </div>
                         </div>
+
+                        {editingPageId === page.id && (
+                          <div className="p-3 bg-slate-50 border rounded-xl grid grid-cols-1 md:grid-cols-3 gap-3 text-xs mb-3">
+                            <div className="space-y-1">
+                              <span className="text-slate-500">水平偏移 (x): {editingXOffset}%</span>
+                              <input
+                                type="range"
+                                min="-40"
+                                max="40"
+                                value={editingXOffset}
+                                onChange={(e) => setEditingXOffset(Number(e.target.value))}
+                                className="w-full accent-indigo-600 cursor-pointer"
+                              />
+                            </div>
+
+                            <div className="space-y-1">
+                              <span className="text-slate-500">垂直偏移 (y): {editingYOffset}%</span>
+                              <input
+                                type="range"
+                                min="-40"
+                                max="40"
+                                value={editingYOffset}
+                                onChange={(e) => setEditingYOffset(Number(e.target.value))}
+                                className="w-full accent-indigo-600 cursor-pointer"
+                              />
+                            </div>
+
+                            <div className="space-y-1">
+                              <span className="text-slate-500">缩放倍率: {editingScale.toFixed(2)}x</span>
+                              <input
+                                type="range"
+                                min="0.4"
+                                max="2"
+                                step="0.05"
+                                value={editingScale}
+                                onChange={(e) => setEditingScale(Number(e.target.value))}
+                                className="w-full accent-indigo-600 cursor-pointer"
+                              />
+                            </div>
+                          </div>
+                        )}
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
                           {/* Template Swapper */}
