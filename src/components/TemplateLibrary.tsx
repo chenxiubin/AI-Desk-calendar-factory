@@ -360,14 +360,14 @@ export const TemplateLibrary: React.FC<TemplateLibraryProps> = ({
 
   // Action: Used for new project
   const handleUseSuiteForNewProject = (suite: TemplateSuite) => {
-    showToast(`🚀 已生成应用 [${suite.suiteName}] 的全新生产项目，正在为您跳转至项目工作台...`);
+    showToast(`已选择套系「${suite.suiteName}」，正在跳转至项目工作台...`);
     setTimeout(() => {
       if (onUseSuiteForNewProject) {
         onUseSuiteForNewProject(suite.id);
       } else {
         onNavigate("project_suite");
       }
-    }, 1200);
+    }, 800);
   };
 
   // Find active suite
