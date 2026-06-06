@@ -1138,6 +1138,23 @@ export const TemplateEditor: React.FC<TemplateEditorProps> = ({
                             />
                           </div>
                         </div>
+
+                        {comp.type === "scene_base" && (
+                          <div className="pt-1.5 border-t border-slate-100">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const updated = activeTemplate.components?.map((c) =>
+                                  c.id === comp.id ? { ...c, x: 0, y: 0, width: 100, height: 100, zIndex: 0 } : c
+                                );
+                                handleUpdateTemplate({ ...activeTemplate, components: updated });
+                              }}
+                              className="w-full py-1.5 px-3 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold rounded-lg text-[10px] text-center cursor-pointer transition-colors flex items-center justify-center gap-1"
+                            >
+                              <span>📺 一键铺满画布 (x:0, y:0, w:100, h:100, zIndex:0)</span>
+                            </button>
+                          </div>
+                        )}
                       </div>
 
                       {/* zIndex & visible */}
@@ -1231,6 +1248,24 @@ export const TemplateEditor: React.FC<TemplateEditorProps> = ({
                             >
                               <option value="contain">contain (完整居中摆入，不切割产品)</option>
                               <option value="cover">cover (贴片最大化拉伸，填充整个槽区)</option>
+                            </select>
+                          </div>
+
+                          <div className="text-left">
+                            <span className="block text-slate-500 text-[10px] mb-1">定位对齐锚点 (anchor)</span>
+                            <select
+                              value={comp.anchor || "bottom_center"}
+                              onChange={(e) => {
+                                const val = e.target.value as "center" | "bottom_center";
+                                const updated = activeTemplate.components?.map((c) =>
+                                  c.id === comp.id ? { ...c, anchor: val } : c
+                                );
+                                handleUpdateTemplate({ ...activeTemplate, components: updated });
+                              }}
+                              className="w-full bg-white border border-slate-200 rounded p-1 text-[11px]"
+                            >
+                              <option value="bottom_center">bottom_center (底部中轴对齐，适合摆放产品)</option>
+                              <option value="center">center (居中对齐，适合自由悬浮或铺布)</option>
                             </select>
                           </div>
 

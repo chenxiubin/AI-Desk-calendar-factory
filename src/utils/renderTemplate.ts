@@ -1136,10 +1136,10 @@ async function drawComponent(
   offsets?: { hOffset?: number; vOffset?: number; scale?: number },
   drawShadow: boolean = true
 ) {
-  const x = comp.x > 100 ? comp.x : cw * (comp.x / 100);
-  const y = comp.y > 100 ? comp.y : ch * (comp.y / 100);
-  const w = comp.width > 100 ? comp.width : cw * (comp.width / 100);
-  const h = comp.height > 100 ? comp.height : ch * (comp.height / 100);
+  const x = cw * (comp.x / 100);
+  const y = ch * (comp.y / 100);
+  const w = cw * (comp.width / 100);
+  const h = ch * (comp.height / 100);
 
   if (comp.type === "product_slot") {
     const matchingAsset = findMatchingAsset(product, "transparent_png");
@@ -1172,13 +1172,9 @@ async function drawComponent(
 
       const rot = comp.defaultRotation || 0;
       
+      const anchorNode = comp.anchor || (comp.scaleMode === "cover" ? "center" : "bottom_center");
       let drawX = finalX - drawW / 2;
-      let drawY = finalY - drawH; // default Bottom-Center anchor
-
-      if (comp.scaleMode === "cover") {
-        drawX = finalX - drawW / 2;
-        drawY = finalY - drawH / 2; // Center anchor
-      }
+      let drawY = anchorNode === "center" ? finalY - drawH / 2 : finalY - drawH;
 
       // Draw Shadow
       if (drawShadow) {
@@ -1205,7 +1201,7 @@ async function drawComponent(
       if (rot !== 0 && comp.allowRotation) {
         ctx.translate(finalX, finalY);
         ctx.rotate((rot * Math.PI) / 180);
-        ctx.drawImage(img, -drawW / 2, comp.scaleMode === "cover" ? -drawH / 2 : -drawH, drawW, drawH);
+        ctx.drawImage(img, -drawW / 2, anchorNode === "center" ? -drawH / 2 : -drawH, drawW, drawH);
       } else {
         ctx.drawImage(img, drawX, drawY, drawW, drawH);
       }
@@ -1360,7 +1356,10 @@ export async function renderFinalCompositeImage(
   }
 
   // Draw any traditional typography / placeholders to protect layout compatibility
-  drawTextFields(ctx, dummyProduct, template, canvas.width, canvas.height);
+  const hasTextOverlay = template.components && template.components.some(c => c.visible && c.type === "text_overlay");
+  if (!hasTextOverlay) {
+    drawTextFields(ctx, dummyProduct, template, canvas.width, canvas.height);
+  }
   if (!template.components || template.components.length === 0) {
     drawDecorAndLogoOverlays(ctx, template, dummyProduct, canvas.width, canvas.height);
   }
@@ -1396,8 +1395,11 @@ export async function renderFullPreviewImage(
       await drawComponent(ctx, comp, product, template, canvas.width, canvas.height, offsets, true);
     }
 
-    // Draw typography
-    drawTextFields(ctx, product, template, canvas.width, canvas.height);
+    // Draw typography only if there is no text_overlay in components
+    const hasTextOverlay = template.components.some((c) => c.visible && c.type === "text_overlay");
+    if (!hasTextOverlay) {
+      drawTextFields(ctx, product, template, canvas.width, canvas.height);
+    }
   } else {
     // Fallback standard render
     drawBackground(ctx, template, canvas.width, canvas.height);

@@ -113,6 +113,7 @@ export interface TemplateComponent {
   scaleMode?: "contain" | "cover";
   allowRotation?: boolean;
   defaultRotation?: number;
+  anchor?: "center" | "bottom_center";
 }
 
 export interface Template {
