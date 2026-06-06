@@ -109,6 +109,10 @@ export interface TemplateComponent {
   zIndex: number;
   visible: boolean;
   sendToRunningHub: boolean;
+  lockAspectRatio?: boolean;
+  scaleMode?: "contain" | "cover";
+  allowRotation?: boolean;
+  defaultRotation?: number;
 }
 
 export interface Template {

@@ -1,6 +1,7 @@
 import React, { useState } from "react";
-import { Template, Product, TemplateSlot, TextField, TemplateBackground } from "../types";
+import { Template, Product, TemplateSlot, TextField, TemplateBackground, TemplateComponent, TemplateComponentType } from "../types";
 import { VisualCalendar } from "./VisualCalendar";
+import { getTemplateComponents } from "../utils/renderTemplate";
 import {
   Undo,
   Redo,
@@ -9,6 +10,7 @@ import {
   Save,
   Play,
   Eye,
+  EyeOff,
   Sliders,
   Type,
   Layers,
@@ -18,7 +20,11 @@ import {
   Trash2,
   Check,
   ChevronRight,
-  FolderOpen
+  FolderOpen,
+  ArrowUp,
+  ArrowDown,
+  Plus,
+  Trash
 } from "lucide-react";
 
 interface TemplateEditorProps {
@@ -41,6 +47,7 @@ export const TemplateEditor: React.FC<TemplateEditorProps> = ({
   const [selectedProductId, setSelectedProductId] = useState<string>(products[0]?.id || "");
   const [selectedSlotId, setSelectedSlotId] = useState<string | null>(null);
   const [selectedTextFieldId, setSelectedTextFieldId] = useState<string | null>(null);
+  const [selectedComponentId, setSelectedComponentId] = useState<string | null>(null);
 
   // Editor viewport settings
   const [showGrid, setShowGrid] = useState(true);
@@ -57,6 +64,19 @@ export const TemplateEditor: React.FC<TemplateEditorProps> = ({
 
   const handleUpdateTemplate = (updated: Template) => {
     setTemplates((prev) => prev.map((t) => (t.id === updated.id ? updated : t)));
+  };
+
+  const activatePSEngine = () => {
+    if (!activeTemplate) return;
+    const comps = getTemplateComponents(activeTemplate);
+    handleUpdateTemplate({
+      ...activeTemplate,
+      components: comps
+    });
+    setSelectedComponentId(comps[1]?.id || comps[0]?.id || null);
+    setSelectedSlotId(null);
+    setSelectedTextFieldId(null);
+    alert("【成功】当前版式已升级为“PS组件分层版式”！现在可以上传自定义背景、槽位、文字与装饰图层。");
   };
 
   // 1. Selector slot event
@@ -243,71 +263,175 @@ export const TemplateEditor: React.FC<TemplateEditorProps> = ({
         <div className="w-64 bg-white border-r flex flex-col min-h-0 scrollbar-none shrink-0">
           <div className="flex-1 overflow-y-auto space-y-4 p-4">
             {/* Template layer selection list */}
-            <div>
-              <h3 className="text-[11px] uppercase tracking-widest font-bold text-neutral-400 mb-2.5 flex items-center">
-                <Layers className="w-3.5 h-3.5 mr-1 text-neutral-500" />
-                排板布局层树 (Layers)
-              </h3>
-              <div className="space-y-1">
-                {/* Background Layer */}
-                <div
-                  onClick={() => {
-                    setSelectedSlotId(null);
-                    setSelectedTextFieldId(null);
-                  }}
-                  className={`p-2 rounded-lg text-xs cursor-pointer text-left flex justify-between items-center ${
-                    !selectedSlotId && !selectedTextFieldId
-                      ? "bg-slate-50 border border-slate-200 font-semibold text-slate-800"
-                      : "text-slate-500 hover:bg-slate-50"
-                  }`}
-                >
-                  <span>1. 背景与风格层 ({activeTemplate.background.type === "scene" ? "烘焙场景" : "纯色"})</span>
-                  <span className="text-[9px] text-slate-400">LAYER 1</span>
+            <div className="space-y-4">
+              <div>
+                <div className="flex justify-between items-center mb-2">
+                  <h3 className="text-[11px] uppercase tracking-widest font-bold text-neutral-400 flex items-center">
+                    <Layers className="w-3.5 h-3.5 mr-1 text-slide-500" />
+                    排板布局层树 (Layers)
+                  </h3>
+                  {!activeTemplate.components && (
+                    <button
+                      onClick={activatePSEngine}
+                      className="text-[9px] bg-indigo-600 hover:bg-indigo-700 font-bold text-white px-1.5 py-0.5 rounded cursor-pointer transition-all"
+                      title="将此模板转换为 PS 专属的多图层套版模式"
+                    >
+                      ⚡ 激活 PS 层
+                    </button>
+                  )}
                 </div>
 
-                {/* Slots Layers list */}
-                {activeTemplate.slots.map((s, idx) => {
-                  const isSel = s.id === selectedSlotId;
-                  return (
-                    <div
-                      key={s.id}
-                      onClick={() => selectSlot(s.id)}
-                      className={`p-2 rounded-lg text-xs cursor-pointer text-left flex justify-between items-center border ${
-                        isSel
-                          ? "bg-blue-50/50 border-blue-200 font-semibold text-blue-700"
-                          : "border-transparent text-slate-655 hover:bg-slate-50/80"
-                      }`}
-                    >
-                      <span className="truncate flex items-center">
-                        <span className="w-2 h-2 rounded-full bg-blue-600 mr-2" />
-                        {idx + 1}. 槽位: {s.slotName}
-                      </span>
-                      <span className="text-[9px] text-slate-400 font-mono">L.{s.layer}</span>
-                    </div>
-                  );
-                })}
+                <div className="space-y-1">
+                  {activeTemplate.components && activeTemplate.components.length > 0 ? (
+                    [...activeTemplate.components]
+                      .sort((a, b) => b.zIndex - a.zIndex)
+                      .map((comp) => {
+                        const isSel = comp.id === selectedComponentId;
+                        return (
+                          <div
+                            key={comp.id}
+                            className={`p-1.5 rounded-lg text-xs flex items-center justify-between border ${
+                              isSel
+                                ? "bg-indigo-50/70 border-indigo-200 font-bold text-indigo-700"
+                                : "border-transparent text-slate-655 hover:bg-slate-50/80"
+                            }`}
+                          >
+                            <div
+                              onClick={() => {
+                                setSelectedComponentId(comp.id);
+                                setSelectedSlotId(null);
+                                setSelectedTextFieldId(null);
+                              }}
+                              className="flex-1 truncate flex items-center cursor-pointer py-1 text-left"
+                            >
+                              <span className={`w-2 h-2 rounded-full mr-2 shrink-0 ${
+                                comp.type === "scene_base" ? "bg-amber-500" :
+                                comp.type === "product_slot" ? "bg-indigo-600" :
+                                comp.type === "decor_overlay" ? "bg-rose-500" :
+                                comp.type === "text_overlay" ? "bg-sky-500" : "bg-teal-500"
+                              }`} />
+                              <span className="truncate pr-1">{comp.name}</span>
+                            </div>
+                            
+                            <div className="flex items-center gap-1 shrink-0">
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  const updatedComps = activeTemplate.components?.map((c) =>
+                                    c.id === comp.id ? { ...c, visible: !c.visible } : c
+                                  );
+                                  handleUpdateTemplate({ ...activeTemplate, components: updatedComps });
+                                }}
+                                className="p-1 hover:bg-neutral-150 rounded text-neutral-400 hover:text-indigo-600 cursor-pointer"
+                                title={comp.visible ? "隐藏图层" : "显示图层"}
+                              >
+                                {comp.visible ? <Eye className="w-3 h-3 text-indigo-600" /> : <EyeOff className="w-3 h-3 text-rose-500" />}
+                              </button>
 
-                {/* Text fields list */}
-                {activeTemplate.textFields.map((tf, idx) => {
-                  const isSel = tf.id === selectedTextFieldId;
-                  return (
-                    <div
-                      key={tf.id}
-                      onClick={() => selectTextField(tf.id)}
-                      className={`p-2 rounded-lg text-xs cursor-pointer text-left flex justify-between items-center border ${
-                        isSel
-                          ? "bg-blue-50/50 border-blue-200 font-semibold text-blue-700"
-                          : "border-transparent text-slate-655 hover:bg-slate-50/80"
-                      }`}
-                    >
-                      <span className="truncate flex items-center">
-                        <Type className="w-3.5 h-3.5 mr-1.5 text-slate-400 shrink-0" />
-                        文案: {tf.fieldName}
-                      </span>
-                      <span className="text-[9px] text-slate-400">TXT</span>
-                    </div>
-                  );
-                })}
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  const updatedComps = activeTemplate.components?.map((c) =>
+                                    c.id === comp.id ? { ...c, zIndex: c.zIndex + 1 } : c
+                                  );
+                                  handleUpdateTemplate({ ...activeTemplate, components: updatedComps });
+                                }}
+                                className="p-0.5 hover:bg-neutral-100 rounded text-neutral-400 hover:text-neutral-700 cursor-pointer"
+                                title="上移一层"
+                              >
+                                <ArrowUp className="w-3 h-3" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  const updatedComps = activeTemplate.components?.map((c) =>
+                                    c.id === comp.id ? { ...c, zIndex: Math.max(0, c.zIndex - 1) } : c
+                                  );
+                                  handleUpdateTemplate({ ...activeTemplate, components: updatedComps });
+                                }}
+                                className="p-0.5 hover:bg-neutral-100 rounded text-neutral-400 hover:text-neutral-700 cursor-pointer"
+                                title="下移一层"
+                              >
+                                <ArrowDown className="w-3 h-3" />
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })
+                  ) : (
+                    <>
+                      {/* Background Layer */}
+                      <div
+                        onClick={() => {
+                          setSelectedSlotId(null);
+                          setSelectedTextFieldId(null);
+                          setSelectedComponentId(null);
+                        }}
+                        className={`p-2 rounded-lg text-xs cursor-pointer text-left flex justify-between items-center ${
+                          !selectedSlotId && !selectedTextFieldId && !selectedComponentId
+                            ? "bg-slate-50 border border-slate-200 font-semibold text-slate-800"
+                            : "text-slate-500 hover:bg-slate-50"
+                        }`}
+                      >
+                        <span>1. 背景与风格层 ({activeTemplate.background.type === "scene" ? "烘焙场景" : "纯色"})</span>
+                        <span className="text-[9px] text-slate-400">LAYER 1</span>
+                      </div>
+
+                      {/* Slots Layers list */}
+                      {activeTemplate.slots.map((s, idx) => {
+                        const isSel = s.id === selectedSlotId;
+                        return (
+                          <div
+                            key={s.id}
+                            onClick={() => {
+                              selectSlot(s.id);
+                              setSelectedComponentId(null);
+                            }}
+                            className={`p-2 rounded-lg text-xs cursor-pointer text-left flex justify-between items-center border ${
+                              isSel
+                                ? "bg-blue-50/50 border-blue-200 font-semibold text-blue-700"
+                                : "border-transparent text-slate-655 hover:bg-slate-50/80"
+                            }`}
+                          >
+                            <span className="truncate flex items-center">
+                              <span className="w-2 h-2 rounded-full bg-blue-600 mr-2" />
+                              {idx + 1}. 槽位: {s.slotName}
+                            </span>
+                            <span className="text-[9px] text-slate-400 font-mono">L.{s.layer}</span>
+                          </div>
+                        );
+                      })}
+
+                      {/* Text fields list */}
+                      {activeTemplate.textFields.map((tf, idx) => {
+                        const isSel = tf.id === selectedTextFieldId;
+                        return (
+                          <div
+                            key={tf.id}
+                            onClick={() => {
+                              selectTextField(tf.id);
+                              setSelectedComponentId(null);
+                            }}
+                            className={`p-2 rounded-lg text-xs cursor-pointer text-left flex justify-between items-center border ${
+                              isSel
+                                ? "bg-blue-50/50 border-blue-200 font-semibold text-blue-700"
+                                : "border-transparent text-slate-655 hover:bg-slate-50/80"
+                            }`}
+                          >
+                            <span className="truncate flex items-center">
+                              <Type className="w-3.5 h-3.5 mr-1.5 text-slate-400 shrink-0" />
+                              文案: {tf.fieldName}
+                            </span>
+                            <span className="text-[9px] text-slate-400">TXT</span>
+                          </div>
+                        );
+                      })}
+                    </>
+                  )}
+                </div>
               </div>
             </div>
 
@@ -407,80 +531,202 @@ export const TemplateEditor: React.FC<TemplateEditorProps> = ({
               </div>
             )}
 
-            {/* Slots render loop */}
-            {activeTemplate.slots.map((slot) => {
-              const isSelected = slot.id === selectedSlotId;
-              // Detect asset type cover vs inner
-              const visualType = slot.assetType === "inner_page" ? "inner_page" : slot.assetType === "side" ? "side" : "front_cover";
+            {/* Components or Slots Render Switch */}
+            {activeTemplate.components && activeTemplate.components.length > 0 ? (
+              <>
+                {/* Visual components sorted by zIndex */}
+                {[...activeTemplate.components]
+                  .sort((a, b) => a.zIndex - b.zIndex)
+                  .map((comp) => {
+                    const isSelected = comp.id === selectedComponentId;
+                    const isSlot = comp.type === "product_slot";
 
-              return (
-                <div
-                  key={slot.id}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    selectSlot(slot.id);
-                  }}
-                  className={`absolute group select-none cursor-pointer transition-shadow z-25 flex flex-col items-center justify-end ${
-                    isSelected ? "ring-2 ring-blue-600 shadow-lg z-40 bg-blue-500/5" : "hover:ring-1 hover:ring-neutral-400"
-                  }`}
-                  style={{
-                    left: `${slot.x}%`,
-                    top: `${slot.y}%`,
-                    width: `${slot.maxWidth}%`,
-                    height: `${slot.maxHeight}%`,
-                    transform: "translate(-50%, -100%)", // bottom-center anchor positioning
-                    zIndex: slot.layer
-                  }}
-                >
-                  {/* Bounding box statistics overlay */}
-                  <div className="absolute inset-0 border-2 border-dashed border-blue-500/25 pointer-events-none" />
+                    const leftVal = `${comp.x}%`;
+                    const topVal = `${comp.y}%`;
+                    const widthVal = `${comp.width}%`;
+                    const heightVal = `${comp.height}%`;
 
-                  {/* Visual Calendar mockup rendered */}
-                  <VisualCalendar
-                    product={activeProduct}
-                    type={visualType as any}
-                    isNakedPNG={true}
-                    className="w-full h-full max-h-full flex items-end justify-center"
-                  />
+                    if (isSlot) {
+                      return (
+                        <div
+                          key={comp.id}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedComponentId(comp.id);
+                            setSelectedSlotId(null);
+                            setSelectedTextFieldId(null);
+                          }}
+                          className={`absolute group select-none cursor-pointer transition-shadow flex flex-col items-center justify-end ${
+                            isSelected ? "ring-2 ring-indigo-600 shadow-lg z-40 bg-indigo-500/5" : "hover:ring-1 hover:ring-neutral-400"
+                          }`}
+                          style={{
+                            left: leftVal,
+                            top: topVal,
+                            width: widthVal,
+                            height: heightVal,
+                            transform: comp.scaleMode === "cover" ? "translate(-50%, -55%)" : "translate(-50%, -100%)", // bottom-center anchor default
+                            zIndex: comp.zIndex
+                          }}
+                        >
+                          <div className="absolute inset-0 border-2 border-dashed border-indigo-500/25 pointer-events-none" />
+                          <VisualCalendar
+                            product={activeProduct}
+                            type="front_cover"
+                            isNakedPNG={true}
+                            className="w-full h-full max-h-full flex items-end justify-center animate-pulse"
+                          />
+                          <div className="absolute top-1 left-1.5 bg-indigo-900/80 text-[8px] text-white px-1.5 py-0.2 rounded font-mono z-30 select-none opacity-0 group-hover:opacity-100 transition-opacity">
+                            {comp.name}
+                          </div>
+                        </div>
+                      );
+                    } else {
+                      return (
+                        <div
+                          key={comp.id}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedComponentId(comp.id);
+                            setSelectedSlotId(null);
+                            setSelectedTextFieldId(null);
+                          }}
+                          className={`absolute group select-none cursor-pointer overflow-hidden transition-shadow flex items-center justify-center ${
+                            isSelected ? "ring-2 ring-indigo-600 shadow-lg z-40 bg-zinc-500/5 animate-pulse" : "hover:ring-1 hover:ring-neutral-400"
+                          }`}
+                          style={{
+                            left: leftVal,
+                            top: topVal,
+                            width: widthVal,
+                            height: heightVal,
+                            zIndex: comp.zIndex
+                          }}
+                        >
+                          {comp.imageUrl ? (
+                            <img src={comp.imageUrl} className="w-full h-full object-cover" alt={comp.name} referrerPolicy="no-referrer" />
+                          ) : (
+                            <div className="text-[10px] text-neutral-400 bg-neutral-100/80 w-full h-full flex flex-col items-center justify-center p-1 border border-neutral-300">
+                              <span className="font-bold">{comp.name}</span>
+                              <span className="text-[8px]">(未上传图片组件)</span>
+                            </div>
+                          )}
+                          <div className="absolute top-1 left-1.5 bg-neutral-900/80 text-[8px] text-white px-1.5 py-0.2 rounded font-mono z-30 select-none opacity-0 group-hover:opacity-100 transition-opacity">
+                            {comp.name} ({comp.zIndex})
+                          </div>
+                        </div>
+                      );
+                    }
+                  })}
 
-                  {/* Top identifier strip for debug */}
-                  <div className="absolute top-1 left-1.5 bg-neutral-900/80 text-[8px] text-white px-1.5 py-0.2 rounded font-mono z-30 select-none opacity-0 group-hover:opacity-100 transition-opacity">
-                    {slot.slotId} • 等比缩放
-                  </div>
-                </div>
-              );
-            })}
+                {/* Text fields vector render loop inside components templates */}
+                {activeTemplate.textFields.map((tf) => {
+                  const isSelected = tf.id === selectedTextFieldId;
+                  const alignClass =
+                    tf.align === "center" ? "text-center -translate-x-1/2" : tf.align === "right" ? "text-right -translate-x-full" : "text-left";
 
-            {/* Text fields vector render loop */}
-            {activeTemplate.textFields.map((tf) => {
-              const isSelected = tf.id === selectedTextFieldId;
-              const alignClass =
-                tf.align === "center" ? "text-center -translate-x-1/2" : tf.align === "right" ? "text-right -translate-x-full" : "text-left";
+                  return (
+                    <div
+                      key={tf.id}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        selectTextField(tf.id);
+                        setSelectedComponentId(null);
+                      }}
+                      className={`absolute cursor-pointer p-1 font-sans font-extrabold ${alignClass} hover:ring-1 hover:ring-indigo-400 z-35`}
+                      style={{
+                        left: `${tf.x}%`,
+                        top: `${tf.y}%`,
+                        fontSize: `${tf.fontSize / 1.7}px`,
+                        color: tf.color,
+                        fontWeight: tf.fontWeight === "font-bold" ? "bold" : tf.fontWeight === "font-extrabold" ? "900" : "normal",
+                        zIndex: 100,
+                        transform: tf.align === "center" ? "translate(-50%, -50%)" : tf.align === "right" ? "translate(-100%, -50%)" : "translate(0, -50%)"
+                      }}
+                    >
+                      <span className={`${isSelected ? "underline decoration-indigo-600 decoration-2" : ""}`}>
+                        {getRenderedContent(tf, activeProduct)}
+                      </span>
+                    </div>
+                  );
+                })}
+              </>
+            ) : (
+              <>
+                {/* Slots render loop */}
+                {activeTemplate.slots.map((slot) => {
+                  const isSelected = slot.id === selectedSlotId;
+                  // Detect asset type cover vs inner
+                  const visualType = slot.assetType === "inner_page" ? "inner_page" : slot.assetType === "side" ? "side" : "front_cover";
 
-              return (
-                <div
-                  key={tf.id}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    selectTextField(tf.id);
-                  }}
-                  className={`absolute cursor-pointer p-1 font-sans font-extrabold ${alignClass} hover:ring-1 hover:ring-indigo-400 z-35`}
-                  style={{
-                    left: `${tf.x}%`,
-                    top: `${tf.y}%`,
-                    fontSize: `${tf.fontSize / 1.7}px`,
-                    color: tf.color,
-                    fontWeight: tf.fontWeight === "font-bold" ? "bold" : tf.fontWeight === "font-extrabold" ? "900" : "normal",
-                    zIndex: 40,
-                    transform: tf.align === "center" ? "translate(-50%, -50%)" : tf.align === "right" ? "translate(-100%, -50%)" : "translate(0, -50%)"
-                  }}
-                >
-                  <span className={`${isSelected ? "underline decoration-indigo-600 decoration-2" : ""}`}>
-                    {getRenderedContent(tf, activeProduct)}
-                  </span>
-                </div>
-              );
-            })}
+                  return (
+                    <div
+                      key={slot.id}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        selectSlot(slot.id);
+                      }}
+                      className={`absolute group select-none cursor-pointer transition-shadow z-25 flex flex-col items-center justify-end ${
+                        isSelected ? "ring-2 ring-blue-600 shadow-lg z-40 bg-blue-500/5" : "hover:ring-1 hover:ring-neutral-400"
+                      }`}
+                      style={{
+                        left: `${slot.x}%`,
+                        top: `${slot.y}%`,
+                        width: `${slot.maxWidth}%`,
+                        height: `${slot.maxHeight}%`,
+                        transform: "translate(-50%, -100%)", // bottom-center anchor positioning
+                        zIndex: slot.layer
+                      }}
+                    >
+                      {/* Bounding box statistics overlay */}
+                      <div className="absolute inset-0 border-2 border-dashed border-blue-500/25 pointer-events-none" />
+
+                      {/* Visual Calendar mockup rendered */}
+                      <VisualCalendar
+                        product={activeProduct}
+                        type={visualType as any}
+                        isNakedPNG={true}
+                        className="w-full h-full max-h-full flex items-end justify-center"
+                      />
+
+                      {/* Top identifier strip for debug */}
+                      <div className="absolute top-1 left-1.5 bg-neutral-900/80 text-[8px] text-white px-1.5 py-0.2 rounded font-mono z-30 select-none opacity-0 group-hover:opacity-100 transition-opacity">
+                        {slot.slotId} • 等比缩放
+                      </div>
+                    </div>
+                  );
+                })}
+
+                {/* Text fields vector render loop */}
+                {activeTemplate.textFields.map((tf) => {
+                  const isSelected = tf.id === selectedTextFieldId;
+                  const alignClass =
+                    tf.align === "center" ? "text-center -translate-x-1/2" : tf.align === "right" ? "text-right -translate-x-full" : "text-left";
+
+                  return (
+                    <div
+                      key={tf.id}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        selectTextField(tf.id);
+                      }}
+                      className={`absolute cursor-pointer p-1 font-sans font-extrabold ${alignClass} hover:ring-1 hover:ring-indigo-400 z-35`}
+                      style={{
+                        left: `${tf.x}%`,
+                        top: `${tf.y}%`,
+                        fontSize: `${tf.fontSize / 1.7}px`,
+                        color: tf.color,
+                        fontWeight: tf.fontWeight === "font-bold" ? "bold" : tf.fontWeight === "font-extrabold" ? "900" : "normal",
+                        zIndex: 40,
+                        transform: tf.align === "center" ? "translate(-50%, -50%)" : tf.align === "right" ? "translate(-100%, -50%)" : "translate(0, -50%)"
+                      }}
+                    >
+                      <span className={`${isSelected ? "underline decoration-indigo-600 decoration-2" : ""}`}>
+                        {getRenderedContent(tf, activeProduct)}
+                      </span>
+                    </div>
+                  );
+                })}
+              </>
+            )}
 
             {/* Bottom corporate credits for branding visual realism */}
             <div className="absolute bottom-1 w-full text-center text-[8px] text-neutral-400 pointer-events-none select-none z-10 font-mono tracking-wider">
@@ -766,9 +1012,384 @@ export const TemplateEditor: React.FC<TemplateEditorProps> = ({
               </div>
             )}
 
-            {/* C. Default Backdrop configurations if nothing selected */}
-            {!selectedSlotId && !selectedTextFieldId && (
+            {/* D. If a custom PSD Component is selected */}
+            {selectedComponentId && (
               <div className="space-y-4">
+                <div className="p-3 bg-purple-50/25 border border-purple-100 rounded-xl text-xs">
+                  <div className="flex justify-between items-center">
+                    <span className="font-bold text-purple-700">正在配置 PS 导入组件</span>
+                    <span className="text-[10px] bg-purple-600 text-white px-2 py-0.5 rounded uppercase font-mono font-bold">
+                      COMPONENT
+                    </span>
+                  </div>
+                  <p className="text-[10px] text-zinc-500 mt-1">控制单个 Photoshop 导出的透明多层资产的空间定位</p>
+                </div>
+
+                {(() => {
+                  const comp = activeTemplate.components?.find((c) => c.id === selectedComponentId);
+                  if (!comp) return null;
+                  return (
+                    <div className="space-y-3.5 text-xs">
+                      <div>
+                        <label className="block text-slate-500 font-bold mb-1">组件图层名称</label>
+                        <input
+                          type="text"
+                          value={comp.name}
+                          onChange={(e) => {
+                            const updated = activeTemplate.components?.map((c) =>
+                              c.id === comp.id ? { ...c, name: e.target.value } : c
+                            );
+                            handleUpdateTemplate({ ...activeTemplate, components: updated });
+                          }}
+                          className="w-full bg-slate-50 border rounded p-1.5 font-bold animate-pulse"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-slate-550 font-bold mb-1">组件类型 (Role)</label>
+                        <select
+                          value={comp.type}
+                          onChange={(e) => {
+                            const val = e.target.value as TemplateComponentType;
+                            const isScene = val === "scene_base";
+                            const isProduct = val === "product_slot";
+                            const updated = activeTemplate.components?.map((c) =>
+                              c.id === comp.id ? { ...c, type: val, sendToRunningHub: isScene || isProduct } : c
+                            );
+                            handleUpdateTemplate({ ...activeTemplate, components: updated });
+                          }}
+                          className="w-full bg-slate-50 border rounded p-1.5 focus:ring-1 focus:ring-indigo-500 text-xs text-slate-705"
+                        >
+                          <option value="scene_base">scene_base (参与 RunningHub 烘焙背景)</option>
+                          <option value="product_slot">product_slot (参与 RunningHub 产品槽区)</option>
+                          <option value="text_overlay">text_overlay (文案置顶盖板层)</option>
+                          <option value="decor_overlay">decor_overlay (点缀装饰置顶盖板层)</option>
+                          <option value="logo_overlay">logo_overlay (商标LOGO置顶盖板层)</option>
+                        </select>
+                      </div>
+
+                      {/* Dimensions & Coordinates */}
+                      <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-100 space-y-2.5">
+                        <span className="font-bold text-slate-700 text-[10px] block">位置尺寸控制 (x, y, width, height) %</span>
+                        <div className="grid grid-cols-2 gap-2 text-[11px]">
+                          <div>
+                            <span>水平中轴 X%</span>
+                            <input
+                              type="number"
+                              min="0"
+                              max="100"
+                              value={comp.x}
+                              onChange={(e) => {
+                                const updated = activeTemplate.components?.map((c) =>
+                                  c.id === comp.id ? { ...c, x: parseInt(e.target.value) || 0 } : c
+                                );
+                                handleUpdateTemplate({ ...activeTemplate, components: updated });
+                              }}
+                              className="w-full mt-1 bg-white border border-slate-205 rounded p-1 font-mono text-slate-800"
+                            />
+                          </div>
+                          <div>
+                            <span>底边定位 Y%</span>
+                            <input
+                              type="number"
+                              min="0"
+                              max="100"
+                              value={comp.y}
+                              onChange={(e) => {
+                                const updated = activeTemplate.components?.map((c) =>
+                                  c.id === comp.id ? { ...c, y: parseInt(e.target.value) || 0 } : c
+                                );
+                                handleUpdateTemplate({ ...activeTemplate, components: updated });
+                              }}
+                              className="w-full mt-1 bg-white border border-slate-205 rounded p-1 font-mono text-slate-800"
+                            />
+                          </div>
+                          <div>
+                            <span>物理宽度 Width%</span>
+                            <input
+                              type="number"
+                              min="5"
+                              max="100"
+                              value={comp.width}
+                              onChange={(e) => {
+                                const updated = activeTemplate.components?.map((c) =>
+                                  c.id === comp.id ? { ...c, width: parseInt(e.target.value) || 10 } : c
+                                );
+                                handleUpdateTemplate({ ...activeTemplate, components: updated });
+                              }}
+                              className="w-full mt-1 bg-white border border-slate-205 rounded p-1 font-mono text-slate-800"
+                            />
+                          </div>
+                          <div>
+                            <span>物理高度 Height%</span>
+                            <input
+                              type="number"
+                              min="5"
+                              max="100"
+                              value={comp.height}
+                              onChange={(e) => {
+                                const updated = activeTemplate.components?.map((c) =>
+                                  c.id === comp.id ? { ...c, height: parseInt(e.target.value) || 10 } : c
+                                );
+                                handleUpdateTemplate({ ...activeTemplate, components: updated });
+                              }}
+                              className="w-full mt-1 bg-white border border-slate-205 rounded p-1 font-mono text-slate-800"
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* zIndex & visible */}
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <label className="block text-[11px] text-slate-500 mb-1">合成层叠层 zIndex</label>
+                          <input
+                            type="number"
+                            value={comp.zIndex}
+                            onChange={(e) => {
+                              const updated = activeTemplate.components?.map((c) =>
+                                c.id === comp.id ? { ...c, zIndex: parseInt(e.target.value) || 0 } : c
+                              );
+                              handleUpdateTemplate({ ...activeTemplate, components: updated });
+                            }}
+                            className="w-full bg-slate-50 border rounded p-1.5 font-mono text-xs"
+                          />
+                        </div>
+                        <div className="flex flex-col justify-end">
+                          <label className="flex items-center space-x-1.5 cursor-pointer text-xs mb-2">
+                            <input
+                              type="checkbox"
+                              checked={comp.visible}
+                              onChange={(e) => {
+                                const updated = activeTemplate.components?.map((c) =>
+                                  c.id === comp.id ? { ...c, visible: e.target.checked } : c
+                                );
+                                handleUpdateTemplate({ ...activeTemplate, components: updated });
+                              }}
+                              className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 w-4 h-4"
+                            />
+                            <span className="font-bold text-slate-700">图层是否可见</span>
+                          </label>
+                        </div>
+                      </div>
+
+                      {/* sendToRunningHub Rule */}
+                      <div className="p-3 bg-zinc-50 border rounded-xl space-y-1">
+                        <label className="flex items-center space-x-2 font-bold text-slate-850 cursor-pointer text-[11px]">
+                          <input
+                            type="checkbox"
+                            checked={comp.sendToRunningHub}
+                            onChange={(e) => {
+                              const updated = activeTemplate.components?.map((c) =>
+                                c.id === comp.id ? { ...c, sendToRunningHub: e.target.checked } : c
+                              );
+                              handleUpdateTemplate({ ...activeTemplate, components: updated });
+                            }}
+                            className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 w-4 h-4"
+                          />
+                          <span>传输给 RunningHub (sendToRunningHub)</span>
+                        </label>
+                        <p className="text-[9px] text-slate-455 pl-6 leading-relaxed">
+                          为 true 时表示该组件属于底层空间图层(烘焙桌面板或摆放的产品层)，会一起送往 RunningHub 做深度光照投影；若为 false，则不参与，保证文案等不会产生畸变。
+                        </p>
+                      </div>
+
+                      {/* Product Slot specific properties */}
+                      {comp.type === "product_slot" && (
+                        <div className="p-3 bg-indigo-50/40 border border-indigo-120 rounded-xl space-y-3.5 text-xs">
+                          <span className="font-bold text-indigo-805 text-[11px] block text-left">🔍 产品槽位高级参数</span>
+
+                          <div className="space-y-2 text-left">
+                            <label className="flex items-center space-x-2 font-bold text-slate-800 cursor-pointer text-[10.5px]">
+                              <input
+                                type="checkbox"
+                                checked={comp.lockAspectRatio !== false}
+                                onChange={(e) => {
+                                  const updated = activeTemplate.components?.map((c) =>
+                                    c.id === comp.id ? { ...c, lockAspectRatio: e.target.checked } : c
+                                  );
+                                  handleUpdateTemplate({ ...activeTemplate, components: updated });
+                                }}
+                                className="rounded border-slate-350 text-indigo-600 focus:ring-indigo-550 w-3.5 h-3.5"
+                              />
+                              <span>强制产品等比缩放 (lockAspectRatio)</span>
+                            </label>
+                          </div>
+
+                          <div className="text-left">
+                            <span className="block text-slate-500 text-[10px] mb-1">产品边缘排布缩放 (scaleMode)</span>
+                            <select
+                              value={comp.scaleMode || "contain"}
+                              onChange={(e) => {
+                                const updated = activeTemplate.components?.map((c) =>
+                                  c.id === comp.id ? { ...c, scaleMode: e.target.value as any } : c
+                                );
+                                handleUpdateTemplate({ ...activeTemplate, components: updated });
+                              }}
+                              className="w-full bg-white border border-slate-200 rounded p-1 text-[11px]"
+                            >
+                              <option value="contain">contain (完整居中摆入，不切割产品)</option>
+                              <option value="cover">cover (贴片最大化拉伸，填充整个槽区)</option>
+                            </select>
+                          </div>
+
+                          <div className="space-y-2 text-left">
+                            <label className="flex items-center space-x-2 font-bold text-slate-800 cursor-pointer text-[10.5px]">
+                              <input
+                                type="checkbox"
+                                checked={comp.allowRotation === true}
+                                onChange={(e) => {
+                                  const updated = activeTemplate.components?.map((c) =>
+                                    c.id === comp.id ? { ...c, allowRotation: e.target.checked } : c
+                                  );
+                                  handleUpdateTemplate({ ...activeTemplate, components: updated });
+                                }}
+                                className="rounded border-slate-350 text-indigo-600 focus:ring-indigo-550 w-3.5 h-3.5"
+                              />
+                              <span>允许旋转产品 (allowRotation)</span>
+                            </label>
+                          </div>
+
+                          <div className="text-left">
+                            <label className="block text-slate-500 text-[10px] mb-1">静态初始旋转角 (defaultRotation) {comp.defaultRotation || 0}°</label>
+                            <input
+                              type="range"
+                              min="-180"
+                              max="180"
+                              value={comp.defaultRotation || 0}
+                              onChange={(e) => {
+                                const updated = activeTemplate.components?.map((c) =>
+                                  c.id === comp.id ? { ...c, defaultRotation: parseInt(e.target.value) || 0 } : c
+                                );
+                                handleUpdateTemplate({ ...activeTemplate, components: updated });
+                              }}
+                              className="w-full h-1 bg-slate-200 rounded cursor-pointer accent-indigo-600"
+                            />
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Remove Component */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (confirm("确定要彻底删除该 PS 导入组件图层吗？（不可撤销）")) {
+                            const updated = activeTemplate.components?.filter((c) => c.id !== comp.id);
+                            handleUpdateTemplate({ ...activeTemplate, components: updated });
+                            setSelectedComponentId(null);
+                          }
+                        }}
+                        className="w-full py-2 bg-rose-50 hover:bg-rose-150 text-rose-600 rounded-lg font-bold flex items-center justify-center gap-1 cursor-pointer transition-colors"
+                      >
+                        <Trash className="w-4 h-4" />
+                        <span>彻底删除此图层</span>
+                      </button>
+                    </div>
+                  );
+                })()}
+              </div>
+            )}
+
+            {/* C. Default Backdrop configurations if nothing selected */}
+            {!selectedSlotId && !selectedTextFieldId && !selectedComponentId && (
+              <div className="space-y-4">
+                {/* PS Components Import Panel */}
+                <div className="p-4 bg-slate-50 border border-slate-200/80 rounded-xl space-y-4 text-xs text-left">
+                  <div className="flex items-center gap-1.5 font-bold text-slate-800">
+                    <FolderOpen className="w-4 h-4 text-indigo-600 shrink-0" />
+                    <span>PS组件批量导入 (Photoshop Components)</span>
+                  </div>
+                  <p className="text-[10px] text-slate-500 leading-relaxed">
+                    在 Photoshop 中设计完主图后，可将导出的透明图层资产 (如背景、贴纸、文案层) 上传至平台。
+                  </p>
+
+                  {/* File uploader container */}
+                  <div className="border border-dashed border-slate-300 rounded-xl p-4 bg-white hover:bg-slate-50 transition-all flex flex-col items-center justify-center cursor-pointer text-center relative group">
+                    <input
+                      type="file"
+                      accept="image/png, image/jpeg, image/webp"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          const reader = new FileReader();
+                          reader.onload = (event) => {
+                            const dataUrl = event.target?.result as string;
+                            const nameClean = file.name.substring(0, file.name.lastIndexOf("."));
+                            let guessedType: TemplateComponentType = "decor_overlay";
+                            let zVal = 30;
+                            let sendToRH = false;
+
+                            if (nameClean.toLowerCase().includes("bg") || nameClean.toLowerCase().includes("scene") || nameClean.toLowerCase().includes("背景")) {
+                              guessedType = "scene_base";
+                              zVal = 0;
+                              sendToRH = true;
+                            } else if (nameClean.toLowerCase().includes("text") || nameClean.toLowerCase().includes("title") || nameClean.toLowerCase().includes("文案") || nameClean.toLowerCase().includes("字")) {
+                              guessedType = "text_overlay";
+                              zVal = 40;
+                            } else if (nameClean.toLowerCase().includes("logo")) {
+                              guessedType = "logo_overlay";
+                              zVal = 50;
+                            }
+
+                            const newComp: TemplateComponent = {
+                              id: `comp_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
+                              name: `${nameClean} (${guessedType === "scene_base" ? "背景" : guessedType === "text_overlay" ? "文案" : "装饰"})`,
+                              type: guessedType,
+                              imageUrl: dataUrl,
+                              x: guessedType === "scene_base" ? 0 : 25,
+                              y: guessedType === "scene_base" ? 0 : 25,
+                              width: guessedType === "scene_base" ? 100 : 50,
+                              height: guessedType === "scene_base" ? 100 : 50,
+                              zIndex: zVal,
+                              visible: true,
+                              sendToRunningHub: sendToRH
+                            };
+
+                            const updatedComps = [...(activeTemplate.components || []), newComp];
+                            handleUpdateTemplate({ ...activeTemplate, components: updatedComps });
+                            setSelectedComponentId(newComp.id);
+                            alert(`【组件导入成功】：已识别「${nameClean}」多层图层资源并存入当前模板！`);
+                          };
+                          reader.readAsDataURL(file);
+                        }
+                      }}
+                      className="absolute inset-0 opacity-0 cursor-pointer"
+                    />
+                    <Sparkles className="w-6 h-6 text-indigo-500 mb-1 group-hover:scale-110 transition-transform" />
+                    <span className="font-bold text-slate-700 text-[11px]">点击或拖拽上传 PNG 组件图</span>
+                    <span className="text-[9px] text-slate-400 mt-0.5">支持 PS 导出的透明图层</span>
+                  </div>
+
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const idVal = `comp_${Date.now()}`;
+                        const newSlot: TemplateComponent = {
+                          id: idVal,
+                          name: `产品槽位 (${(activeTemplate.components?.filter(c => c.type === "product_slot").length || 0) + 1})`,
+                          type: "product_slot",
+                          x: 42,
+                          y: 65,
+                          width: 35,
+                          height: 35,
+                          zIndex: 10,
+                          visible: true,
+                          sendToRunningHub: true,
+                          lockAspectRatio: true,
+                          scaleMode: "contain"
+                        };
+                        const updatedComps = [...(activeTemplate.components || []), newSlot];
+                        handleUpdateTemplate({ ...activeTemplate, components: updatedComps });
+                        setSelectedComponentId(idVal);
+                      }}
+                      className="flex-1 py-1.5 px-2 border border-indigo-150 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-lg text-[10px] font-bold text-center cursor-pointer transition-all"
+                    >
+                      ➕ 新增产品槽层 (product_slot)
+                    </button>
+                  </div>
+                </div>
+
                 <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs space-y-1">
                   <span className="font-bold text-slate-800 block">1. 模板背景预设置</span>
                   <p className="text-[10px] text-slate-400 leading-normal">

@@ -1116,16 +1116,167 @@ export function getTemplateComponents(template: Template): TemplateComponent[] {
   return components;
 }
 
+function loadImage(url: string): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.onload = () => resolve(img);
+    img.onerror = () => reject(new Error("Failed to load image: " + url));
+    img.src = url;
+  });
+}
+
+async function drawComponent(
+  ctx: CanvasRenderingContext2D,
+  comp: TemplateComponent,
+  product: Product,
+  template: Template,
+  cw: number,
+  ch: number,
+  offsets?: { hOffset?: number; vOffset?: number; scale?: number },
+  drawShadow: boolean = true
+) {
+  const x = comp.x > 100 ? comp.x : cw * (comp.x / 100);
+  const y = comp.y > 100 ? comp.y : ch * (comp.y / 100);
+  const w = comp.width > 100 ? comp.width : cw * (comp.width / 100);
+  const h = comp.height > 100 ? comp.height : ch * (comp.height / 100);
+
+  if (comp.type === "product_slot") {
+    const matchingAsset = findMatchingAsset(product, "transparent_png");
+    let assetUrl = "";
+    if (matchingAsset && matchingAsset.fileUrl) {
+      const isPlaceholder = ["front", "inner", "side", "pdf", "png", "ring", "det_cov", "det_pg", "det_base", "ad", "white_bg"].includes(matchingAsset.fileUrl);
+      if (isPlaceholder) {
+        assetUrl = generateDynamicAssetDataUrl(product, "transparent_png");
+      } else {
+        assetUrl = matchingAsset.fileUrl;
+      }
+    } else {
+      assetUrl = generateDynamicAssetDataUrl(product, "transparent_png");
+    }
+
+    try {
+      const img = await loadImage(assetUrl);
+      const hOffset = ((offsets?.hOffset || 0) / 100) * cw;
+      const vOffset = ((offsets?.vOffset || 0) / 100) * ch;
+      const scaleF = offsets?.scale !== undefined ? offsets.scale : 1.0;
+
+      const finalW = w * scaleF;
+      const finalH = h * scaleF;
+      const finalX = x + hOffset;
+      const finalY = y + vOffset;
+
+      const scale = Math.min(finalW / img.width, finalH / img.height);
+      const drawW = img.width * scale;
+      const drawH = img.height * scale;
+
+      const rot = comp.defaultRotation || 0;
+      
+      let drawX = finalX - drawW / 2;
+      let drawY = finalY - drawH; // default Bottom-Center anchor
+
+      if (comp.scaleMode === "cover") {
+        drawX = finalX - drawW / 2;
+        drawY = finalY - drawH / 2; // Center anchor
+      }
+
+      // Draw Shadow
+      if (drawShadow) {
+        ctx.save();
+        const shadowY = drawY + drawH + 1;
+        const shadowX = drawX + drawW / 2;
+        const shadowRadiusX = drawW * 0.45;
+        const shadowRadiusY = drawH * 0.08;
+        ctx.translate(shadowX, shadowY);
+        ctx.scale(1, shadowRadiusY / shadowRadiusX);
+        const grad = ctx.createRadialGradient(0, 0, 0, 0, 0, shadowRadiusX);
+        grad.addColorStop(0, "rgba(0, 0, 0, 0.25)");
+        grad.addColorStop(0.4, "rgba(0, 0, 0, 0.12)");
+        grad.addColorStop(1, "rgba(0, 0, 0, 0)");
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.arc(0, 0, shadowRadiusX, 0, 2 * Math.PI);
+        ctx.fill();
+        ctx.restore();
+      }
+
+      // Draw product PNG
+      ctx.save();
+      if (rot !== 0 && comp.allowRotation) {
+        ctx.translate(finalX, finalY);
+        ctx.rotate((rot * Math.PI) / 180);
+        ctx.drawImage(img, -drawW / 2, comp.scaleMode === "cover" ? -drawH / 2 : -drawH, drawW, drawH);
+      } else {
+        ctx.drawImage(img, drawX, drawY, drawW, drawH);
+      }
+      ctx.restore();
+    } catch (err) {
+      console.error("Failed to load product slot image:", err);
+    }
+  } else if (comp.type === "scene_base") {
+    if (comp.imageUrl) {
+      try {
+        const img = await loadImage(comp.imageUrl);
+        ctx.drawImage(img, x, y, w, h);
+      } catch (err) {
+        console.error("Failed to load scene_base image, falling back to background:", err);
+        drawBackground(ctx, template, cw, ch);
+      }
+    } else {
+      drawBackground(ctx, template, cw, ch);
+    }
+  } else {
+    // text_overlay, decor_overlay, logo_overlay
+    if (!comp.imageUrl) return;
+    try {
+      const img = await loadImage(comp.imageUrl);
+      ctx.drawImage(img, x, y, w, h);
+    } catch (err) {
+      console.error("Failed to load overlay image:", comp.name, err);
+    }
+  }
+}
+
 /**
  * 1. Only renders: scene_base, product_slot. No shadows, text, badges.
  * Optimized for RunningHub V2 Light & Shadow AI Fusion.
+ * RunningHub will handle shadows and unit lighting.
  */
 export async function renderFusionBaseImage(
   product: Product,
   template: Template,
   offsets?: { hOffset?: number; vOffset?: number; scale?: number }
 ): Promise<string> {
-  return renderTemplateToCanvas(product, template, offsets, "base_only");
+  const canvas = document.createElement("canvas");
+  canvas.width = template.outputWidth || 800;
+  canvas.height = template.outputHeight || 800;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) throw new Error("Could not construct 2D canvas context");
+
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = "high";
+
+  if (template.components && template.components.length > 0) {
+    // Filter and render components: scene_base and product_slots only.
+    const eligibleComps = template.components
+      .filter((c) => c.visible && (c.type === "scene_base" || c.type === "product_slot"))
+      .sort((a, b) => a.zIndex - b.zIndex);
+
+    for (const comp of eligibleComps) {
+      // Bypassing shadows for base_fusion
+      await drawComponent(ctx, comp, product, template, canvas.width, canvas.height, offsets, false);
+    }
+  } else {
+    // Classic fallback
+    drawBackground(ctx, template, canvas.width, canvas.height);
+    const sortedSlots = [...template.slots].sort((a, b) => (a.layer || 0) - (b.layer || 0));
+    for (const slot of sortedSlots) {
+      await drawSlot(ctx, product, slot, canvas.width, canvas.height, offsets, "base_only");
+    }
+  }
+
+  const format = template.exportSettings?.format === "PNG" ? "image/png" : "image/jpeg";
+  return canvas.toDataURL(format, 0.95);
 }
 
 /**
@@ -1137,7 +1288,17 @@ export async function renderFinalCompositeImage(
   product?: Product,
   offsets?: { hOffset?: number; vOffset?: number; scale?: number }
 ): Promise<string> {
-  const dummyProduct = product || {
+  const canvas = document.createElement("canvas");
+  canvas.width = template.outputWidth || 800;
+  canvas.height = template.outputHeight || 800;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) throw new Error("Could not construct 2D canvas context");
+
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = "high";
+
+  // Use dummy product if none supplied
+  const dummyProduct = product || ({
     id: "temp",
     productCode: "TEMP-001",
     productName: "台历/挂历",
@@ -1158,8 +1319,54 @@ export async function renderFinalCompositeImage(
     status: "completed",
     themeColor: "#854D0E",
     illustrationType: "landscape"
-  } as Product;
-  return renderTemplateToCanvas(dummyProduct, template, offsets, "all", aiFusionUrl);
+  } as Product);
+
+  // Draw RunningHub fused backdrop first if provided
+  if (aiFusionUrl) {
+    try {
+      const img = await loadImage(aiFusionUrl);
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+    } catch (err) {
+      console.error("Failed to draw RunningHub base image, falling back to background:", err);
+      drawBackground(ctx, template, canvas.width, canvas.height);
+    }
+  } else {
+    // If runninghub output is not completed, we draw standard base preview background
+    if (template.components && template.components.length > 0) {
+      const baseComps = template.components
+        .filter((c) => c.visible && (c.type === "scene_base" || c.type === "product_slot"))
+        .sort((a, b) => a.zIndex - b.zIndex);
+      for (const comp of baseComps) {
+        await drawComponent(ctx, comp, dummyProduct, template, canvas.width, canvas.height, offsets, true);
+      }
+    } else {
+      drawBackground(ctx, template, canvas.width, canvas.height);
+      const sortedSlots = [...template.slots].sort((a, b) => (a.layer || 0) - (b.layer || 0));
+      for (const slot of sortedSlots) {
+        await drawSlot(ctx, dummyProduct, slot, canvas.width, canvas.height, offsets, "all");
+      }
+    }
+  }
+
+  // Draw overlay types: text_overlay, decor_overlay, logo_overlay
+  if (template.components && template.components.length > 0) {
+    const overlays = template.components
+      .filter((c) => c.visible && (c.type === "text_overlay" || c.type === "decor_overlay" || c.type === "logo_overlay"))
+      .sort((a, b) => a.zIndex - b.zIndex);
+
+    for (const comp of overlays) {
+      await drawComponent(ctx, comp, dummyProduct, template, canvas.width, canvas.height, offsets, false);
+    }
+  }
+
+  // Draw any traditional typography / placeholders to protect layout compatibility
+  drawTextFields(ctx, dummyProduct, template, canvas.width, canvas.height);
+  if (!template.components || template.components.length === 0) {
+    drawDecorAndLogoOverlays(ctx, template, dummyProduct, canvas.width, canvas.height);
+  }
+
+  const format = template.exportSettings?.format === "PNG" ? "image/png" : "image/jpeg";
+  return canvas.toDataURL(format, 0.95);
 }
 
 /**
@@ -1170,6 +1377,39 @@ export async function renderFullPreviewImage(
   template: Template,
   offsets?: { hOffset?: number; vOffset?: number; scale?: number }
 ): Promise<string> {
-  return renderTemplateToCanvas(product, template, offsets, "all");
+  const canvas = document.createElement("canvas");
+  canvas.width = template.outputWidth || 800;
+  canvas.height = template.outputHeight || 800;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) throw new Error("Could not construct 2D canvas context");
+
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = "high";
+
+  if (template.components && template.components.length > 0) {
+    // Sort and draw ALL components
+    const sortedComps = [...template.components]
+      .filter((c) => c.visible)
+      .sort((a, b) => a.zIndex - b.zIndex);
+
+    for (const comp of sortedComps) {
+      await drawComponent(ctx, comp, product, template, canvas.width, canvas.height, offsets, true);
+    }
+
+    // Draw typography
+    drawTextFields(ctx, product, template, canvas.width, canvas.height);
+  } else {
+    // Fallback standard render
+    drawBackground(ctx, template, canvas.width, canvas.height);
+    const sortedSlots = [...template.slots].sort((a, b) => (a.layer || 0) - (b.layer || 0));
+    for (const slot of sortedSlots) {
+      await drawSlot(ctx, product, slot, canvas.width, canvas.height, offsets, "all");
+    }
+    drawTextFields(ctx, product, template, canvas.width, canvas.height);
+    drawDecorAndLogoOverlays(ctx, template, product, canvas.width, canvas.height);
+  }
+
+  const format = template.exportSettings?.format === "PNG" ? "image/png" : "image/jpeg";
+  return canvas.toDataURL(format, 0.95);
 }
 
