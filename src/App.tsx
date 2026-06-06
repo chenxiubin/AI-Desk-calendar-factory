@@ -12,6 +12,7 @@ import { BatchGenerator } from "./components/BatchGenerator";
 import { ReviewCenter } from "./components/ReviewCenter";
 import { ExportCenter } from "./components/ExportCenter";
 import { DataStatistics, SystemSettings } from "./components/SystemViews";
+import { Sparkles } from "lucide-react";
 import { INITIAL_PRODUCTS, PRESET_TEMPLATES } from "./data";
 import { Product, Template, GenerationTask, GeneratedImage, ProductAsset } from "./types";
 
@@ -257,12 +258,23 @@ export default function App() {
         );
       case "batch":
         return (
-          <BatchGenerator
-            products={products}
-            templates={templates}
-            onStartWorkflow={handleStartWorkflow}
-            onNavigateToReview={() => setActiveTab("review")}
-          />
+          <div className="flex flex-col items-center justify-center min-h-[460px] text-center p-8 bg-white border border-slate-200 rounded-2xl shadow-sm max-w-xl mx-auto my-12">
+            <div className="w-16 h-16 rounded-full bg-indigo-50 flex items-center justify-center text-indigo-600 mb-5 animate-pulse">
+              <Sparkles className="w-8 h-8" />
+            </div>
+            <h3 className="text-lg font-bold text-slate-800 mb-2">服务合并迁移通知</h3>
+            <p className="text-sm text-slate-500 max-w-md leading-relaxed mb-6">
+              旧版批量套版已合并到套系生产工作台，请前往套系生产工作台继续操作。
+            </p>
+            <button
+              id="goto-suite-workbench-from-batch"
+              type="button"
+              onClick={() => setActiveTab("project_suite")}
+              className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs px-6 py-2.5 rounded-lg shadow-md active:scale-95 transition-all"
+            >
+              前往套系生产工作台
+            </button>
+          </div>
         );
       case "review":
         return (
