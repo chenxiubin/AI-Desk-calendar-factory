@@ -40,6 +40,7 @@ import {
 import { PRESET_TEMPLATE_SUITES, PRESET_PRODUCT_ASSET_PACKS } from "../data";
 import { renderFullPreviewImage } from "../utils/renderTemplate";
 import { LayeredCanvasWorkbench } from "./LayeredCanvasWorkbench";
+import { getSuiteDeliveryCompleteness } from "../utils/businessRuleHelpers";
 
 interface SuiteWorkbenchProps {
   products: Product[];
@@ -783,6 +784,122 @@ export const SuiteWorkbench: React.FC<SuiteWorkbenchProps> = ({
                 </div>
               )}
             </div>
+
+            {/* 交付完整性校验 card */}
+            {activeProject && activeSuite && (
+              (() => {
+                const completeness = getSuiteDeliveryCompleteness(activeSuite, activeProject.pages);
+                const hasAlerts = 
+                  completeness.mainSquareMissing > 0 || 
+                  completeness.mainVerticalMissing > 0 || 
+                  completeness.mainMarketingTotalMissing > 0 || 
+                  completeness.whiteBgMissing || 
+                  completeness.transparentPngMissing;
+
+                return (
+                  <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm space-y-4">
+                    <span className="font-black text-slate-800 border-l-4 border-amber-500 pl-2 block text-sm flex items-center justify-between">
+                      <span>🏷️ 交付完整性校验</span>
+                      {hasAlerts ? (
+                        <span className="text-[10px] text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200/50 font-bold">待达标</span>
+                      ) : (
+                        <span className="text-[10px] text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200/50 font-bold">已达标</span>
+                      )}
+                    </span>
+
+                    <div className="space-y-3 pt-1 text-xs">
+                      {/* 1:1方形主图 */}
+                      <div className="space-y-1">
+                        <div className="flex justify-between items-center text-[11px] font-medium">
+                          <span className="text-slate-600">1:1方形主图卖点图</span>
+                          <span className={`font-mono font-bold ${completeness.mainSquareMissing > 0 ? "text-amber-600" : "text-emerald-600"}`}>
+                            {completeness.mainSquareCurrent} / {completeness.mainSquareRequired}
+                          </span>
+                        </div>
+                        {completeness.mainSquareMissing > 0 && (
+                          <div className="p-1.5 px-2.5 bg-amber-50 text-[10px] text-amber-700 rounded-lg border border-amber-100 flex items-start gap-1">
+                            <span className="leading-none text-[12px]">⚠️</span>
+                            <span>数量未达标：最少需要 {completeness.mainSquareRequired} 张，差 {completeness.mainSquareMissing} 张</span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* 3:4竖版主图 */}
+                      <div className="space-y-1">
+                        <div className="flex justify-between items-center text-[11px] font-medium">
+                          <span className="text-slate-600">3:4竖版主图卖点图</span>
+                          <span className={`font-mono font-bold ${completeness.mainVerticalMissing > 0 ? "text-amber-600" : "text-emerald-600"}`}>
+                            {completeness.mainVerticalCurrent} / {completeness.mainVerticalRequired}
+                          </span>
+                        </div>
+                        {completeness.mainVerticalMissing > 0 && (
+                          <div className="p-1.5 px-2.5 bg-amber-50 text-[10px] text-amber-700 rounded-lg border border-amber-100 flex items-start gap-1">
+                            <span className="leading-none text-[12px]">⚠️</span>
+                            <span>数量未达标：最少需要 {completeness.mainVerticalRequired} 张，差 {completeness.mainVerticalMissing} 张</span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* 合计卖点图 */}
+                      <div className="space-y-1">
+                        <div className="flex justify-between items-center text-[11px] font-semibold">
+                          <span className="text-slate-700">主图卖点图合计</span>
+                          <span className={`font-mono font-bold ${completeness.mainMarketingTotalMissing > 0 ? "text-amber-650" : "text-indigo-600 font-extrabold"}`}>
+                            {completeness.mainMarketingTotalCurrent} / {completeness.mainMarketingTotalRequired}
+                          </span>
+                        </div>
+                        {completeness.mainMarketingTotalMissing > 0 && (
+                          <div className="p-1.5 px-2.5 bg-amber-50 text-[10px] text-amber-700 rounded-lg border border-amber-100 flex items-start gap-1">
+                            <span className="leading-none text-[12px]">⚠️</span>
+                            <span>差 {completeness.mainMarketingTotalMissing} 张：合计应不低于 {completeness.mainMarketingTotalRequired} 张</span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* 白底精修图 */}
+                      <div className="space-y-1 pt-1.5 border-t border-slate-100">
+                        <div className="flex justify-between items-center">
+                          <span className="text-slate-600">白底精修图 (必交)</span>
+                          <span className={`font-bold ${completeness.hasWhiteBg ? "text-emerald-600" : "text-amber-600"}`}>
+                            {completeness.hasWhiteBg ? "✓ 已存在" : "❌ 未找到"}
+                          </span>
+                        </div>
+                        {!completeness.hasWhiteBg && completeness.whiteBgMissing && (
+                          <div className="p-1.5 px-2.5 bg-amber-50 text-[10px] text-amber-700 rounded-lg border border-amber-100 flex items-start gap-1">
+                            <span className="leading-none text-[12px]">⚠️</span>
+                            <span>未找到交付所需的白底精修单页</span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* 透明PNG图 */}
+                      <div className="space-y-1 pt-1.5 border-t border-slate-100">
+                        <div className="flex justify-between items-center">
+                          <span className="text-slate-600">透明PNG图 (必交)</span>
+                          <span className={`font-bold ${completeness.hasTransparentPng ? "text-emerald-600" : "text-amber-600"}`}>
+                            {completeness.hasTransparentPng ? "✓ 已存在" : "❌ 未找到"}
+                          </span>
+                        </div>
+                        {!completeness.hasTransparentPng && completeness.transparentPngMissing && (
+                          <div className="p-1.5 px-2.5 bg-amber-50 text-[10px] text-amber-700 rounded-lg border border-amber-100 flex items-start gap-1">
+                            <span className="leading-none text-[12px]">⚠️</span>
+                            <span>未找到交付所需的透明PNG单页</span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* 绿色标示：全部达标 */}
+                      {!hasAlerts && (
+                        <div className="p-2.5 bg-emerald-50 text-[10.5px] text-emerald-700 rounded-xl border border-emerald-200/80 font-semibold space-y-1 mt-2 flex flex-col items-center text-center">
+                          <span className="text-[20px] leading-none text-emerald-600">✓</span>
+                          <span>整套交付规则校验：全部达标，已符合交付标准，可以放心导出！</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })()
+            )}
           </div>
 
           {/* Right panel: Tab views */}

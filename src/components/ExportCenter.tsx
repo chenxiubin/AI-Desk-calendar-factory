@@ -12,6 +12,9 @@ import {
   CheckCircle2,
   AlertCircle
 } from "lucide-react";
+import { PRESET_TEMPLATE_SUITES } from "../data";
+import { getPageExportFolder, getExportFolderName } from "../utils/businessRuleHelpers";
+import { ExportFolderKey } from "../domain/calendarTaxonomy";
 
 interface ExportCenterProps {
   generatedImages: GeneratedImage[];
@@ -31,6 +34,8 @@ export const ExportCenter: React.FC<ExportCenterProps> = ({
   const [compressionRatio, setCompressionRatio] = useState<number>(90);
   const [namingFormat, setNamingFormat] = useState<string>("{Code}_{Name}_{Type}_{TempId}_{Size}");
 
+  const [activeViewTab, setActiveViewTab] = useState<"tree" | "flat" | "manifest">("tree");
+
   const [isZipping, setIsZipping] = useState(false);
   const [zipProgress, setZipProgress] = useState(0);
   const [showComplete, setShowComplete] = useState(false);
@@ -40,6 +45,50 @@ export const ExportCenter: React.FC<ExportCenterProps> = ({
     img => img.fileUrl && img.fileUrl !== "url" && img.reviewStatus !== "needs_adjustment"
   ); 
   const readyCount = exportableImages.length;
+
+  const getImageFolderDetails = (img: GeneratedImage) => {
+    let matchingSuite = PRESET_TEMPLATE_SUITES.find((suite) =>
+      suite.pages.some((page) => page.templateId === img.templateId)
+    );
+    let matchingPage = matchingSuite?.pages.find((page) => page.templateId === img.templateId);
+
+    let folderKey: string | ExportFolderKey = "";
+    if (matchingPage && matchingSuite) {
+      folderKey = getPageExportFolder(matchingPage, matchingSuite);
+    } else {
+      if (img.imageType === "main") {
+        folderKey = ExportFolderKey.main_square;
+      } else if (img.imageType === "sku") {
+        folderKey = ExportFolderKey.sku;
+      } else if (img.imageType === "detail") {
+        folderKey = ExportFolderKey.detail;
+      } else if (img.imageType === "white_bg") {
+        folderKey = ExportFolderKey.white_bg;
+      } else {
+        folderKey = "unclassified";
+      }
+    }
+
+    const folderName = getExportFolderName(folderKey);
+    return { folderKey, folderName };
+  };
+
+  const getCompiledFilePath = (img: GeneratedImage) => {
+    const p = products.find((x) => x.id === img.productId);
+    const t = templates.find((x) => x.id === img.templateId);
+    if (!p || !t) return `/未分类/calendar_file.${outputFormat.toLowerCase()}`;
+
+    const { folderName } = getImageFolderDetails(img);
+
+    let matchingSuite = PRESET_TEMPLATE_SUITES.find((suite) =>
+      suite.pages.some((page) => page.templateId === img.templateId)
+    );
+    let matchingPage = matchingSuite?.pages.find((page) => page.templateId === img.templateId);
+    const pageName = matchingPage?.pageName || t.templateName || "单页";
+
+    let ext = outputFormat.toLowerCase();
+    return `/${folderName}/${p.productCode}_${pageName}.${ext}`;
+  };
 
   const platformsMap: Record<string, string> = {
     taobao: "淘宝主图/详情规范",
@@ -97,7 +146,8 @@ export const ExportCenter: React.FC<ExportCenterProps> = ({
               setTimeout(() => {
                 const link = document.createElement("a");
                 link.href = targetDownloadUrl;
-                link.download = getCompiledFileName(img);
+                // use direct file name inside folder
+                link.download = getCompiledFilePath(img).split("/").pop() || getCompiledFileName(img);
                 document.body.appendChild(link);
                 link.click();
                 document.body.removeChild(link);
@@ -243,55 +293,181 @@ export const ExportCenter: React.FC<ExportCenterProps> = ({
             </div>
 
             {/* Scrollable filenames list */}
-            <div className="flex-1 overflow-y-auto space-y-1.5 max-h-80 pr-1 min-h-[220px]">
-              {exportableImages.map((img) => (
-                <div
-                  key={img.id}
-                  className="p-2.5 border border-slate-100 bg-slate-50/50 hover:bg-slate-50 rounded-xl flex items-center justify-between text-xs font-mono text-slate-600"
-                >
-                  <p className="font-bold truncate text-slate-700 pr-4">
-                    {getCompiledFileName(img)}
-                  </p>
-                  <div className="flex items-center space-x-2 shrink-0">
-                    <span className="text-[9px] bg-emerald-50 text-emerald-800 border-emerald-100 border px-1.5 py-0.5 rounded-full font-bold">
-                      质检通过
-                    </span>
-                    {(() => {
-                      const targetImgUrl = img.finalCompositeUrl || img.aiFusionUrl || img.fileUrl;
-                      return targetImgUrl && targetImgUrl !== "url" ? (
-                        <a
-                          href={targetImgUrl}
-                          download={getCompiledFileName(img)}
-                          className="p-1 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded transition-all cursor-pointer"
-                          title="下载此张"
-                        >
-                          <FileDown className="w-4 h-4" />
-                        </a>
-                      ) : null;
-                    })()}
-                  </div>
-                </div>
-              ))}
+            {(() => {
+              // Group images by folder for visual directory structure
+              const groupedExportImages: Record<string, { folderName: string; images: GeneratedImage[] }> = {};
+              exportableImages.forEach((img) => {
+                const { folderKey, folderName } = getImageFolderDetails(img);
+                if (!groupedExportImages[folderKey]) {
+                  groupedExportImages[folderKey] = { folderName, images: [] };
+                }
+                groupedExportImages[folderKey].images.push(img);
+              });
 
-              {readyCount === 0 && (
+              const renderEmptyState = () => (
                 <div className="flex flex-col items-center justify-center py-16 text-slate-400 text-center space-y-2">
                   <AlertCircle className="w-8 h-8 text-slate-300" />
-                  <p className="text-xs font-medium text-slate-600">
+                  <p className="text-xs font-medium text-slate-650">
                     目前尚未有经「图片审核中心」质检通过的台历大图！
                   </p>
                   <p className="text-[11px] text-slate-400">
                     请先前往「批量套版」或「图片质量审核」进行质检。
                   </p>
                 </div>
-              )}
-            </div>
+              );
+
+              return (
+                <div className="flex-1 flex flex-col min-h-0 space-y-3">
+                  {/* Tab Selector */}
+                  <div className="flex border-b border-slate-100 space-x-1.5 text-xs pb-1 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => setActiveViewTab("tree")}
+                      className={`pb-1.5 px-2.5 border-b-2 font-bold transition-all cursor-pointer ${
+                        activeViewTab === "tree" ? "border-blue-600 text-blue-600" : "border-transparent text-slate-400 hover:text-slate-600"
+                      }`}
+                    >
+                      📁 交付文件夹归档预览 (虚拟树)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setActiveViewTab("flat")}
+                      className={`pb-1.5 px-2.5 border-b-2 font-bold transition-all cursor-pointer ${
+                        activeViewTab === "flat" ? "border-blue-600 text-blue-600" : "border-transparent text-slate-400 hover:text-slate-600"
+                      }`}
+                    >
+                      📋 物理路径下载清单 (平铺)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setActiveViewTab("manifest")}
+                      className={`pb-1.5 px-2.5 border-b-2 font-bold transition-all cursor-pointer ${
+                        activeViewTab === "manifest" ? "border-blue-600 text-blue-600" : "border-transparent text-slate-400 hover:text-slate-600"
+                      }`}
+                    >
+                      📄 ERP 智能装配清单 (JSON)
+                    </button>
+                  </div>
+
+                  <div className="flex-1 overflow-y-auto pr-1 min-h-[220px]">
+                    {activeViewTab === "tree" && (
+                      <div className="space-y-4">
+                        {Object.entries(groupedExportImages).map(([fKey, grp]) => (
+                          <div key={fKey} className="border border-slate-150 rounded-xl overflow-hidden bg-slate-50/20 text-xs">
+                            <div className="bg-slate-50 border-b border-slate-200/60 px-3 py-2 flex justify-between items-center font-bold text-slate-700">
+                              <div className="flex items-center space-x-1.5">
+                                <span className="text-sm">📁</span>
+                                <span className="font-mono">{grp.folderName}/</span>
+                              </div>
+                              <span className="text-[10px] text-slate-400 font-mono font-normal">目录Key: {fKey} ({grp.images.length}张)</span>
+                            </div>
+                            <div className="p-2 space-y-1 bg-white">
+                              {grp.images.map((img) => (
+                                <div key={img.id} className="pl-6 flex justify-between items-center py-1.5 hover:bg-slate-50 rounded-lg text-[11px] font-mono text-slate-600">
+                                  <span className="truncate pr-4 flex items-center space-x-1.5">
+                                    <span className="text-slate-400 text-xs">📄</span>
+                                    <span>{getCompiledFilePath(img).split("/").pop()}</span>
+                                  </span>
+                                  <div className="flex items-center space-x-2 shrink-0 font-sans font-bold">
+                                    <span className="text-[9.5px] text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded">
+                                      {img.imageType.toUpperCase()}
+                                    </span>
+                                    {(() => {
+                                      const targetImgUrl = img.finalCompositeUrl || img.aiFusionUrl || img.fileUrl;
+                                      return targetImgUrl && targetImgUrl !== "url" ? (
+                                        <a
+                                          href={targetImgUrl}
+                                          download={getCompiledFilePath(img).split("/").pop()}
+                                          className="text-blue-600 hover:text-blue-800 p-0.5"
+                                          title="下载当前文件"
+                                        >
+                                          <FileDown className="w-3.5 h-3.5" />
+                                        </a>
+                                      ) : null;
+                                    })()}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        ))}
+                        {readyCount === 0 && renderEmptyState()}
+                      </div>
+                    )}
+
+                    {activeViewTab === "flat" && (
+                      <div className="space-y-1.5 text-xs">
+                        {exportableImages.map((img) => (
+                          <div
+                            key={img.id}
+                            className="p-2.5 border border-slate-100 bg-slate-50/50 hover:bg-slate-50 rounded-xl flex items-center justify-between font-mono text-slate-600"
+                          >
+                            <div className="flex flex-col text-left">
+                              <span className="font-bold text-slate-700 pr-4">
+                                {getCompiledFilePath(img)}
+                              </span>
+                              <span className="text-[9.5px] text-slate-400 mt-0.5">
+                                物理合成图地址: {img.finalCompositeUrl || img.aiFusionUrl || img.fileUrl ? "已缓存在离线合成栈" : "待处理"}
+                              </span>
+                            </div>
+                            <div className="flex items-center space-x-2 shrink-0">
+                              <span className="text-[9px] bg-emerald-50 text-emerald-800 border-emerald-100 border px-1.5 py-0.5 rounded-full font-bold font-sans">
+                                质检通过
+                              </span>
+                              {(() => {
+                                const targetImgUrl = img.finalCompositeUrl || img.aiFusionUrl || img.fileUrl;
+                                return targetImgUrl && targetImgUrl !== "url" ? (
+                                  <a
+                                    href={targetImgUrl}
+                                    download={getCompiledFilePath(img).split("/").pop()}
+                                    className="p-1 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded transition-all cursor-pointer"
+                                    title="下载此张"
+                                  >
+                                    <FileDown className="w-4 h-4" />
+                                  </a>
+                                ) : null;
+                              })()}
+                            </div>
+                          </div>
+                        ))}
+                        {readyCount === 0 && renderEmptyState()}
+                      </div>
+                    )}
+
+                    {activeViewTab === "manifest" && (
+                      <div className="space-y-2">
+                        <p className="text-[10px] text-slate-400 leading-relaxed">
+                          💡 以下是通过质检并准备交付整套导出的 ERP 智能装配清单模型，采用高级电商商户标准多级分类：
+                        </p>
+                        <pre className="p-3 bg-slate-900 text-slate-200 rounded-xl text-[10.5px] font-mono overflow-x-auto select-all max-h-72 leading-relaxed">
+                          {JSON.stringify({
+                            projectId: "project_export_active",
+                            exportedAt: new Date().toISOString(),
+                            exportFormat: outputFormat,
+                            sizing: outputSize,
+                            readyCount,
+                            manifestTree: exportableImages.map((img) => ({
+                              virtualPath: getCompiledFilePath(img),
+                              imageType: img.imageType,
+                              reviewStatus: img.reviewStatus,
+                              width: img.width || 800,
+                              height: img.height || 800
+                            }))
+                          }, null, 2)}
+                        </pre>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })()}
           </div>
 
           {/* Zipping progress banner */}
           <div className="mt-4 border-t border-slate-100 pt-4 shrink-0">
             {isZipping ? (
               <div className="space-y-2">
-                <div className="flex justify-between items-center text-xs font-bold text-slate-700">
+                <div className="flex justify-between items-center text-xs font-bold text-slate-705">
                   <span>正在并行预热并触发浏览器批量下载队列...</span>
                   <span className="font-mono text-blue-600">{zipProgress}%</span>
                 </div>
