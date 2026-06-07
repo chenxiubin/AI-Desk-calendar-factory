@@ -167,6 +167,43 @@ export function getSuiteDeliveryCompleteness(
   const whiteBgRequired = !!expected.whiteBgRequired;
   const transparentPngRequired = !!expected.transparentPngRequired;
 
+  // 页面信息辅助解析器
+  const getPageInfo = (page: GeneratedPage) => {
+    const matchingTp = suite.pages.find((tp) => tp.id === page.templatePageId);
+    const pageAny = page as any;
+    return {
+      outputFolder: pageAny.outputFolder || matchingTp?.outputFolder || "",
+      pageRole: pageAny.pageRole || matchingTp?.pageRole || "",
+      businessRatioType: pageAny.businessRatioType || matchingTp?.businessRatioType || ""
+    };
+  };
+
+  const isMainSquarePage = (page: GeneratedPage): boolean => {
+    const info = getPageInfo(page);
+    const isMainGroup = info.outputFolder === "main_square" || info.outputFolder === "main_vertical";
+    return (
+      info.outputFolder === "main_square" ||
+      info.pageRole === "primary_main_square" ||
+      info.pageRole === "main_marketing_square" ||
+      (info.businessRatioType === "square" && isMainGroup)
+    );
+  };
+
+  const isMainVerticalPage = (page: GeneratedPage): boolean => {
+    const info = getPageInfo(page);
+    const isMainGroup = info.outputFolder === "main_square" || info.outputFolder === "main_vertical";
+    return (
+      info.outputFolder === "main_vertical" ||
+      info.pageRole === "primary_main_vertical" ||
+      info.pageRole === "main_marketing_vertical" ||
+      (info.businessRatioType === "vertical" && isMainGroup)
+    );
+  };
+
+  const hasGeneratedOutput = (page: GeneratedPage): boolean => {
+    return Boolean(page.finalCompositeUrl || page.aiFusionUrl || page.fileUrl);
+  };
+
   // --- 1. 页面规划层面的统计 ---
   let mainSquareCurrent = 0;
   let mainVerticalCurrent = 0;
@@ -188,45 +225,23 @@ export function getSuiteDeliveryCompleteness(
   }
 
   pages.forEach((page) => {
-    const matchingTp = suite.pages.find((tp) => tp.id === page.templatePageId);
-    const pageAny = page as any;
-    
-    // 优先读取页面本身的字段，其次才后备读取预设模板页面
-    const outputFolder = pageAny.outputFolder || matchingTp?.outputFolder;
-    const pageRole = pageAny.pageRole || matchingTp?.pageRole;
-    const businessRatioType = pageAny.businessRatioType || matchingTp?.businessRatioType;
+    const info = getPageInfo(page);
 
-    const isMainSquare = outputFolder === "main_square";
-    const isMainVertical = outputFolder === "main_vertical";
-    const isMainGroup = isMainSquare || isMainVertical;
-
-    // 方形主图规划统计
-    if (
-      outputFolder === "main_square" ||
-      pageRole === "primary_main_square" ||
-      pageRole === "main_marketing_square" ||
-      (businessRatioType === "square" && isMainGroup)
-    ) {
+    if (isMainSquarePage(page)) {
       mainSquareCurrent++;
     }
 
-    // 竖版主图规划统计
-    if (
-      outputFolder === "main_vertical" ||
-      pageRole === "primary_main_vertical" ||
-      pageRole === "main_marketing_vertical" ||
-      (businessRatioType === "vertical" && isMainGroup)
-    ) {
+    if (isMainVerticalPage(page)) {
       mainVerticalCurrent++;
     }
 
     // 白底精修规划统计
-    if (outputFolder === "white_bg" || pageRole === "white_bg") {
+    if (info.outputFolder === "white_bg" || info.pageRole === "white_bg") {
       hasWhiteBgPlan = true;
     }
 
     // 透明底规划统计
-    if (outputFolder === "transparent_png" || pageRole === "transparent_png") {
+    if (info.outputFolder === "transparent_png" || info.pageRole === "transparent_png") {
       hasTransparentPngPlan = true;
     }
   });
@@ -269,46 +284,23 @@ export function getSuiteDeliveryCompleteness(
 
   // 1. 检查页面自身成品
   pages.forEach((page) => {
-    const hasOutput = Boolean(page.finalCompositeUrl || page.aiFusionUrl || page.fileUrl);
-    if (!hasOutput) return;
+    if (!hasGeneratedOutput(page)) return;
 
-    const matchingTp = suite.pages.find((tp) => tp.id === page.templatePageId);
-    const pageAny = page as any;
-    const outputFolder = pageAny.outputFolder || matchingTp?.outputFolder;
-    const pageRole = pageAny.pageRole || matchingTp?.pageRole;
-    const businessRatioType = pageAny.businessRatioType || matchingTp?.businessRatioType;
+    const info = getPageInfo(page);
 
-    const isMainSquare = outputFolder === "main_square";
-    const isMainVertical = outputFolder === "main_vertical";
-    const isMainGroup = isMainSquare || isMainVertical;
-
-    // 方形主图成品统计
-    if (
-      outputFolder === "main_square" ||
-      pageRole === "primary_main_square" ||
-      pageRole === "main_marketing_square" ||
-      (businessRatioType === "square" && isMainGroup)
-    ) {
+    if (isMainSquarePage(page)) {
       mainSquareOutputCurrent++;
     }
 
-    // 竖版主图成品统计
-    if (
-      outputFolder === "main_vertical" ||
-      pageRole === "primary_main_vertical" ||
-      pageRole === "main_marketing_vertical" ||
-      (businessRatioType === "vertical" && isMainGroup)
-    ) {
+    if (isMainVerticalPage(page)) {
       mainVerticalOutputCurrent++;
     }
 
-    // 白底精修成品统计
-    if (outputFolder === "white_bg" || pageRole === "white_bg") {
+    if (info.outputFolder === "white_bg" || info.pageRole === "white_bg") {
       hasWhiteBgOutput = true;
     }
 
-    // 透明底成品统计
-    if (outputFolder === "transparent_png" || pageRole === "transparent_png") {
+    if (info.outputFolder === "transparent_png" || info.pageRole === "transparent_png") {
       hasTransparentPngOutput = true;
     }
   });
