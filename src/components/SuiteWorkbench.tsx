@@ -873,7 +873,7 @@ export const SuiteWorkbench: React.FC<SuiteWorkbenchProps> = ({
 
                     {/* 模块 2：成品交付检查 */}
                     <div className="space-y-3">
-                      <div className="flex justify-between items-center bg-slate-55 p-2 rounded-lg">
+                      <div className="flex justify-between items-center bg-slate-50 p-2 rounded-lg">
                         <span className="text-xs font-bold text-slate-700">2. 成品交付检查</span>
                         {output.isOutputComplete ? (
                           <span className="text-[10px] text-emerald-600 bg-emerald-50 font-medium px-1.5 py-0.5 rounded border border-emerald-200/40">已完全生成</span>
