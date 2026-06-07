@@ -47,93 +47,111 @@ export const ExportCenter: React.FC<ExportCenterProps> = ({
   const readyCount = exportableImages.length;
 
   const getImageFolderDetails = (img: GeneratedImage) => {
-    // 1. 如果导出对象中有 outputFolder，优先使用 outputFolder。
-    let fKey: string = (img as any).outputFolder || "";
-
-    // 寻找配对的 Suite 和 Page
+    // 寻找配对的 Suite 和 Page (供后续反查/后备使用)
     const matchingSuite = PRESET_TEMPLATE_SUITES.find((suite) =>
       suite.pages.some((page) => page.templateId === img.templateId)
     );
     const matchingPage = matchingSuite?.pages.find((page) => page.templateId === img.templateId);
 
-    if (!fKey && matchingPage) {
-      fKey = matchingPage.outputFolder || "";
-    }
+    // 1. 如果导出对象本身有 outputFolder，优先使用 outputFolder
+    let folderKey: any = (img as any).outputFolder || "";
 
-    if (fKey) {
-      const folderKey = fKey as ExportFolderKey;
-      return { folderKey, folderName: getExportFolderName(folderKey) };
-    }
-
-    // 2. 如果导出对象中有 pageRole，根据 pageRole 推导。
-    let pageRoleValue: string = (img as any).pageRole || "";
-    if (!pageRoleValue && matchingPage) {
-      pageRoleValue = matchingPage.pageRole || "";
-    }
-
-    if (pageRoleValue) {
-      if (pageRoleValue === "primary_main_square" || pageRoleValue === "main_marketing_square") {
-        return { folderKey: ExportFolderKey.main_square, folderName: "主图800" };
-      }
-      if (pageRoleValue === "primary_main_vertical" || pageRoleValue === "main_marketing_vertical") {
-        return { folderKey: ExportFolderKey.main_vertical, folderName: "主图750" };
-      }
-      if (
-        pageRoleValue === "sku_variant" ||
-        pageRoleValue === "sku_with_label" ||
-        pageRoleValue === "sku_grid"
-      ) {
-        return { folderKey: ExportFolderKey.sku, folderName: "SKU" };
-      }
-      if (
-        pageRoleValue === "detail_sequence" ||
-        pageRoleValue === "detail_core_selling" ||
-        pageRoleValue === "detail_size_material" ||
-        pageRoleValue === "detail_inner_page" ||
-        pageRoleValue === "detail_craft_closeup" ||
-        pageRoleValue === "detail_package"
-      ) {
-        return { folderKey: ExportFolderKey.detail, folderName: "详情图" };
-      }
-      if (pageRoleValue === "sample_book_mockup") {
-        return { folderKey: ExportFolderKey.sample_book, folderName: "书样" };
-      }
-      if (pageRoleValue === "customization_detail" || pageRoleValue === "customization_ad_area") {
-        return { folderKey: ExportFolderKey.customization_detail, folderName: "定制详情" };
-      }
-      if (pageRoleValue === "ad_custom_effect") {
-        return { folderKey: ExportFolderKey.ad_custom_effect, folderName: "定制效果" };
-      }
-      if (pageRoleValue === "white_bg") {
-        return { folderKey: ExportFolderKey.white_bg, folderName: "白底精修" };
-      }
-      if (pageRoleValue === "transparent_png") {
-        return { folderKey: ExportFolderKey.transparent_png, folderName: "透明PNG" };
+    // 2. 如果导出对象有 pageRole，根据 pageRole 推导
+    if (!folderKey) {
+      const pageRoleValue = (img as any).pageRole || "";
+      if (pageRoleValue) {
+        if (pageRoleValue === "primary_main_square" || pageRoleValue === "main_marketing_square") {
+          folderKey = ExportFolderKey.main_square;
+        } else if (pageRoleValue === "primary_main_vertical" || pageRoleValue === "main_marketing_vertical") {
+          folderKey = ExportFolderKey.main_vertical;
+        } else if (
+          pageRoleValue === "sku_variant" ||
+          pageRoleValue === "sku_with_label" ||
+          pageRoleValue === "sku_grid"
+        ) {
+          folderKey = ExportFolderKey.sku;
+        } else if (
+          pageRoleValue === "detail_sequence" ||
+          pageRoleValue === "detail_core_selling" ||
+          pageRoleValue === "detail_size_material" ||
+          pageRoleValue === "detail_inner_page" ||
+          pageRoleValue === "detail_craft_closeup" ||
+          pageRoleValue === "detail_package"
+        ) {
+          folderKey = ExportFolderKey.detail;
+        } else if (pageRoleValue === "sample_book_mockup") {
+          folderKey = ExportFolderKey.sample_book;
+        } else if (pageRoleValue === "customization_detail" || pageRoleValue === "customization_ad_area") {
+          folderKey = ExportFolderKey.customization_detail;
+        } else if (pageRoleValue === "ad_custom_effect") {
+          folderKey = ExportFolderKey.ad_custom_effect;
+        } else if (pageRoleValue === "white_bg") {
+          folderKey = ExportFolderKey.white_bg;
+        } else if (pageRoleValue === "transparent_png") {
+          folderKey = ExportFolderKey.transparent_png;
+        }
       }
     }
 
-    // 3. 如果导出对象中有 businessRatioType 和主图信息，根据规则推导：
-    //    * square 主图 → main_square → 主图800
-    //    * vertical 主图 → main_vertical → 主图750
-    let ratioType: string = (img as any).businessRatioType || "";
-    if (!ratioType && matchingPage) {
-      ratioType = matchingPage.businessRatioType || "";
-    }
-
-    const isMainImg = img.imageType === "main" || (matchingPage && matchingPage.pageType === "main");
-    if (ratioType && isMainImg) {
-      if (ratioType === "square") {
-        return { folderKey: ExportFolderKey.main_square, folderName: "主图800" };
-      } else if (ratioType === "vertical" || ratioType === "long_vertical") {
-        return { folderKey: ExportFolderKey.main_vertical, folderName: "主图750" };
+    // 3. 如果导出对象有 businessRatioType，并且能判断它属于主图组
+    if (!folderKey) {
+      const ratioType = (img as any).businessRatioType || "";
+      const isMainImg = img.imageType === "main" || (matchingPage && matchingPage.pageType === "main");
+      if (ratioType && isMainImg) {
+        if (ratioType === "square") {
+          folderKey = ExportFolderKey.main_square;
+        } else if (ratioType === "vertical" || ratioType === "long_vertical") {
+          folderKey = ExportFolderKey.main_vertical;
+        }
       }
     }
 
-    // 4. Fallback 到旧逻辑
-    let folderKey: string | ExportFolderKey = "";
-    if (matchingPage && matchingSuite) {
-      folderKey = getPageExportFolder(matchingPage, matchingSuite);
-    } else {
+    // 4. 如果以上都没有，再用旧逻辑：templateId 反查 PRESET_TEMPLATE_SUITES 中的 TemplatePage
+    if (!folderKey) {
+      if (matchingPage) {
+        // 优先使用 matchingPage.outputFolder
+        if (matchingPage.outputFolder) {
+          folderKey = matchingPage.outputFolder;
+        } else if (matchingPage.pageRole) {
+          const pr = matchingPage.pageRole;
+          if (pr === "primary_main_square" || pr === "main_marketing_square") {
+            folderKey = ExportFolderKey.main_square;
+          } else if (pr === "primary_main_vertical" || pr === "main_marketing_vertical") {
+            folderKey = ExportFolderKey.main_vertical;
+          } else if (pr === "sku_variant" || pr === "sku_with_label" || pr === "sku_grid") {
+            folderKey = ExportFolderKey.sku;
+          } else if (pr === "white_bg") {
+            folderKey = ExportFolderKey.white_bg;
+          } else if (pr === "transparent_png") {
+            folderKey = ExportFolderKey.transparent_png;
+          } else if (pr === "sample_book_mockup") {
+            folderKey = ExportFolderKey.sample_book;
+          } else if (pr === "customization_detail") {
+            folderKey = ExportFolderKey.customization_detail;
+          } else if (pr === "ad_custom_effect") {
+            folderKey = ExportFolderKey.ad_custom_effect;
+          } else {
+            folderKey = ExportFolderKey.detail;
+          }
+        } else if (matchingPage.pageType) {
+          const pt = matchingPage.pageType;
+          if (pt === "main") {
+            folderKey = ExportFolderKey.main_square;
+          } else if (pt === "sku") {
+            folderKey = ExportFolderKey.sku;
+          } else if (pt === "detail" || pt === "scene" || pt === "detail_closeup" || pt === "package") {
+            folderKey = ExportFolderKey.detail;
+          } else if (pt === "white_bg") {
+            folderKey = ExportFolderKey.white_bg;
+          } else if (pt === "transparent_png") {
+            folderKey = ExportFolderKey.transparent_png;
+          }
+        }
+      }
+    }
+
+    // 5. 最后 fallback 到“未分类”
+    if (!folderKey) {
       if (img.imageType === "main") {
         folderKey = ExportFolderKey.main_square;
       } else if (img.imageType === "sku") {

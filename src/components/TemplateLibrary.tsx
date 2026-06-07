@@ -821,10 +821,14 @@ export const TemplateLibrary: React.FC<TemplateLibraryProps> = ({
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {(() => {
                 const sortedSuites = [...filteredSuites].sort((a, b) => {
-                  const isProdA = a.id === "suite_nc_001" || a.id === "suite_wall_002";
-                  const isProdB = b.id === "suite_nc_001" || b.id === "suite_wall_002";
+                  const isProdA = a.id === "suite_nc_001" || a.id === "suite_wall_002" || a.id === "suite_fu_003";
+                  const isProdB = b.id === "suite_nc_001" || b.id === "suite_wall_002" || b.id === "suite_fu_003";
                   if (isProdA && !isProdB) return -1;
                   if (!isProdA && isProdB) return 1;
+                  if (isProdA && isProdB) {
+                    const order = ["suite_nc_001", "suite_wall_002", "suite_fu_003"];
+                    return order.indexOf(a.id) - order.indexOf(b.id);
+                  }
                   return 0;
                 });
                 return sortedSuites.map((suite) => {
@@ -853,7 +857,7 @@ export const TemplateLibrary: React.FC<TemplateLibraryProps> = ({
                             {getProductTypeLabel(suite.productType)}
                           </span>
                           <div className="flex items-center space-x-1.5">
-                            {!(suite.id === "suite_nc_001" || suite.id === "suite_wall_002") && (
+                            {!(suite.id === "suite_nc_001" || suite.id === "suite_wall_002" || suite.id === "suite_fu_003") && (
                               <span className="inline-flex items-center py-0.5 px-1.5 bg-amber-500 text-white text-[9px] font-black rounded border border-amber-400 font-sans shadow-sm">
                                 演示草稿
                               </span>
@@ -876,7 +880,7 @@ export const TemplateLibrary: React.FC<TemplateLibraryProps> = ({
                           <div className="flex items-center justify-between">
                             <h3 className="font-bold text-slate-800 tracking-tight truncate max-w-[190px] flex items-center gap-1.5">
                               {suite.suiteName}
-                              {!(suite.id === "suite_nc_001" || suite.id === "suite_wall_002") && (
+                              {!(suite.id === "suite_nc_001" || suite.id === "suite_wall_002" || suite.id === "suite_fu_003") && (
                                 <span className="text-[9px] font-bold text-amber-600 bg-amber-50 px-1 rounded hover:opacity-80 scale-95 origin-left shrink-0">演示</span>
                               )}
                             </h3>

@@ -386,11 +386,22 @@ export function getSuiteDeliveryCompleteness(
       warnings: planningWarnings
     },
     output: {
+      mainSquareRequired,
       mainSquareOutputCurrent,
-      mainVerticalOutputCurrent,
-      mainMarketingOutputCurrent,
+      mainSquareOutputMissing,
 
+      mainVerticalRequired,
+      mainVerticalOutputCurrent,
+      mainVerticalOutputMissing,
+
+      mainMarketingTotalRequired,
+      mainMarketingOutputCurrent,
+      mainMarketingOutputMissing,
+
+      whiteBgRequired,
       hasWhiteBgOutput,
+
+      transparentPngRequired,
       hasTransparentPngOutput,
 
       isOutputComplete,

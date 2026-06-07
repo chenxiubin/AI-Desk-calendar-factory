@@ -808,7 +808,7 @@ export const SuiteWorkbench: React.FC<SuiteWorkbenchProps> = ({
                       <div className="space-y-2 pt-0.5 text-xs">
                         {/* 1:1方形规划 */}
                         <div className="flex justify-between items-center text-[11pt]">
-                          <span className="text-slate-500">1:1 方形主图卖点图</span>
+                          <span className="text-slate-500">1:1 主图卖点图</span>
                           <span className={`font-mono font-bold ${planning.mainSquareMissing > 0 ? "text-amber-600" : "text-slate-700"}`}>
                             已规划 {planning.mainSquareCurrent} / 要求 {planning.mainSquareRequired}
                           </span>
@@ -816,7 +816,7 @@ export const SuiteWorkbench: React.FC<SuiteWorkbenchProps> = ({
 
                         {/* 3:4竖版规划 */}
                         <div className="flex justify-between items-center text-[11pt]">
-                          <span className="text-slate-500">3:4 竖版主图卖点图</span>
+                          <span className="text-slate-500">3:4 主图卖点图</span>
                           <span className={`font-mono font-bold ${planning.mainVerticalMissing > 0 ? "text-amber-600" : "text-slate-700"}`}>
                             已规划 {planning.mainVerticalCurrent} / 要求 {planning.mainVerticalRequired}
                           </span>
@@ -824,7 +824,7 @@ export const SuiteWorkbench: React.FC<SuiteWorkbenchProps> = ({
 
                         {/* 合计规划 */}
                         <div className="flex justify-between items-center text-[11pt] font-medium border-t border-slate-100 pt-1.5">
-                          <span className="text-slate-700">主图卖点图总规划数</span>
+                          <span className="text-slate-700 font-bold">主图卖点图合计</span>
                           <span className={`font-mono font-bold ${planning.mainMarketingTotalMissing > 0 ? "text-amber-650" : "text-indigo-600 font-extrabold"}`}>
                             已规划 {planning.mainMarketingTotalCurrent} / 要求 {planning.mainMarketingTotalRequired}
                           </span>
@@ -834,7 +834,7 @@ export const SuiteWorkbench: React.FC<SuiteWorkbenchProps> = ({
                         <div className="flex justify-between items-center text-[11pt] border-t border-slate-100 pt-1.5">
                           <span className="text-slate-500">白底精修交付项</span>
                           <span className={`font-bold ${planning.hasWhiteBgPlan ? "text-emerald-600" : "text-amber-600"}`}>
-                            {planning.hasWhiteBgPlan ? "✓ 已规划" : "❌ 缺失规划"}
+                            {planning.hasWhiteBgPlan ? "已规划" : "缺失"}
                           </span>
                         </div>
 
@@ -842,7 +842,7 @@ export const SuiteWorkbench: React.FC<SuiteWorkbenchProps> = ({
                         <div className="flex justify-between items-center text-[11pt]">
                           <span className="text-slate-500">透明PNG交付项</span>
                           <span className={`font-bold ${planning.hasTransparentPngPlan ? "text-emerald-600" : "text-amber-600"}`}>
-                            {planning.hasTransparentPngPlan ? "✓ 已规划" : "❌ 缺失规划"}
+                            {planning.hasTransparentPngPlan ? "已规划" : "缺失"}
                           </span>
                         </div>
                       </div>
@@ -874,7 +874,7 @@ export const SuiteWorkbench: React.FC<SuiteWorkbenchProps> = ({
                     {/* 模块 2：成品交付检查 */}
                     <div className="space-y-3">
                       <div className="flex justify-between items-center bg-slate-55 p-2 rounded-lg">
-                        <span className="text-xs font-bold text-slate-700">2. 成品输出质量检查</span>
+                        <span className="text-xs font-bold text-slate-700">2. 成品交付检查</span>
                         {output.isOutputComplete ? (
                           <span className="text-[10px] text-emerald-600 bg-emerald-50 font-medium px-1.5 py-0.5 rounded border border-emerald-200/40">已完全生成</span>
                         ) : (
@@ -885,41 +885,41 @@ export const SuiteWorkbench: React.FC<SuiteWorkbenchProps> = ({
                       <div className="space-y-2 pt-0.5 text-xs">
                         {/* 1:1方形成品 */}
                         <div className="flex justify-between items-center text-[11pt]">
-                          <span className="text-slate-500">1:1 方形主图卖点图</span>
-                          <span className={`font-mono font-bold ${output.mainSquareOutputCurrent < planning.mainSquareRequired ? "text-amber-600" : "text-slate-700"}`}>
-                            已生成 {output.mainSquareOutputCurrent} / 要求 {planning.mainSquareRequired}
+                          <span className="text-slate-500">1:1 主图卖点图</span>
+                          <span className={`font-mono font-bold ${output.mainSquareOutputMissing > 0 ? "text-amber-600" : "text-slate-700"}`}>
+                            已生成 {output.mainSquareOutputCurrent} / 要求 {output.mainSquareRequired}
                           </span>
                         </div>
 
                         {/* 3:4竖版成品 */}
                         <div className="flex justify-between items-center text-[11pt]">
-                          <span className="text-slate-500">3:4 竖版主图卖点图</span>
-                          <span className={`font-mono font-bold ${output.mainVerticalOutputCurrent < planning.mainVerticalRequired ? "text-amber-600" : "text-slate-700"}`}>
-                            已生成 {output.mainVerticalOutputCurrent} / 要求 {planning.mainVerticalRequired}
+                          <span className="text-slate-500">3:4 主图卖点图</span>
+                          <span className={`font-mono font-bold ${output.mainVerticalOutputMissing > 0 ? "text-amber-600" : "text-slate-700"}`}>
+                            已生成 {output.mainVerticalOutputCurrent} / 要求 {output.mainVerticalRequired}
                           </span>
                         </div>
 
                         {/* 合计成品 */}
                         <div className="flex justify-between items-center text-[11pt] font-medium border-t border-slate-100 pt-1.5">
-                          <span className="text-slate-700">主图卖点图总生成数</span>
-                          <span className={`font-mono font-bold ${output.mainMarketingOutputCurrent < planning.mainMarketingTotalRequired ? "text-amber-650" : "text-indigo-600 font-extrabold"}`}>
-                            已生成 {output.mainMarketingOutputCurrent} / 要求 {planning.mainMarketingTotalRequired}
+                          <span className="text-slate-700 font-bold">主图卖点图合计</span>
+                          <span className={`font-mono font-bold ${output.mainMarketingOutputMissing > 0 ? "text-amber-650" : "text-indigo-600 font-extrabold"}`}>
+                            已生成 {output.mainMarketingOutputCurrent} / 要求 {output.mainMarketingTotalRequired}
                           </span>
                         </div>
 
                         {/* 白底精修成品 */}
                         <div className="flex justify-between items-center text-[11pt] border-t border-slate-100 pt-1.5">
-                          <span className="text-slate-500">白底精修成品图</span>
+                          <span className="text-slate-500">白底精修成品</span>
                           <span className={`font-bold ${output.hasWhiteBgOutput ? "text-emerald-600" : "text-amber-600"}`}>
-                            {output.hasWhiteBgOutput ? "✓ 已存在" : "❌ 缺失成品"}
+                            {output.hasWhiteBgOutput ? "已生成" : "缺失"}
                           </span>
                         </div>
 
                         {/* 透明PNG成品 */}
                         <div className="flex justify-between items-center text-[11pt]">
-                          <span className="text-slate-500">透明PNG成品图</span>
+                          <span className="text-slate-500">透明PNG成品</span>
                           <span className={`font-bold ${output.hasTransparentPngOutput ? "text-emerald-600" : "text-amber-600"}`}>
-                            {output.hasTransparentPngOutput ? "✓ 已存在" : "❌ 缺失成品"}
+                            {output.hasTransparentPngOutput ? "已生成" : "缺失"}
                           </span>
                         </div>
                       </div>
