@@ -47,11 +47,89 @@ export const ExportCenter: React.FC<ExportCenterProps> = ({
   const readyCount = exportableImages.length;
 
   const getImageFolderDetails = (img: GeneratedImage) => {
-    let matchingSuite = PRESET_TEMPLATE_SUITES.find((suite) =>
+    // 1. 如果导出对象中有 outputFolder，优先使用 outputFolder。
+    let fKey: string = (img as any).outputFolder || "";
+
+    // 寻找配对的 Suite 和 Page
+    const matchingSuite = PRESET_TEMPLATE_SUITES.find((suite) =>
       suite.pages.some((page) => page.templateId === img.templateId)
     );
-    let matchingPage = matchingSuite?.pages.find((page) => page.templateId === img.templateId);
+    const matchingPage = matchingSuite?.pages.find((page) => page.templateId === img.templateId);
 
+    if (!fKey && matchingPage) {
+      fKey = matchingPage.outputFolder || "";
+    }
+
+    if (fKey) {
+      const folderKey = fKey as ExportFolderKey;
+      return { folderKey, folderName: getExportFolderName(folderKey) };
+    }
+
+    // 2. 如果导出对象中有 pageRole，根据 pageRole 推导。
+    let pageRoleValue: string = (img as any).pageRole || "";
+    if (!pageRoleValue && matchingPage) {
+      pageRoleValue = matchingPage.pageRole || "";
+    }
+
+    if (pageRoleValue) {
+      if (pageRoleValue === "primary_main_square" || pageRoleValue === "main_marketing_square") {
+        return { folderKey: ExportFolderKey.main_square, folderName: "主图800" };
+      }
+      if (pageRoleValue === "primary_main_vertical" || pageRoleValue === "main_marketing_vertical") {
+        return { folderKey: ExportFolderKey.main_vertical, folderName: "主图750" };
+      }
+      if (
+        pageRoleValue === "sku_variant" ||
+        pageRoleValue === "sku_with_label" ||
+        pageRoleValue === "sku_grid"
+      ) {
+        return { folderKey: ExportFolderKey.sku, folderName: "SKU" };
+      }
+      if (
+        pageRoleValue === "detail_sequence" ||
+        pageRoleValue === "detail_core_selling" ||
+        pageRoleValue === "detail_size_material" ||
+        pageRoleValue === "detail_inner_page" ||
+        pageRoleValue === "detail_craft_closeup" ||
+        pageRoleValue === "detail_package"
+      ) {
+        return { folderKey: ExportFolderKey.detail, folderName: "详情图" };
+      }
+      if (pageRoleValue === "sample_book_mockup") {
+        return { folderKey: ExportFolderKey.sample_book, folderName: "书样" };
+      }
+      if (pageRoleValue === "customization_detail" || pageRoleValue === "customization_ad_area") {
+        return { folderKey: ExportFolderKey.customization_detail, folderName: "定制详情" };
+      }
+      if (pageRoleValue === "ad_custom_effect") {
+        return { folderKey: ExportFolderKey.ad_custom_effect, folderName: "定制效果" };
+      }
+      if (pageRoleValue === "white_bg") {
+        return { folderKey: ExportFolderKey.white_bg, folderName: "白底精修" };
+      }
+      if (pageRoleValue === "transparent_png") {
+        return { folderKey: ExportFolderKey.transparent_png, folderName: "透明PNG" };
+      }
+    }
+
+    // 3. 如果导出对象中有 businessRatioType 和主图信息，根据规则推导：
+    //    * square 主图 → main_square → 主图800
+    //    * vertical 主图 → main_vertical → 主图750
+    let ratioType: string = (img as any).businessRatioType || "";
+    if (!ratioType && matchingPage) {
+      ratioType = matchingPage.businessRatioType || "";
+    }
+
+    const isMainImg = img.imageType === "main" || (matchingPage && matchingPage.pageType === "main");
+    if (ratioType && isMainImg) {
+      if (ratioType === "square") {
+        return { folderKey: ExportFolderKey.main_square, folderName: "主图800" };
+      } else if (ratioType === "vertical" || ratioType === "long_vertical") {
+        return { folderKey: ExportFolderKey.main_vertical, folderName: "主图750" };
+      }
+    }
+
+    // 4. Fallback 到旧逻辑
     let folderKey: string | ExportFolderKey = "";
     if (matchingPage && matchingSuite) {
       folderKey = getPageExportFolder(matchingPage, matchingSuite);
@@ -64,6 +142,8 @@ export const ExportCenter: React.FC<ExportCenterProps> = ({
         folderKey = ExportFolderKey.detail;
       } else if (img.imageType === "white_bg") {
         folderKey = ExportFolderKey.white_bg;
+      } else if ((img.imageType as string) === "transparent_png") {
+        folderKey = ExportFolderKey.transparent_png;
       } else {
         folderKey = "unclassified";
       }

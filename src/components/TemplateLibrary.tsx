@@ -819,51 +819,69 @@ export const TemplateLibrary: React.FC<TemplateLibraryProps> = ({
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredSuites.map((suite) => {
-                const stats = getSuitePagesStats(suite.pages);
-                const ratios = getSuiteRatios(suite.pages);
+              {(() => {
+                const sortedSuites = [...filteredSuites].sort((a, b) => {
+                  const isProdA = a.id === "suite_nc_001" || a.id === "suite_wall_002";
+                  const isProdB = b.id === "suite_nc_001" || b.id === "suite_wall_002";
+                  if (isProdA && !isProdB) return -1;
+                  if (!isProdA && isProdB) return 1;
+                  return 0;
+                });
+                return sortedSuites.map((suite) => {
+                  const stats = getSuitePagesStats(suite.pages);
+                  const ratios = getSuiteRatios(suite.pages);
 
-                return (
-                  <div
-                    key={suite.id}
-                    className="bg-white border border-slate-201 hover:border-slate-300 rounded-2xl overflow-hidden flex flex-col justify-between hover:shadow-xl transition-all min-h-[490px] h-auto"
-                  >
-                    {/* Cover graphic banner wrapper */}
-                    <div className="relative h-40 w-full bg-slate-101 overflow-hidden group">
-                      <img
-                        src={suite.coverImage || "https://images.unsplash.com/photo-1579783902614-a3fb3927b6a5?q=80&w=600&auto=format&fit=crop"}
-                        alt={suite.suiteName}
-                        referrerPolicy="no-referrer"
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                      />
-                      {/* Gradient mask */}
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
+                  return (
+                    <div
+                      key={suite.id}
+                      className="bg-white border border-slate-201 hover:border-slate-300 rounded-2xl overflow-hidden flex flex-col justify-between hover:shadow-xl transition-all min-h-[490px] h-auto"
+                    >
+                      {/* Cover graphic banner wrapper */}
+                      <div className="relative h-40 w-full bg-slate-101 overflow-hidden group">
+                        <img
+                          src={suite.coverImage || "https://images.unsplash.com/photo-1579783902614-a3fb3927b6a5?q=80&w=600&auto=format&fit=crop"}
+                          alt={suite.suiteName}
+                          referrerPolicy="no-referrer"
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                        />
+                        {/* Gradient mask */}
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
 
-                      {/* Top labels */}
-                      <div className="absolute top-2.5 inset-x-2.5 flex justify-between items-center">
-                        <span className="text-[9px] uppercase tracking-wider font-extrabold bg-indigo-600 text-white px-2 py-0.5 rounded-md leading-relaxed shadow-sm">
-                          {getProductTypeLabel(suite.productType)}
-                        </span>
-                        {getStatusBadge(suite.status)}
-                      </div>
-
-                      {/* Display style metadata */}
-                      <div className="absolute bottom-2 inset-x-3 text-white">
-                        <span className="text-[9px] bg-black/60 backdrop-blur-xs text-amber-300 border border-amber-500/10 font-bold px-1.5 py-0.5 rounded font-mono">
-                          {suite.styleName}
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Meta stats & descriptions */}
-                    <div className="p-4 space-y-3 flex-1 flex flex-col justify-between text-xs">
-                      <div className="space-y-3.5">
-                        <div className="flex items-center justify-between">
-                          <h3 className="font-bold text-slate-800 tracking-tight truncate max-w-[190px]">
-                            {suite.suiteName}
-                          </h3>
-                          <span className="text-[10px] text-slate-400 font-mono">{getCategoryLabel(suite.category)}风格</span>
+                        {/* Top labels */}
+                        <div className="absolute top-2.5 inset-x-2.5 flex justify-between items-center">
+                          <span className="text-[9px] uppercase tracking-wider font-extrabold bg-indigo-600 text-white px-2 py-0.5 rounded-md leading-relaxed shadow-sm">
+                            {getProductTypeLabel(suite.productType)}
+                          </span>
+                          <div className="flex items-center space-x-1.5">
+                            {!(suite.id === "suite_nc_001" || suite.id === "suite_wall_002") && (
+                              <span className="inline-flex items-center py-0.5 px-1.5 bg-amber-500 text-white text-[9px] font-black rounded border border-amber-400 font-sans shadow-sm">
+                                演示草稿
+                              </span>
+                            )}
+                            {getStatusBadge(suite.status)}
+                          </div>
                         </div>
+
+                        {/* Display style metadata */}
+                        <div className="absolute bottom-2 inset-x-3 text-white">
+                          <span className="text-[9px] bg-black/60 backdrop-blur-xs text-amber-300 border border-amber-500/10 font-bold px-1.5 py-0.5 rounded font-mono">
+                            {suite.styleName}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Meta stats & descriptions */}
+                      <div className="p-4 space-y-3 flex-1 flex flex-col justify-between text-xs">
+                        <div className="space-y-3.5">
+                          <div className="flex items-center justify-between">
+                            <h3 className="font-bold text-slate-800 tracking-tight truncate max-w-[190px] flex items-center gap-1.5">
+                              {suite.suiteName}
+                              {!(suite.id === "suite_nc_001" || suite.id === "suite_wall_002") && (
+                                <span className="text-[9px] font-bold text-amber-600 bg-amber-50 px-1 rounded hover:opacity-80 scale-95 origin-left shrink-0">演示</span>
+                              )}
+                            </h3>
+                            <span className="text-[10px] text-slate-400 font-mono">{getCategoryLabel(suite.category)}风格</span>
+                          </div>
 
                         {/* Page counts breakdown statistics tag list */}
                         <div className="grid grid-cols-3 gap-1.5 bg-slate-50 border border-slate-100 p-2 rounded-xl text-[10px]">
@@ -971,8 +989,9 @@ export const TemplateLibrary: React.FC<TemplateLibraryProps> = ({
                     </div>
                   </div>
                 );
-              })}
-            </div>
+              });
+            })()}
+          </div>
           )}
         </div>
       )}

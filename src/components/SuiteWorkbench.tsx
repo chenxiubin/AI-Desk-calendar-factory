@@ -767,19 +767,7 @@ export const SuiteWorkbench: React.FC<SuiteWorkbenchProps> = ({
                   </div>
                   <div className="flex justify-between">
                     <span className="text-slate-500">检测资源:</span>
-                    <span className="text-slate-800">{activePack.assets.length}张切片 transparent_png</span>
-                  </div>
-
-                  <div className="pt-2 border-t border-slate-100 space-y-1">
-                    <span className="text-slate-500 block text-[10px] uppercase font-bold tracking-wider">资产标签说明:</span>
-                    <div className="max-h-36 overflow-y-auto space-y-1 text-[11px]">
-                      {activePack.assets.map((as) => (
-                        <div key={as.id} className="flex justify-between p-1 bg-slate-50 rounded border border-slate-100">
-                          <code className="text-indigo-600 font-semibold">{as.assetRole || "white_bg"}</code>
-                          <span className="text-slate-400 font-mono">({as.fileUrl}.png)</span>
-                        </div>
-                      ))}
-                    </div>
+                    <span className="text-slate-800">{activePack.assets.length}张切片 asset</span>
                   </div>
                 </div>
               )}
@@ -788,111 +776,171 @@ export const SuiteWorkbench: React.FC<SuiteWorkbenchProps> = ({
             {/* 交付完整性校验 card */}
             {activeProject && activeSuite && (
               (() => {
-                const completeness = getSuiteDeliveryCompleteness(activeSuite, activeProject.pages);
-                const hasAlerts = 
-                  completeness.mainSquareMissing > 0 || 
-                  completeness.mainVerticalMissing > 0 || 
-                  completeness.mainMarketingTotalMissing > 0 || 
-                  completeness.whiteBgMissing || 
-                  completeness.transparentPngMissing;
+                const completeness = getSuiteDeliveryCompleteness(activeSuite, activeProject.pages, activePack);
+                const { planning, output } = completeness;
 
                 return (
-                  <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm space-y-4">
-                    <span className="font-black text-slate-800 border-l-4 border-amber-500 pl-2 block text-sm flex items-center justify-between">
-                      <span>🏷️ 交付完整性校验</span>
-                      {hasAlerts ? (
-                        <span className="text-[10px] text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200/50 font-bold">待达标</span>
+                  <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm space-y-5">
+                    <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
+                      <span className="font-extrabold text-slate-800 text-sm flex items-center gap-1.5">
+                        <span>🏷️ 交付完整性双层校验</span>
+                      </span>
+                      {output.isOutputComplete ? (
+                        <span className="text-[10px] text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200/50 font-bold">完全达标</span>
+                      ) : planning.isPlanningComplete ? (
+                        <span className="text-[10px] text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded border border-blue-250/50 font-bold">规划达标</span>
                       ) : (
-                        <span className="text-[10px] text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200/50 font-bold">已达标</span>
+                        <span className="text-[10px] text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200/50 font-bold">规划待达标</span>
                       )}
-                    </span>
+                    </div>
 
-                    <div className="space-y-3 pt-1 text-xs">
-                      {/* 1:1方形主图 */}
-                      <div className="space-y-1">
-                        <div className="flex justify-between items-center text-[11px] font-medium">
-                          <span className="text-slate-600">1:1方形主图卖点图</span>
-                          <span className={`font-mono font-bold ${completeness.mainSquareMissing > 0 ? "text-amber-600" : "text-emerald-600"}`}>
-                            {completeness.mainSquareCurrent} / {completeness.mainSquareRequired}
-                          </span>
-                        </div>
-                        {completeness.mainSquareMissing > 0 && (
-                          <div className="p-1.5 px-2.5 bg-amber-50 text-[10px] text-amber-700 rounded-lg border border-amber-100 flex items-start gap-1">
-                            <span className="leading-none text-[12px]">⚠️</span>
-                            <span>数量未达标：最少需要 {completeness.mainSquareRequired} 张，差 {completeness.mainSquareMissing} 张</span>
-                          </div>
+                    {/* 模块 1：套系页面规划检查 */}
+                    <div className="space-y-3">
+                      <div className="flex justify-between items-center bg-slate-50 p-2 rounded-lg">
+                        <span className="text-xs font-bold text-slate-700">1. 套系页面规划检查</span>
+                        {planning.isPlanningComplete ? (
+                          <span className="text-[10px] text-emerald-600 bg-emerald-50 font-medium px-1.5 py-0.5 rounded border border-emerald-200/40">已规划足额</span>
+                        ) : (
+                          <span className="text-[10px] text-amber-600 bg-amber-50 font-medium px-1.5 py-0.5 rounded border border-amber-250/40">需要补充</span>
                         )}
                       </div>
 
-                      {/* 3:4竖版主图 */}
-                      <div className="space-y-1">
-                        <div className="flex justify-between items-center text-[11px] font-medium">
-                          <span className="text-slate-600">3:4竖版主图卖点图</span>
-                          <span className={`font-mono font-bold ${completeness.mainVerticalMissing > 0 ? "text-amber-600" : "text-emerald-600"}`}>
-                            {completeness.mainVerticalCurrent} / {completeness.mainVerticalRequired}
+                      <div className="space-y-2 pt-0.5 text-xs">
+                        {/* 1:1方形规划 */}
+                        <div className="flex justify-between items-center text-[11pt]">
+                          <span className="text-slate-500">1:1 方形主图卖点图</span>
+                          <span className={`font-mono font-bold ${planning.mainSquareMissing > 0 ? "text-amber-600" : "text-slate-700"}`}>
+                            已规划 {planning.mainSquareCurrent} / 要求 {planning.mainSquareRequired}
                           </span>
                         </div>
-                        {completeness.mainVerticalMissing > 0 && (
-                          <div className="p-1.5 px-2.5 bg-amber-50 text-[10px] text-amber-700 rounded-lg border border-amber-100 flex items-start gap-1">
-                            <span className="leading-none text-[12px]">⚠️</span>
-                            <span>数量未达标：最少需要 {completeness.mainVerticalRequired} 张，差 {completeness.mainVerticalMissing} 张</span>
+
+                        {/* 3:4竖版规划 */}
+                        <div className="flex justify-between items-center text-[11pt]">
+                          <span className="text-slate-500">3:4 竖版主图卖点图</span>
+                          <span className={`font-mono font-bold ${planning.mainVerticalMissing > 0 ? "text-amber-600" : "text-slate-700"}`}>
+                            已规划 {planning.mainVerticalCurrent} / 要求 {planning.mainVerticalRequired}
+                          </span>
+                        </div>
+
+                        {/* 合计规划 */}
+                        <div className="flex justify-between items-center text-[11pt] font-medium border-t border-slate-100 pt-1.5">
+                          <span className="text-slate-700">主图卖点图总规划数</span>
+                          <span className={`font-mono font-bold ${planning.mainMarketingTotalMissing > 0 ? "text-amber-650" : "text-indigo-600 font-extrabold"}`}>
+                            已规划 {planning.mainMarketingTotalCurrent} / 要求 {planning.mainMarketingTotalRequired}
+                          </span>
+                        </div>
+
+                        {/* 白底精修交付项规划 */}
+                        <div className="flex justify-between items-center text-[11pt] border-t border-slate-100 pt-1.5">
+                          <span className="text-slate-500">白底精修交付项</span>
+                          <span className={`font-bold ${planning.hasWhiteBgPlan ? "text-emerald-600" : "text-amber-600"}`}>
+                            {planning.hasWhiteBgPlan ? "✓ 已规划" : "❌ 缺失规划"}
+                          </span>
+                        </div>
+
+                        {/* 透明PNG交付项规划 */}
+                        <div className="flex justify-between items-center text-[11pt]">
+                          <span className="text-slate-500">透明PNG交付项</span>
+                          <span className={`font-bold ${planning.hasTransparentPngPlan ? "text-emerald-600" : "text-amber-600"}`}>
+                            {planning.hasTransparentPngPlan ? "✓ 已规划" : "❌ 缺失规划"}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Planning alerts/success */}
+                      {planning.isPlanningComplete ? (
+                        <div className="p-2 bg-emerald-50 text-[10px] text-emerald-700 rounded-lg border border-emerald-100 flex items-start gap-1 font-medium">
+                          <span className="leading-none text-xs">✓</span>
+                          <span>当前页面规划已满足套系基础交付要求。</span>
+                        </div>
+                      ) : (
+                        <div className="p-2 bg-amber-50 rounded-lg border border-amber-100 space-y-1">
+                          <div className="text-[10px] text-amber-800 font-bold flex items-center gap-1">
+                            <span>⚠️</span>
+                            <span>当前页面规划未满足套系基础交付要求：</span>
                           </div>
+                          <ul className="list-disc pl-4 text-[9.5px] text-amber-700 space-y-0.5 font-medium leading-normal">
+                            {planning.warnings.map((warn, idx) => (
+                              <li key={idx}>{warn}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* 分割线 */}
+                    <div className="border-t border-slate-100 my-2"></div>
+
+                    {/* 模块 2：成品交付检查 */}
+                    <div className="space-y-3">
+                      <div className="flex justify-between items-center bg-slate-55 p-2 rounded-lg">
+                        <span className="text-xs font-bold text-slate-700">2. 成品输出质量检查</span>
+                        {output.isOutputComplete ? (
+                          <span className="text-[10px] text-emerald-600 bg-emerald-50 font-medium px-1.5 py-0.5 rounded border border-emerald-200/40">已完全生成</span>
+                        ) : (
+                          <span className="text-[10px] text-amber-655 bg-amber-50 font-medium px-1.5 py-0.5 rounded border border-amber-250/30">待生成补齐</span>
                         )}
                       </div>
 
-                      {/* 合计卖点图 */}
-                      <div className="space-y-1">
-                        <div className="flex justify-between items-center text-[11px] font-semibold">
-                          <span className="text-slate-700">主图卖点图合计</span>
-                          <span className={`font-mono font-bold ${completeness.mainMarketingTotalMissing > 0 ? "text-amber-650" : "text-indigo-600 font-extrabold"}`}>
-                            {completeness.mainMarketingTotalCurrent} / {completeness.mainMarketingTotalRequired}
+                      <div className="space-y-2 pt-0.5 text-xs">
+                        {/* 1:1方形成品 */}
+                        <div className="flex justify-between items-center text-[11pt]">
+                          <span className="text-slate-500">1:1 方形主图卖点图</span>
+                          <span className={`font-mono font-bold ${output.mainSquareOutputCurrent < planning.mainSquareRequired ? "text-amber-600" : "text-slate-700"}`}>
+                            已生成 {output.mainSquareOutputCurrent} / 要求 {planning.mainSquareRequired}
                           </span>
                         </div>
-                        {completeness.mainMarketingTotalMissing > 0 && (
-                          <div className="p-1.5 px-2.5 bg-amber-50 text-[10px] text-amber-700 rounded-lg border border-amber-100 flex items-start gap-1">
-                            <span className="leading-none text-[12px]">⚠️</span>
-                            <span>差 {completeness.mainMarketingTotalMissing} 张：合计应不低于 {completeness.mainMarketingTotalRequired} 张</span>
-                          </div>
-                        )}
-                      </div>
 
-                      {/* 白底精修图 */}
-                      <div className="space-y-1 pt-1.5 border-t border-slate-100">
-                        <div className="flex justify-between items-center">
-                          <span className="text-slate-600">白底精修图 (必交)</span>
-                          <span className={`font-bold ${completeness.hasWhiteBg ? "text-emerald-600" : "text-amber-600"}`}>
-                            {completeness.hasWhiteBg ? "✓ 已存在" : "❌ 未找到"}
+                        {/* 3:4竖版成品 */}
+                        <div className="flex justify-between items-center text-[11pt]">
+                          <span className="text-slate-500">3:4 竖版主图卖点图</span>
+                          <span className={`font-mono font-bold ${output.mainVerticalOutputCurrent < planning.mainVerticalRequired ? "text-amber-600" : "text-slate-700"}`}>
+                            已生成 {output.mainVerticalOutputCurrent} / 要求 {planning.mainVerticalRequired}
                           </span>
                         </div>
-                        {!completeness.hasWhiteBg && completeness.whiteBgMissing && (
-                          <div className="p-1.5 px-2.5 bg-amber-50 text-[10px] text-amber-700 rounded-lg border border-amber-100 flex items-start gap-1">
-                            <span className="leading-none text-[12px]">⚠️</span>
-                            <span>未找到交付所需的白底精修单页</span>
-                          </div>
-                        )}
-                      </div>
 
-                      {/* 透明PNG图 */}
-                      <div className="space-y-1 pt-1.5 border-t border-slate-100">
-                        <div className="flex justify-between items-center">
-                          <span className="text-slate-600">透明PNG图 (必交)</span>
-                          <span className={`font-bold ${completeness.hasTransparentPng ? "text-emerald-600" : "text-amber-600"}`}>
-                            {completeness.hasTransparentPng ? "✓ 已存在" : "❌ 未找到"}
+                        {/* 合计成品 */}
+                        <div className="flex justify-between items-center text-[11pt] font-medium border-t border-slate-100 pt-1.5">
+                          <span className="text-slate-700">主图卖点图总生成数</span>
+                          <span className={`font-mono font-bold ${output.mainMarketingOutputCurrent < planning.mainMarketingTotalRequired ? "text-amber-650" : "text-indigo-600 font-extrabold"}`}>
+                            已生成 {output.mainMarketingOutputCurrent} / 要求 {planning.mainMarketingTotalRequired}
                           </span>
                         </div>
-                        {!completeness.hasTransparentPng && completeness.transparentPngMissing && (
-                          <div className="p-1.5 px-2.5 bg-amber-50 text-[10px] text-amber-700 rounded-lg border border-amber-100 flex items-start gap-1">
-                            <span className="leading-none text-[12px]">⚠️</span>
-                            <span>未找到交付所需的透明PNG单页</span>
-                          </div>
-                        )}
+
+                        {/* 白底精修成品 */}
+                        <div className="flex justify-between items-center text-[11pt] border-t border-slate-100 pt-1.5">
+                          <span className="text-slate-500">白底精修成品图</span>
+                          <span className={`font-bold ${output.hasWhiteBgOutput ? "text-emerald-600" : "text-amber-600"}`}>
+                            {output.hasWhiteBgOutput ? "✓ 已存在" : "❌ 缺失成品"}
+                          </span>
+                        </div>
+
+                        {/* 透明PNG成品 */}
+                        <div className="flex justify-between items-center text-[11pt]">
+                          <span className="text-slate-500">透明PNG成品图</span>
+                          <span className={`font-bold ${output.hasTransparentPngOutput ? "text-emerald-600" : "text-amber-600"}`}>
+                            {output.hasTransparentPngOutput ? "✓ 已存在" : "❌ 缺失成品"}
+                          </span>
+                        </div>
                       </div>
 
-                      {/* 绿色标示：全部达标 */}
-                      {!hasAlerts && (
-                        <div className="p-2.5 bg-emerald-50 text-[10.5px] text-emerald-700 rounded-xl border border-emerald-200/80 font-semibold space-y-1 mt-2 flex flex-col items-center text-center">
-                          <span className="text-[20px] leading-none text-emerald-600">✓</span>
-                          <span>整套交付规则校验：全部达标，已符合交付标准，可以放心导出！</span>
+                      {/* Output alerts/success */}
+                      {output.isOutputComplete ? (
+                        <div className="p-2 bg-emerald-50 text-[10px] text-emerald-700 rounded-lg border border-emerald-100 flex items-start gap-1 font-medium">
+                          <span className="leading-none text-xs">✓</span>
+                          <span>当前成品已满足基础交付要求。</span>
+                        </div>
+                      ) : (
+                        <div className="p-2 bg-amber-50/50 rounded-lg border border-amber-100/70 space-y-1">
+                          <div className="text-[10px] text-amber-850 font-bold flex items-center gap-1">
+                            <span>⚠️</span>
+                            <span>当前成品尚未满足基础交付要求，可继续生成或补充素材：</span>
+                          </div>
+                          <ul className="list-disc pl-4 text-[9.5px] text-amber-700 space-y-0.5 font-medium leading-normal">
+                            {output.warnings.map((warn, idx) => (
+                              <li key={idx}>{warn}</li>
+                            ))}
+                          </ul>
                         </div>
                       )}
                     </div>
