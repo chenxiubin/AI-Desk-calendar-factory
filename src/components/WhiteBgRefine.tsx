@@ -87,7 +87,8 @@ export const WhiteBgRefine: React.FC<WhiteBgRefineProps> = ({
   const [cropCanvasState, setCropCanvasState] = useState<CropCanvasState | null>(null);
   const [cropAspectLocked, setCropAspectLocked] = useState(true);
   const [snapEnabled, setSnapEnabled] = useState(true);
-  const [cropInputPreviewUrl, setCropInputPreviewUrl] = useState("");
+  const [confirmedCropInputUrl, setConfirmedCropInputUrl] = useState("");
+  const [isCropConfirmed, setIsCropConfirmed] = useState(false);
 
   const [targetSize, setTargetSize] = useState<1600 | 2048 | 2560>(2048);
   const [boundingBox, setBoundingBox] = useState<BoundingBoxInfo | null>(null);
@@ -153,7 +154,8 @@ export const WhiteBgRefine: React.FC<WhiteBgRefineProps> = ({
       // Reset bounding box and crop
       setBoundingBox(null);
       setCropCanvasState(null);
-      setCropInputPreviewUrl("");
+      setConfirmedCropInputUrl("");
+      setIsCropConfirmed(false);
     };
     reader.readAsDataURL(file);
   };
@@ -221,15 +223,47 @@ export const WhiteBgRefine: React.FC<WhiteBgRefineProps> = ({
     return preferred?.fileUrl || "";
   };
 
+  const handleConfirmCrop = async () => {
+    if (!selectedProduct) return;
+    const sourceImageUrl = getMattingSourceImage(selectedProduct, uploadedRawUrl);
+
+    if (!sourceImageUrl) {
+      setMattingError("请先上传或选择原始实拍图。");
+      return;
+    }
+
+    if (!cropCanvasState) {
+      setMattingError("请先在裁剪画布中调整裁剪区域。");
+      return;
+    }
+
+    try {
+      const dataUrl = await renderCropCanvasToDataUrl({
+        imageUrl: sourceImageUrl,
+        cropBox: cropCanvasState.cropBox,
+        imageTransform: cropCanvasState.imageTransform,
+        viewportSize: cropCanvasState.viewportSize,
+        targetSize,
+        backgroundColor: "#ffffff",
+        mimeType: "image/jpeg",
+        quality: 0.95,
+      });
+
+      setConfirmedCropInputUrl(dataUrl);
+      setIsCropConfirmed(true);
+      setMattingError("");
+    } catch (e) {
+      console.error("Failed to render confirmed crop input:", e);
+      setMattingError("确认裁剪失败，请重试。");
+    }
+  };
+
   // Implement the core matting pipeline trigger
   const handleStartMatting = async () => {
     if (!selectedProduct) return;
 
-    // Pick source image: prefers user's uploaded local raw image, else uses any existing asset URL as fallback
-    const sourceImageUrl = getMattingSourceImage(selectedProduct, uploadedRawUrl);
-
-    if (!sourceImageUrl) {
-      setMattingError("当前产品缺少可用于抠图的原始实拍图，请先上传原图。");
+    if (!confirmedCropInputUrl) {
+      setMattingError("请先确认裁剪，生成 RunningHub 输入图。");
       setMattingStatus("failed");
       return;
     }
@@ -245,30 +279,11 @@ export const WhiteBgRefine: React.FC<WhiteBgRefineProps> = ({
       setMattingStatus("queued");
       setMattingProgress(15);
       
-      let mattingInputUrl = sourceImageUrl;
-      if (cropCanvasState) {
-        try {
-          mattingInputUrl = await renderCropCanvasToDataUrl({
-            imageUrl: sourceImageUrl,
-            cropBox: cropCanvasState.cropBox,
-            imageTransform: cropCanvasState.imageTransform,
-            viewportSize: cropCanvasState.viewportSize,
-            targetSize,
-            backgroundColor: "#ffffff",
-            mimeType: "image/jpeg",
-            quality: 0.95,
-          });
-          setCropInputPreviewUrl(mattingInputUrl);
-        } catch (e) {
-          console.error("Failed to render crop canvas for matting input:", e);
-        }
-      }
-      
       // Reset bounding box before new generation
       setBoundingBox(null);
 
       const res = await runRunningHubMatting({
-        imageUrlOrBase64: mattingInputUrl,
+        imageUrlOrBase64: confirmedCropInputUrl,
         workflowConfig: mattingWorkflow as any,
       });
 
@@ -708,7 +723,11 @@ export const WhiteBgRefine: React.FC<WhiteBgRefineProps> = ({
                       targetSize={targetSize}
                       cropAspectLocked={cropAspectLocked}
                       snapEnabled={snapEnabled}
-                      onStateChange={setCropCanvasState}
+                      onStateChange={(state) => {
+                        setCropCanvasState(state);
+                        setIsCropConfirmed(false);
+                        setConfirmedCropInputUrl("");
+                      }}
                     />
                     
                     {/* Floating Controls for CropCanvas (Top Right) */}
@@ -896,16 +915,26 @@ export const WhiteBgRefine: React.FC<WhiteBgRefineProps> = ({
               </div>
             </div>
 
-            {cropInputPreviewUrl && (
+            {confirmedCropInputUrl && (
               <div className="space-y-3">
-                <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-wide block">
-                  裁剪输入预览
+                <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-wide block">
+                  裁剪已确认
                 </span>
-                <div className="bg-slate-50 p-3 rounded-lg border border-slate-100 flex flex-col items-center">
-                  <span className="text-[9px] text-slate-500 mb-2">本次送入 RunningHub 的裁剪输入图（不作为正式资产）</span>
-                  <img src={cropInputPreviewUrl} alt="Crop Input Preview" className="w-24 h-24 object-contain shadow-sm border border-slate-200 bg-white" />
+                <div className="bg-emerald-50/50 p-3 rounded-lg border border-emerald-100 flex flex-col items-center">
+                  <span className="text-[9px] text-emerald-600/80 mb-2 font-medium">该图仅做RunningHub输入，不写入正式资产</span>
+                  <img src={confirmedCropInputUrl} alt="Crop Input Preview" className="w-24 h-24 object-contain shadow border border-emerald-200 bg-white rounded-sm" />
                 </div>
               </div>
+            )}
+
+            {!isCropConfirmed && uploadedRawUrl && previewMode === "raw" && (
+                <button
+                onClick={handleConfirmCrop}
+                className="w-full bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold py-3 px-4 rounded-lg shadow transition-colors flex items-center justify-center space-x-2"
+                >
+                <Scissors className="w-4 h-4 text-slate-300" />
+                <span>确认裁剪并生成 RunningHub 输入图</span>
+                </button>
             )}
 
             {/* Outbound file format selects */}
@@ -1097,11 +1126,30 @@ export const WhiteBgRefine: React.FC<WhiteBgRefineProps> = ({
           {/* Action Button */}
           <button
             onClick={handleStartMatting}
-            disabled={isPending}
-            className="w-full mt-4 bg-blue-650 hover:bg-blue-700 disabled:bg-neutral-300 text-white font-bold py-2.5 px-4 rounded-xl text-xs flex items-center justify-center space-x-1.5 shadow transition-all duration-300 active:scale-[0.98]"
+            disabled={
+              isPending ||
+              !uploadedRawUrl ||
+              !isCropConfirmed ||
+              !isWorkflowConfigured
+            }
+            className={`w-full mt-4 font-bold py-2.5 px-4 rounded-xl text-xs flex items-center justify-center space-x-1.5 shadow transition-all duration-300 active:scale-[0.98] ${
+              isPending || !uploadedRawUrl || !isCropConfirmed || !isWorkflowConfigured
+                ? "bg-slate-200 text-slate-400 cursor-not-allowed"
+                : "bg-blue-650 hover:bg-blue-700 text-white"
+            }`}
           >
             <Play className="w-3.5 h-3.5 shrink-0" />
-            <span>{isPending ? "抠图执行中..." : "开始 RunningHub 抠图"}</span>
+            <span>
+              {isPending
+                ? "抠图执行中..."
+                : !uploadedRawUrl
+                ? "请先上传原图"
+                : !isCropConfirmed
+                ? "请先确认裁剪"
+                : !isWorkflowConfigured
+                ? "工作流未配置"
+                : "开始 RunningHub 抠图"}
+            </span>
           </button>
         </div>
         {/* Close flex flex-1 wrapper */}
