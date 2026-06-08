@@ -8,7 +8,8 @@ import {
 import { 
   calculateTransparentImageBoundingBox, 
   BoundingBoxInfo,
-  renderCropCanvasToDataUrl
+  renderCropCanvasToDataUrl,
+  RawImageAutoCropResult
 } from "../utils/imagePreprocess";
 import { CropCanvas, CropCanvasState } from "./CropCanvas";
 
@@ -88,6 +89,7 @@ export const WhiteBgRefine: React.FC<WhiteBgRefineProps> = ({
   const [cropAspectLocked, setCropAspectLocked] = useState(true);
   const [snapEnabled, setSnapEnabled] = useState(true);
   const [cropMode, setCropMode] = useState<"simple" | "advanced">("simple");
+  const [autoCropResult, setAutoCropResult] = useState<RawImageAutoCropResult | null>(null);
   const [confirmedCropInputUrl, setConfirmedCropInputUrl] = useState("");
   const [isCropConfirmed, setIsCropConfirmed] = useState(false);
   const [isCanvasLocked, setIsCanvasLocked] = useState(false);
@@ -113,6 +115,7 @@ export const WhiteBgRefine: React.FC<WhiteBgRefineProps> = ({
     setPreviewMode("raw");
     setBoundingBox(null);
     setCropCanvasState(null);
+    setAutoCropResult(null);
     setConfirmedCropInputUrl("");
     setIsCropConfirmed(false);
     setIsCanvasLocked(false);
@@ -175,6 +178,7 @@ export const WhiteBgRefine: React.FC<WhiteBgRefineProps> = ({
       // Reset bounding box and crop
       setBoundingBox(null);
       setCropCanvasState(null);
+      setAutoCropResult(null);
       setConfirmedCropInputUrl("");
       setIsCropConfirmed(false);
       setIsCanvasLocked(false);
@@ -519,6 +523,8 @@ export const WhiteBgRefine: React.FC<WhiteBgRefineProps> = ({
   let displayUrl = "";
   if (previewMode === "raw") {
     displayUrl = sourceImageUrl;
+  } else if (previewMode === "crop_input") {
+    displayUrl = confirmedCropInputUrl;
   } else if (previewMode === "png") {
     displayUrl =
       mattingResultUrl ||
@@ -744,7 +750,7 @@ export const WhiteBgRefine: React.FC<WhiteBgRefineProps> = ({
           </div>
 
           {/* Dynamic preview canvas */}
-          <div className="flex-1 rounded-xl bg-slate-950 border border-slate-800 overflow-hidden p-6 relative flex items-center justify-center min-h-[300px]">
+          <div className="flex-1 rounded-xl bg-slate-950 border border-slate-800 overflow-hidden p-6 relative flex items-center justify-center h-[560px] min-h-[480px]">
             {/* Transparent grid layer behind images */}
             {previewMode === "png" && (
               <div
@@ -789,6 +795,9 @@ export const WhiteBgRefine: React.FC<WhiteBgRefineProps> = ({
                       snapEnabled={snapEnabled}
                       mode={cropMode}
                       locked={isCanvasLocked}
+                      autoCropOnLoad={true}
+                      safetyPaddingRatio={0.12}
+                      onAutoCropResult={setAutoCropResult}
                       onStateChange={handleCropCanvasStateChange}
                     />
                     
@@ -835,12 +844,39 @@ export const WhiteBgRefine: React.FC<WhiteBgRefineProps> = ({
                     crossOrigin={displayUrl.startsWith("data:") ? undefined : "anonymous"}
                   />
                 )}
-                <div className="absolute top-2 left-2 bg-slate-900/90 text-white text-[9px] px-2 py-0.5 rounded border border-slate-700 font-mono z-10 shadow-sm pointer-events-none">
-                  {previewMode === "raw" && "📷 调整抠图输入 (1:1)"}
-                  {previewMode === "crop_input" && "📐 RunningHub 输入图预览"}
-                  {previewMode === "png" && "✨ RunningHub 抠图透明 PNG"}
-                  {previewMode === "white_bg" && "🥚 渲染白底 JPG 资产"}
-                  {previewMode === "mask" && "🖤 高精度黑白 Mask 蒙版"}
+                <div className="absolute top-2 left-2 flex flex-col gap-1 z-10 pointer-events-none">
+                  <div className="bg-slate-900/90 text-white text-[9px] px-2 py-0.5 rounded border border-slate-700 font-mono shadow-sm flex items-center justify-center inline-block w-max">
+                    {previewMode === "raw" && "📷 调整抠图输入 (1:1)"}
+                    {previewMode === "crop_input" && "📐 RunningHub 输入图预览"}
+                    {previewMode === "png" && "✨ RunningHub 抠图透明 PNG"}
+                    {previewMode === "white_bg" && "🥚 渲染白底 JPG 资产"}
+                    {previewMode === "mask" && "🖤 高精度黑白 Mask 蒙版"}
+                  </div>
+                  
+                  {previewMode === "raw" && autoCropResult && (
+                    <div className={`text-[10px] px-2 py-1.5 rounded border font-medium shadow-sm w-max backdrop-blur ${
+                      autoCropResult.confidence >= 0.8 ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/30" :
+                      autoCropResult.confidence >= 0.4 ? "bg-amber-500/20 text-amber-400 border-amber-500/30" :
+                      "bg-slate-800/80 text-slate-300 border-slate-600"
+                    }`}>
+                      <div className="flex items-center justify-between gap-3">
+                        <span>
+                          {autoCropResult.confidence >= 0.8 && "✨ 已自动识别产品主体并居中"}
+                          {autoCropResult.confidence >= 0.4 && autoCropResult.confidence < 0.8 && "⚠️ 自动识别可能不准确，请手动微调"}
+                          {autoCropResult.confidence < 0.4 && "🔄 自动识别失败，已完整适应原图，请手动调整"}
+                        </span>
+                        <span className="text-[8px] opacity-60 font-mono tracking-tight uppercase">
+                          {autoCropResult.method} | {(autoCropResult.confidence * 100).toFixed(0)}%
+                        </span>
+                      </div>
+                      
+                      {autoCropResult.warnings.length > 0 && (
+                        <div className="text-[9px] opacity-80 mt-1 line-clamp-1 border-t border-current pt-0.5">
+                          警告: {autoCropResult.warnings.join(", ")}
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
             ) : (

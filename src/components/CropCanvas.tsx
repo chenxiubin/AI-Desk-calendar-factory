@@ -1,5 +1,9 @@
 import React, { useState, useRef, useEffect, MouseEvent, WheelEvent, useCallback } from "react";
-import { ZoomIn, ZoomOut, Maximize, Target, RotateCcw } from "lucide-react";
+import { ZoomIn, ZoomOut, Maximize, Target, RotateCcw, Wand2 } from "lucide-react";
+import { 
+  calculateRawImageAutoCropBox, 
+  RawImageAutoCropResult 
+} from "../utils/imagePreprocess";
 
 export interface CropBox {
   x: number;
@@ -32,6 +36,9 @@ export interface CropCanvasProps {
   snapEnabled: boolean;
   locked?: boolean;
   mode?: "simple" | "advanced";
+  autoCropOnLoad?: boolean;
+  safetyPaddingRatio?: number;
+  onAutoCropResult?: (result: RawImageAutoCropResult) => void;
   onStateChange: (state: CropCanvasState) => void;
 }
 
@@ -51,6 +58,9 @@ export const CropCanvas: React.FC<CropCanvasProps> = ({
   snapEnabled,
   locked = false,
   mode = "simple",
+  autoCropOnLoad = true,
+  safetyPaddingRatio = 0.1,
+  onAutoCropResult,
   onStateChange,
 }) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -58,10 +68,15 @@ export const CropCanvas: React.FC<CropCanvasProps> = ({
 
   const [viewportSize, setViewportSize] = useState<ViewportSize>({ width: 0, height: 0 });
   const [imageTransform, setImageTransform] = useState<ImageTransform>({ x: 0, y: 0, scale: 1 });
+  const [baseScale, setBaseScale] = useState(1);
+  const [zoom, setZoom] = useState(1);
   // CropBox is in viewport coordinates
   const [cropBox, setCropBox] = useState<CropBox>({ x: 0, y: 0, width: 0, height: 0 });
 
   const [isReady, setIsReady] = useState(false);
+  const [isAutoCropping, setIsAutoCropping] = useState(false);
+  const [lastAutoCroppedImageUrl, setLastAutoCroppedImageUrl] = useState("");
+  const [imageSize, setImageSize] = useState({ w: 0, h: 0 });
 
   // Interaction State
   const dragModeRef = useRef<DragMode>("none");
@@ -84,37 +99,164 @@ export const CropCanvas: React.FC<CropCanvasProps> = ({
     }
   };
 
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+
+    const observer = new ResizeObserver(() => {
+      const rect = el.getBoundingClientRect();
+      if (rect.width > 0 && rect.height > 0) {
+        setViewportSize(prev => {
+          if (prev.width === rect.width && prev.height === rect.height) return prev;
+          return { width: rect.width, height: rect.height };
+        });
+      }
+    });
+
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
   const resetCanvasToFit = useCallback(() => {
     const container = containerRef.current;
     const img = imgRef.current;
     if (!container || !img) return;
 
-    const { width: vw, height: vh } = container.getBoundingClientRect();
-    const iw = img.naturalWidth;
-    const ih = img.naturalHeight;
+    const { width: viewportWidth, height: viewportHeight } = container.getBoundingClientRect();
+    const naturalWidth = img.naturalWidth;
+    const naturalHeight = img.naturalHeight;
 
-    const scale = Math.min((vw * 0.8) / iw, (vh * 0.8) / ih);
-    const w = iw * scale;
-    const h = ih * scale;
-    const x = (vw - w) / 2;
-    const y = (vh - h) / 2;
+    if (viewportWidth === 0 || viewportHeight === 0 || naturalWidth === 0 || naturalHeight === 0) return;
 
-    const cropSize = Math.min(vw, vh) * 0.72;
-
-    setViewportSize({ width: vw, height: vh });
-    setImageTransform({ x, y, scale });
-    setCropBox({
-      x: (vw - cropSize) / 2,
-      y: (vh - cropSize) / 2,
+    const cropSize = Math.min(viewportWidth, viewportHeight) * 0.78;
+    const newCropBox = {
+      x: (viewportWidth - cropSize) / 2,
+      y: (viewportHeight - cropSize) / 2,
       width: cropSize,
       height: cropSize,
-    });
+    };
+
+    setViewportSize({ width: viewportWidth, height: viewportHeight });
+    setCropBox(newCropBox);
     setIsReady(true);
+    
+    return newCropBox;
   }, []);
 
+  const applyAutoCropResult = useCallback((bbox: RawImageAutoCropResult["bbox"], overrideCropBox?: CropBox) => {
+    const cb = overrideCropBox || cropBox;
+    if (!imgRef.current || !containerRef.current || cb.width === 0) return;
+    
+    const safeWidth = cb.width * (1 - safetyPaddingRatio * 2);
+    const safeHeight = cb.height * (1 - safetyPaddingRatio * 2);
+
+    const scale = Math.min(
+      safeWidth / bbox.width,
+      safeHeight / bbox.height
+    );
+
+    const cropCenterX = cb.x + cb.width / 2;
+    const cropCenterY = cb.y + cb.height / 2;
+
+    const bboxCenterX = bbox.x + bbox.width / 2;
+    const bboxCenterY = bbox.y + bbox.height / 2;
+
+    const imageX = cropCenterX - bboxCenterX * scale;
+    const imageY = cropCenterY - bboxCenterY * scale;
+
+    setBaseScale(isNaN(scale) ? 1 : scale);
+    setZoom(1);
+    setImageTransform({
+      x: isNaN(imageX) ? 0 : imageX,
+      y: isNaN(imageY) ? 0 : imageY,
+      scale: isNaN(scale) ? 1 : scale,
+    });
+  }, [cropBox, safetyPaddingRatio]);
+
+  const fitProductToCropBox = useCallback((overrideCropBox?: CropBox) => {
+    if (locked || !imgRef.current || !containerRef.current) return;
+    const iw = imgRef.current.naturalWidth;
+    const ih = imgRef.current.naturalHeight;
+    const cb = overrideCropBox || cropBox;
+    if (cb.width === 0) return;
+    
+    const safeCropW = cb.width * 0.84;
+    const safeCropH = cb.height * 0.84;
+    
+    const initialBaseScale = Math.min(safeCropW / iw, safeCropH / ih);
+    
+    const scaledW = iw * initialBaseScale;
+    const scaledH = ih * initialBaseScale;
+    const cx = cb.x + cb.width / 2;
+    const cy = cb.y + cb.height / 2;
+    
+    const x = cx - scaledW / 2;
+    const y = cy - scaledH / 2;
+    
+    setBaseScale(isNaN(initialBaseScale) ? 1 : initialBaseScale);
+    setZoom(1);
+    setImageTransform(prev => ({ 
+      ...prev, 
+      x: isNaN(x) ? 0 : x, 
+      y: isNaN(y) ? 0 : y, 
+      scale: isNaN(initialBaseScale) ? 1 : initialBaseScale 
+    }));
+  }, [locked, cropBox]);
+
+  const autoDetectProduct = useCallback(async (currentCropBox?: CropBox) => {
+    if (locked || isAutoCropping || !imgRef.current || !containerRef.current) return;
+    setIsAutoCropping(true);
+    try {
+      const result = await calculateRawImageAutoCropBox(imageUrl, {
+        paddingRatio: safetyPaddingRatio,
+      });
+      if (result.confidence >= 0.4) {
+        applyAutoCropResult(result.bbox, currentCropBox);
+      } else {
+        fitProductToCropBox(currentCropBox);
+      }
+      onAutoCropResult?.(result);
+    } catch (err) {
+      console.warn("Auto crop failed:", err);
+      fitProductToCropBox(currentCropBox);
+    } finally {
+      setIsAutoCropping(false);
+    }
+  }, [imageUrl, locked, isAutoCropping, safetyPaddingRatio, applyAutoCropResult, fitProductToCropBox, onAutoCropResult]);
+
+  useEffect(() => {
+    if (!locked && viewportSize.width > 0 && imgRef.current?.complete) {
+      if (imageUrl !== lastAutoCroppedImageUrl) {
+        const t = setTimeout(() => {
+          const cb = resetCanvasToFit();
+          if (cb) {
+            setLastAutoCroppedImageUrl(imageUrl);
+            if (autoCropOnLoad) {
+              autoDetectProduct(cb);
+            } else {
+              fitProductToCropBox(cb);
+            }
+          }
+        }, 50);
+        return () => clearTimeout(t);
+      }
+    }
+  }, [imageUrl, viewportSize.width, viewportSize.height, locked, autoCropOnLoad, lastAutoCroppedImageUrl, autoDetectProduct, fitProductToCropBox, resetCanvasToFit]);
+
   // Initialize bounds on image load
-  const handleImageLoad = () => {
-    resetCanvasToFit();
+  const handleImageLoad = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
+    setImageSize({ w: e.currentTarget.naturalWidth, h: e.currentTarget.naturalHeight });
+    if (imageUrl !== lastAutoCroppedImageUrl) {
+      const cb = resetCanvasToFit();
+      if (cb) {
+        setLastAutoCroppedImageUrl(imageUrl);
+        if (autoCropOnLoad) {
+          autoDetectProduct(cb);
+        } else {
+          fitProductToCropBox(cb);
+        }
+      }
+    }
   };
 
   // Notify parent
@@ -134,10 +276,10 @@ export const CropCanvas: React.FC<CropCanvasProps> = ({
 
   const snapThreshold = snapEnabled ? 10 : 0;
 
-  const clampScale = (s: number) => Math.max(0.25, Math.min(s, 4));
+  const clampZoom = (z: number) => Math.max(0.1, Math.min(z, 4));
 
   const handleWheel = (e: WheelEvent<HTMLDivElement>) => {
-    if (locked || !containerRef.current) return;
+    if (locked || !containerRef.current || baseScale === 0) return;
     e.preventDefault();
     
     const rect = containerRef.current.getBoundingClientRect();
@@ -145,64 +287,45 @@ export const CropCanvas: React.FC<CropCanvasProps> = ({
     const my = e.clientY - rect.top;
 
     const delta = e.deltaY > 0 ? 0.9 : 1.1;
-    let newScale = clampScale(imageTransform.scale * delta);
+    const nextZoom = clampZoom(zoom * delta);
+    const nextScale = baseScale * nextZoom;
     
     // Zoom around mouse
-    const actualDelta = newScale / imageTransform.scale;
-    const nx = mx - (mx - imageTransform.x) * actualDelta;
-    const ny = my - (my - imageTransform.y) * actualDelta;
+    const scaleRatio = nextScale / imageTransform.scale;
+    const nx = mx - (mx - imageTransform.x) * scaleRatio;
+    const ny = my - (my - imageTransform.y) * scaleRatio;
 
-    setImageTransform({ x: nx, y: ny, scale: newScale });
+    setZoom(nextZoom);
+    setImageTransform({ x: nx, y: ny, scale: nextScale });
   };
 
   const handleZoom = (direction: "in" | "out") => {
-    if (locked || !containerRef.current) return;
-    const rect = containerRef.current.getBoundingClientRect();
-    const mx = rect.width / 2;
-    const my = rect.height / 2;
+    if (locked || !containerRef.current || baseScale === 0) return;
+    const mx = cropBox.x + cropBox.width / 2;
+    const my = cropBox.y + cropBox.height / 2;
     
     const delta = direction === "in" ? 1.1 : 0.9;
-    let newScale = clampScale(imageTransform.scale * delta);
-    const actualDelta = newScale / imageTransform.scale;
-    const nx = mx - (mx - imageTransform.x) * actualDelta;
-    const ny = my - (my - imageTransform.y) * actualDelta;
-    setImageTransform({ x: nx, y: ny, scale: newScale });
+    const nextZoom = clampZoom(zoom * delta);
+    const nextScale = baseScale * nextZoom;
+
+    const scaleRatio = nextScale / imageTransform.scale;
+    const nx = mx - (mx - imageTransform.x) * scaleRatio;
+    const ny = my - (my - imageTransform.y) * scaleRatio;
+    
+    setZoom(nextZoom);
+    setImageTransform({ x: nx, y: ny, scale: nextScale });
   };
 
   const centerImage = useCallback(() => {
     if (locked || !imgRef.current || !containerRef.current) return;
-    const { width: vw, height: vh } = containerRef.current.getBoundingClientRect();
     const iw = imgRef.current.naturalWidth * imageTransform.scale;
     const ih = imgRef.current.naturalHeight * imageTransform.scale;
-    const x = (vw - iw) / 2;
-    const y = (vh - ih) / 2;
-    setImageTransform(prev => ({ ...prev, x, y }));
-  }, [locked, imageTransform.scale]);
-
-  const fitProductToCropBox = useCallback(() => {
-    if (locked || !imgRef.current || !containerRef.current) return;
-    const iw = imgRef.current.naturalWidth;
-    const ih = imgRef.current.naturalHeight;
-    
-    // We want the image to fit inside the cropBox, with an 8% margin.
-    // So target image size = cropBox inner safe size.
-    // Safe size is 84% of cropBox size (8% on each side).
-    const safeCropW = cropBox.width * 0.84;
-    const safeCropH = cropBox.height * 0.84;
-    
-    const scale = Math.min(safeCropW / iw, safeCropH / ih);
-    
-    // Center the image inside the cropBox
-    const scaledW = iw * scale;
-    const scaledH = ih * scale;
     const cx = cropBox.x + cropBox.width / 2;
     const cy = cropBox.y + cropBox.height / 2;
-    
-    const x = cx - scaledW / 2;
-    const y = cy - scaledH / 2;
-    
-    setImageTransform(prev => ({ ...prev, x, y, scale }));
-  }, [locked, cropBox]);
+    const x = cx - iw / 2;
+    const y = cy - ih / 2;
+    setImageTransform(prev => ({ ...prev, x, y }));
+  }, [locked, imageTransform.scale, cropBox]);
 
   const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>, mode: DragMode) => {
     e.preventDefault();
@@ -330,45 +453,39 @@ export const CropCanvas: React.FC<CropCanvasProps> = ({
   return (
     <div 
       ref={containerRef}
-      className="relative w-full h-full overflow-hidden select-none bg-slate-900 flex items-center justify-center cursor-move"
+      className="relative w-full h-full overflow-hidden select-none flex items-center justify-center cursor-move"
+      style={{ 
+        touchAction: "none",
+        backgroundImage: 'url("data:image/svg+xml,%3Csvg width=\'20\' height=\'20\' viewBox=\'0 0 20 20\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cg fill=\'%23cbd5e1\' fill-opacity=\'0.1\' fill-rule=\'evenodd\'%3E%3Crect x=\'0\' y=\'0\' width=\'10\' height=\'10\'/%3E%3Crect x=\'10\' y=\'10\' width=\'10\' height=\'10\'/%3E%3C/g%3E%3C/svg%3E")',
+        backgroundColor: '#1e293b'
+      }}
       onPointerDown={(e) => handlePointerDown(e, "image")}
       onPointerMove={handlePointerMove}
       onPointerUp={handlePointerUp}
       onPointerCancel={handlePointerUp}
       onWheel={handleWheel}
-      style={{ touchAction: "none" }}
     >
-      <img
-        ref={imgRef}
-        src={imageUrl}
-        onLoad={handleImageLoad}
-        crossOrigin={imageUrl.startsWith("data:") ? undefined : "anonymous"}
-        draggable={false}
-        className="absolute origin-top-left will-change-transform max-w-none max-h-none"
-        style={{
-          transform: `translate(${imageTransform.x}px, ${imageTransform.y}px) scale(${imageTransform.scale})`,
-          opacity: isReady ? 1 : 0
-        }}
-      />
+      {/* Container to handle image transforms correctly without issues related to max width limits */}
+      <div className="absolute origin-top-left" style={{
+        transform: `translate(${imageTransform.x}px, ${imageTransform.y}px) scale(${imageTransform.scale})`,
+        opacity: isReady ? 1 : 0,
+        zIndex: 0
+      }}>
+        <img
+          ref={imgRef}
+          src={imageUrl}
+          onLoad={handleImageLoad}
+          crossOrigin={imageUrl.startsWith("data:") || imageUrl.startsWith("blob:") ? undefined : "anonymous"}
+          draggable={false}
+          className="will-change-transform max-w-none max-h-none block"
+          style={{
+            width: imageSize.w > 0 ? `${imageSize.w}px` : 'auto',
+            height: imageSize.h > 0 ? `${imageSize.h}px` : 'auto',
+          }}
+        />
+      </div>
       
-      {/* Dimmed Overlay */}
-      {isReady && (
-        <svg className="absolute inset-0 pointer-events-none w-full h-full">
-          <defs>
-            <mask id="crop-mask">
-              <rect width="100%" height="100%" fill="white" />
-              <rect 
-                x={cropBox.x} 
-                y={cropBox.y} 
-                width={cropBox.width} 
-                height={cropBox.height} 
-                fill="black" 
-              />
-            </mask>
-          </defs>
-          <rect width="100%" height="100%" fill="rgba(0,0,0,0.5)" mask="url(#crop-mask)" />
-        </svg>
-      )}
+      {/* Dimmed Overlay removed based on request */}
 
       {/* Crop Box UI */}
       {isReady && (
@@ -450,11 +567,21 @@ export const CropCanvas: React.FC<CropCanvasProps> = ({
              <input 
                type="range" 
                disabled={locked}
-               min="0.25" max="4" step="0.05"
-               value={imageTransform.scale}
+               min="0.1" max="4" step="0.01"
+               value={zoom}
                onChange={(e) => {
-                 if (locked) return;
-                 setImageTransform((prev) => ({ ...prev, scale: parseFloat(e.target.value) }));
+                 if (locked || baseScale === 0) return;
+                 const nextZoom = Number(e.target.value);
+                 const nextScale = baseScale * nextZoom;
+                 
+                 const mx = cropBox.x + cropBox.width / 2;
+                 const my = cropBox.y + cropBox.height / 2;
+                 const scaleRatio = nextScale / imageTransform.scale;
+                 const nx = mx - (mx - imageTransform.x) * scaleRatio;
+                 const ny = my - (my - imageTransform.y) * scaleRatio;
+                 
+                 setZoom(nextZoom);
+                 setImageTransform({ x: nx, y: ny, scale: nextScale });
                }}
                className="w-20 accent-blue-500 disabled:opacity-50"
                onPointerDown={(e) => e.stopPropagation()}
@@ -462,12 +589,27 @@ export const CropCanvas: React.FC<CropCanvasProps> = ({
              <button disabled={locked} onClick={() => handleZoom("in")} className={`p-1 rounded hover:bg-slate-800 ${locked ? 'opacity-50 cursor-not-allowed' : ''}`}>
                <ZoomIn className="w-4 h-4 text-slate-300" />
              </button>
-             <span className="text-[10px] text-slate-400 font-mono w-8 text-right mr-2">
-               {Math.round(imageTransform.scale * 100)}%
+             <span className="text-[10px] text-slate-400 font-mono w-[38px] text-right mr-1">
+               {Math.round(zoom * 100)}%
              </span>
           </div>
           
           <div className="w-px h-4 bg-slate-700" />
+          
+          <button 
+            type="button"
+            disabled={locked || isAutoCropping}
+            onClick={(e) => {
+              e.stopPropagation();
+              if (locked) return;
+              autoDetectProduct();
+            }}
+            title="自动识别产品"
+            className={`flex items-center gap-1 p-1.5 rounded transition-colors ${locked || isAutoCropping ? 'text-slate-600 cursor-not-allowed' : 'text-slate-300 hover:text-white hover:bg-slate-800'}`}
+          >
+            <Wand2 className={`w-4 h-4 ${isAutoCropping ? 'animate-pulse' : ''}`} />
+            <span className="text-[10px] hidden sm:inline">自动识别产品</span>
+          </button>
           
           <button 
             type="button"
@@ -477,10 +619,11 @@ export const CropCanvas: React.FC<CropCanvasProps> = ({
               if (locked) return;
               fitProductToCropBox();
             }}
-            title="适应完整产品"
-            className={`p-1.5 rounded transition-colors ${locked ? 'text-slate-600 cursor-not-allowed' : 'text-slate-300 hover:text-white hover:bg-slate-800'}`}
+            title="完整适应原图"
+            className={`flex items-center gap-1 p-1.5 rounded transition-colors ${locked ? 'text-slate-600 cursor-not-allowed' : 'text-slate-300 hover:text-white hover:bg-slate-800'}`}
           >
             <Maximize className="w-4 h-4" />
+            <span className="text-[10px] hidden sm:inline">完整适应原图</span>
           </button>
           
           <button 
@@ -492,9 +635,10 @@ export const CropCanvas: React.FC<CropCanvasProps> = ({
               centerImage();
             }}
             title="居中"
-            className={`p-1.5 rounded transition-colors ${locked ? 'text-slate-600 cursor-not-allowed' : 'text-slate-300 hover:text-white hover:bg-slate-800'}`}
+            className={`flex items-center gap-1 p-1.5 rounded transition-colors ${locked ? 'text-slate-600 cursor-not-allowed' : 'text-slate-300 hover:text-white hover:bg-slate-800'}`}
           >
             <Target className="w-4 h-4" />
+            <span className="text-[10px] hidden sm:inline">居中</span>
           </button>
 
           <div className="w-px h-4 bg-slate-700" />
@@ -505,7 +649,13 @@ export const CropCanvas: React.FC<CropCanvasProps> = ({
             onClick={(e) => {
               e.stopPropagation();
               if (locked) return;
+              setLastAutoCroppedImageUrl("");
               resetCanvasToFit();
+              if (autoCropOnLoad) {
+                autoDetectProduct();
+              } else {
+                fitProductToCropBox();
+              }
             }}
             className={`flex items-center gap-1 text-[10px] font-medium tracking-wide transition-colors px-2 py-1 rounded ${locked ? 'text-slate-600 cursor-not-allowed' : 'text-slate-300 hover:text-blue-400 hover:bg-slate-800'}`}
           >
