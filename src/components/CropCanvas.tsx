@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect, MouseEvent, WheelEvent, useCallback } from "react";
+import { ZoomIn, ZoomOut, Maximize, Target, RotateCcw } from "lucide-react";
 
 export interface CropBox {
   x: number;
@@ -30,6 +31,7 @@ export interface CropCanvasProps {
   cropAspectLocked: boolean;
   snapEnabled: boolean;
   locked?: boolean;
+  mode?: "simple" | "advanced";
   onStateChange: (state: CropCanvasState) => void;
 }
 
@@ -48,6 +50,7 @@ export const CropCanvas: React.FC<CropCanvasProps> = ({
   cropAspectLocked,
   snapEnabled,
   locked = false,
+  mode = "simple",
   onStateChange,
 }) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -151,6 +154,55 @@ export const CropCanvas: React.FC<CropCanvasProps> = ({
 
     setImageTransform({ x: nx, y: ny, scale: newScale });
   };
+
+  const handleZoom = (direction: "in" | "out") => {
+    if (locked || !containerRef.current) return;
+    const rect = containerRef.current.getBoundingClientRect();
+    const mx = rect.width / 2;
+    const my = rect.height / 2;
+    
+    const delta = direction === "in" ? 1.1 : 0.9;
+    let newScale = clampScale(imageTransform.scale * delta);
+    const actualDelta = newScale / imageTransform.scale;
+    const nx = mx - (mx - imageTransform.x) * actualDelta;
+    const ny = my - (my - imageTransform.y) * actualDelta;
+    setImageTransform({ x: nx, y: ny, scale: newScale });
+  };
+
+  const centerImage = useCallback(() => {
+    if (locked || !imgRef.current || !containerRef.current) return;
+    const { width: vw, height: vh } = containerRef.current.getBoundingClientRect();
+    const iw = imgRef.current.naturalWidth * imageTransform.scale;
+    const ih = imgRef.current.naturalHeight * imageTransform.scale;
+    const x = (vw - iw) / 2;
+    const y = (vh - ih) / 2;
+    setImageTransform(prev => ({ ...prev, x, y }));
+  }, [locked, imageTransform.scale]);
+
+  const fitProductToCropBox = useCallback(() => {
+    if (locked || !imgRef.current || !containerRef.current) return;
+    const iw = imgRef.current.naturalWidth;
+    const ih = imgRef.current.naturalHeight;
+    
+    // We want the image to fit inside the cropBox, with an 8% margin.
+    // So target image size = cropBox inner safe size.
+    // Safe size is 84% of cropBox size (8% on each side).
+    const safeCropW = cropBox.width * 0.84;
+    const safeCropH = cropBox.height * 0.84;
+    
+    const scale = Math.min(safeCropW / iw, safeCropH / ih);
+    
+    // Center the image inside the cropBox
+    const scaledW = iw * scale;
+    const scaledH = ih * scale;
+    const cx = cropBox.x + cropBox.width / 2;
+    const cy = cropBox.y + cropBox.height / 2;
+    
+    const x = cx - scaledW / 2;
+    const y = cy - scaledH / 2;
+    
+    setImageTransform(prev => ({ ...prev, x, y, scale }));
+  }, [locked, cropBox]);
 
   const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>, mode: DragMode) => {
     e.preventDefault();
@@ -332,44 +384,69 @@ export const CropCanvas: React.FC<CropCanvasProps> = ({
         >
           {/* Draggable Inner */}
           <div 
-            className="w-full h-full cursor-move"
+            className={`w-full h-full ${mode === "advanced" && !locked ? 'cursor-move' : ''}`}
             onPointerDown={(e) => {
-              e.stopPropagation();
-              handlePointerDown(e, "crop");
+              if (mode === "advanced") {
+                e.stopPropagation();
+                handlePointerDown(e, "crop");
+              }
             }}
           />
 
-          {/* Grid Lines */}
-          <div className="absolute inset-0 pointer-events-none grid grid-cols-3 grid-rows-3 border-white/20 divide-x divide-y divide-white/20 shadow-sm opacity-50">
-            <div/><div/><div/><div/><div/><div/><div/><div/><div/>
-          </div>
+          {mode === "simple" && (
+            <>
+              {/* Center Cross lines */}
+              <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
+                <div className="w-full h-[1px] bg-white/40" />
+                <div className="absolute h-full w-[1px] bg-white/40" />
+              </div>
+              {/* 8% safe margin */}
+              <div className="absolute top-[8%] left-[8%] bottom-[8%] right-[8%] pointer-events-none border border-dashed border-red-400/60" />
+              {/* Output Label */}
+              <div className="absolute top-2 left-2 bg-slate-900/80 px-2 py-0.5 rounded text-[10px] text-white">
+                {targetSize}×{targetSize} 输出框
+              </div>
+            </>
+          )}
 
-          {/* Handles */}
-          <div 
-            className="absolute -top-1.5 -left-1.5 w-3 h-3 bg-white border border-slate-300 rounded-sm cursor-nw-resize"
-            onPointerDown={(e) => { e.stopPropagation(); handlePointerDown(e, "resize-nw"); }}
-          />
-          <div 
-            className="absolute -top-1.5 -right-1.5 w-3 h-3 bg-white border border-slate-300 rounded-sm cursor-ne-resize"
-            onPointerDown={(e) => { e.stopPropagation(); handlePointerDown(e, "resize-ne"); }}
-          />
-          <div 
-            className="absolute -bottom-1.5 -left-1.5 w-3 h-3 bg-white border border-slate-300 rounded-sm cursor-sw-resize"
-            onPointerDown={(e) => { e.stopPropagation(); handlePointerDown(e, "resize-sw"); }}
-          />
-          <div 
-            className="absolute -bottom-1.5 -right-1.5 w-3 h-3 bg-white border border-slate-300 rounded-sm cursor-se-resize"
-            onPointerDown={(e) => { e.stopPropagation(); handlePointerDown(e, "resize-se"); }}
-          />
+          {mode === "advanced" && (
+            <>
+              {/* Grid Lines */}
+              <div className="absolute inset-0 pointer-events-none grid grid-cols-3 grid-rows-3 border-white/20 divide-x divide-y divide-white/20 shadow-sm opacity-50">
+                <div/><div/><div/><div/><div/><div/><div/><div/><div/>
+              </div>
+
+              {/* Handles */}
+              <div 
+                className="absolute -top-1.5 -left-1.5 w-3 h-3 bg-white border border-slate-300 rounded-sm cursor-nw-resize"
+                onPointerDown={(e) => { e.stopPropagation(); handlePointerDown(e, "resize-nw"); }}
+              />
+              <div 
+                className="absolute -top-1.5 -right-1.5 w-3 h-3 bg-white border border-slate-300 rounded-sm cursor-ne-resize"
+                onPointerDown={(e) => { e.stopPropagation(); handlePointerDown(e, "resize-ne"); }}
+              />
+              <div 
+                className="absolute -bottom-1.5 -left-1.5 w-3 h-3 bg-white border border-slate-300 rounded-sm cursor-sw-resize"
+                onPointerDown={(e) => { e.stopPropagation(); handlePointerDown(e, "resize-sw"); }}
+              />
+              <div 
+                className="absolute -bottom-1.5 -right-1.5 w-3 h-3 bg-white border border-slate-300 rounded-sm cursor-se-resize"
+                onPointerDown={(e) => { e.stopPropagation(); handlePointerDown(e, "resize-se"); }}
+              />
+            </>
+          )}
         </div>
       )}
-         {isReady && (
+
+      {isReady && (
         <div 
-          className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-4 bg-slate-900/80 backdrop-blur text-white px-4 py-2 rounded-full border border-slate-700 shadow-xl z-20"
+          className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-3 bg-slate-900/90 backdrop-blur text-white px-4 py-2 rounded-full border border-slate-700 shadow-xl z-20"
           onPointerDown={(e) => e.stopPropagation()}
         >
           <div className="flex items-center gap-2">
-             <span className="text-[9px] text-slate-400 font-mono">缩放</span>
+             <button disabled={locked} onClick={() => handleZoom("out")} className={`p-1 rounded hover:bg-slate-800 ${locked ? 'opacity-50 cursor-not-allowed' : ''}`}>
+               <ZoomOut className="w-4 h-4 text-slate-300" />
+             </button>
              <input 
                type="range" 
                disabled={locked}
@@ -380,13 +457,48 @@ export const CropCanvas: React.FC<CropCanvasProps> = ({
                  setImageTransform((prev) => ({ ...prev, scale: parseFloat(e.target.value) }));
                }}
                className="w-20 accent-blue-500 disabled:opacity-50"
-               onPointerDown={(e) => e.stopPropagation()} // Prevent dragging the canvas when sliding
+               onPointerDown={(e) => e.stopPropagation()}
              />
-             <span className="text-[9px] text-slate-300 font-mono w-6 text-right">
+             <button disabled={locked} onClick={() => handleZoom("in")} className={`p-1 rounded hover:bg-slate-800 ${locked ? 'opacity-50 cursor-not-allowed' : ''}`}>
+               <ZoomIn className="w-4 h-4 text-slate-300" />
+             </button>
+             <span className="text-[10px] text-slate-400 font-mono w-8 text-right mr-2">
                {Math.round(imageTransform.scale * 100)}%
              </span>
           </div>
-          <div className="w-px h-3 bg-slate-700" />
+          
+          <div className="w-px h-4 bg-slate-700" />
+          
+          <button 
+            type="button"
+            disabled={locked}
+            onClick={(e) => {
+              e.stopPropagation();
+              if (locked) return;
+              fitProductToCropBox();
+            }}
+            title="适应完整产品"
+            className={`p-1.5 rounded transition-colors ${locked ? 'text-slate-600 cursor-not-allowed' : 'text-slate-300 hover:text-white hover:bg-slate-800'}`}
+          >
+            <Maximize className="w-4 h-4" />
+          </button>
+          
+          <button 
+            type="button"
+            disabled={locked}
+            onClick={(e) => {
+              e.stopPropagation();
+              if (locked) return;
+              centerImage();
+            }}
+            title="居中"
+            className={`p-1.5 rounded transition-colors ${locked ? 'text-slate-600 cursor-not-allowed' : 'text-slate-300 hover:text-white hover:bg-slate-800'}`}
+          >
+            <Target className="w-4 h-4" />
+          </button>
+
+          <div className="w-px h-4 bg-slate-700" />
+
           <button 
             type="button"
             disabled={locked}
@@ -395,15 +507,19 @@ export const CropCanvas: React.FC<CropCanvasProps> = ({
               if (locked) return;
               resetCanvasToFit();
             }}
-            className={`text-[10px] font-medium tracking-wide transition-colors ${locked ? 'text-slate-500 cursor-not-allowed' : 'hover:text-blue-400'}`}
+            className={`flex items-center gap-1 text-[10px] font-medium tracking-wide transition-colors px-2 py-1 rounded ${locked ? 'text-slate-600 cursor-not-allowed' : 'text-slate-300 hover:text-blue-400 hover:bg-slate-800'}`}
           >
-            重置裁剪
+            <RotateCcw className="w-3 h-3" />
+            重置
           </button>
         </div>
       )}
+      
       {locked && (
-        <div className="absolute top-4 left-4 bg-emerald-500/90 text-white text-[10px] px-2 py-1 rounded font-bold tracking-wide z-30 shadow-sm border border-emerald-400">
-          画布已锁定
+        <div className="absolute inset-0 flex items-center justify-center bg-black/40 z-30 pointer-events-none">
+          <div className="bg-emerald-500/90 text-white text-xs px-4 py-2 rounded-lg font-bold tracking-wide shadow-lg border border-emerald-400">
+            画布已锁定，点击"重新调整"可继续编辑
+          </div>
         </div>
       )}
     </div>

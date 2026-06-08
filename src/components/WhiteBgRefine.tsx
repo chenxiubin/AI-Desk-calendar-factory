@@ -81,12 +81,13 @@ export const WhiteBgRefine: React.FC<WhiteBgRefineProps> = ({
 
   // Preview display selector mode
   const [previewMode, setPreviewMode] = useState<
-    "raw" | "png" | "white_bg" | "mask"
+    "raw" | "crop_input" | "png" | "white_bg" | "mask"
   >("raw");
 
   const [cropCanvasState, setCropCanvasState] = useState<CropCanvasState | null>(null);
   const [cropAspectLocked, setCropAspectLocked] = useState(true);
   const [snapEnabled, setSnapEnabled] = useState(true);
+  const [cropMode, setCropMode] = useState<"simple" | "advanced">("simple");
   const [confirmedCropInputUrl, setConfirmedCropInputUrl] = useState("");
   const [isCropConfirmed, setIsCropConfirmed] = useState(false);
   const [isCanvasLocked, setIsCanvasLocked] = useState(false);
@@ -285,6 +286,7 @@ export const WhiteBgRefine: React.FC<WhiteBgRefineProps> = ({
       setIsCropConfirmed(true);
       setIsCanvasLocked(true);
       setIsCropPreviewApproved(false);
+      setPreviewMode("crop_input");
       setMattingError("");
     } catch (e) {
       console.error("Failed to render confirmed crop input:", e);
@@ -574,10 +576,10 @@ export const WhiteBgRefine: React.FC<WhiteBgRefineProps> = ({
           <div className="space-y-4 flex-1 flex flex-col min-h-0">
             <div className="border-b border-slate-100 pb-2">
               <h3 className="text-xs font-bold text-slate-800 tracking-wider">
-                上传与资产生成 queue
+                ① 选择原图
               </h3>
               <p className="text-[10px] text-slate-400 mt-0.5">
-                导入原始产品实拍图片以开始抠图
+                导入原始产品实拍图片或选择队列中的产品
               </p>
             </div>
 
@@ -785,42 +787,57 @@ export const WhiteBgRefine: React.FC<WhiteBgRefineProps> = ({
                       targetSize={targetSize}
                       cropAspectLocked={cropAspectLocked}
                       snapEnabled={snapEnabled}
+                      mode={cropMode}
                       locked={isCanvasLocked}
                       onStateChange={handleCropCanvasStateChange}
                     />
                     
                     {/* Floating Controls for CropCanvas (Top Right) */}
                     <div className="absolute top-4 right-4 flex flex-col gap-2 bg-slate-900/80 backdrop-blur text-white px-3 py-2.5 rounded-xl border border-slate-700 shadow-xl z-20">
-                      <label className="flex items-center gap-2 cursor-pointer hover:text-blue-400 transition-colors">
+                      <label className="flex items-center gap-2 cursor-pointer hover:text-purple-400 transition-colors">
                         <input
                           type="checkbox"
-                          checked={cropAspectLocked}
-                          onChange={(e) => setCropAspectLocked(e.target.checked)}
-                          className="rounded-sm border-slate-600 bg-slate-800 text-blue-500 w-3.5 h-3.5"
+                          checked={cropMode === "advanced"}
+                          onChange={(e) => setCropMode(e.target.checked ? "advanced" : "simple")}
+                          className="rounded-sm border-slate-600 bg-slate-800 text-purple-500 w-3.5 h-3.5"
                         />
-                        <span className="text-[10px] font-medium tracking-wide">锁定 1:1</span>
+                        <span className="text-[10px] font-medium tracking-wide">高级自由裁剪</span>
                       </label>
-                      <label className="flex items-center gap-2 cursor-pointer hover:text-emerald-400 transition-colors">
-                        <input
-                          type="checkbox"
-                          checked={snapEnabled}
-                          onChange={(e) => setSnapEnabled(e.target.checked)}
-                          className="rounded-sm border-slate-600 bg-slate-800 text-emerald-500 w-3.5 h-3.5"
-                        />
-                        <span className="text-[10px] font-medium tracking-wide">吸附边框</span>
-                      </label>
+                      {cropMode === "advanced" && (
+                        <>
+                          <label className="flex items-center gap-2 cursor-pointer hover:text-blue-400 transition-colors">
+                            <input
+                              type="checkbox"
+                              checked={cropAspectLocked}
+                              onChange={(e) => setCropAspectLocked(e.target.checked)}
+                              className="rounded-sm border-slate-600 bg-slate-800 text-blue-500 w-3.5 h-3.5"
+                            />
+                            <span className="text-[10px] font-medium tracking-wide">锁定 1:1</span>
+                          </label>
+                          <label className="flex items-center gap-2 cursor-pointer hover:text-emerald-400 transition-colors">
+                            <input
+                              type="checkbox"
+                              checked={snapEnabled}
+                              onChange={(e) => setSnapEnabled(e.target.checked)}
+                              className="rounded-sm border-slate-600 bg-slate-800 text-emerald-500 w-3.5 h-3.5"
+                            />
+                            <span className="text-[10px] font-medium tracking-wide">吸附边框</span>
+                          </label>
+                        </>
+                      )}
                     </div>
                   </div>
                 ) : (
                   <img
                     src={displayUrl}
                     alt={previewMode}
-                    className="max-w-full max-h-[350px] object-contain transition-all duration-300 rounded shadow-lg bg-transparent"
+                    className="max-w-full max-h-[450px] object-contain transition-all duration-300 rounded shadow-lg bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyMCIgaGVpZ2h0PSIyMCI+CgkJPHJlY3Qgd2lkdGg9IjEwIiBoZWlnaHQ9IjEwIiBmaWxsPSIjZTZlNmU2IiAvPgoJCTxyZWN0IHg9IjEwIiB3aWR0aD0iMTAiIGhlaWdodD0iMTAiIGZpbGw9IiNmZmZiZmIiIC8+CgkJPHJlY3QgeT0iMTAiIHdpZHRoPSIxMCIgaGVpZ2h0PSIxMCIgZmlsbD0iI2ZmZmJmYiIgLz4KCQk8cmVjdCB4PSIxMCIgeT0iMTAiIHdpZHRoPSIxMCIgaGVpZ2h0PSIxMCIgZmlsbD0iI2U2ZTZlNiIgLz4KCTwvc3ZnPg==')]"
                     crossOrigin={displayUrl.startsWith("data:") ? undefined : "anonymous"}
                   />
                 )}
-                <div className="absolute top-2 left-2 bg-slate-900/90 text-white text-[9px] px-2 py-0.5 rounded border border-slate-700 font-mono z-10">
-                  {previewMode === "raw" && "📷 1:1 裁剪 / 原始实拍"}
+                <div className="absolute top-2 left-2 bg-slate-900/90 text-white text-[9px] px-2 py-0.5 rounded border border-slate-700 font-mono z-10 shadow-sm pointer-events-none">
+                  {previewMode === "raw" && "📷 调整抠图输入 (1:1)"}
+                  {previewMode === "crop_input" && "📐 RunningHub 输入图预览"}
                   {previewMode === "png" && "✨ RunningHub 抠图透明 PNG"}
                   {previewMode === "white_bg" && "🥚 渲染白底 JPG 资产"}
                   {previewMode === "mask" && "🖤 高精度黑白 Mask 蒙版"}
@@ -928,7 +945,7 @@ export const WhiteBgRefine: React.FC<WhiteBgRefineProps> = ({
             <div className="border-b pb-2 flex justify-between items-center border-slate-100">
               <h3 className="text-xs font-bold text-neutral-800 uppercase tracking-wider flex items-center">
                 <Sliders className="w-4 h-4 mr-1 text-neutral-500" />
-                RunningHub 抠图配置
+                ② 调整抠图输入
               </h3>
               <HelpCircle className="w-3.5 h-3.5 text-neutral-400" />
             </div>
@@ -981,7 +998,7 @@ export const WhiteBgRefine: React.FC<WhiteBgRefineProps> = ({
                 </span>
                 <div className={`${isCropPreviewApproved ? "bg-emerald-50/50 border-emerald-100" : "bg-blue-50/50 border-blue-100"} p-3 rounded-lg border flex flex-col items-center`}>
                   <span className={`text-[9px] mb-2 font-medium text-center ${isCropPreviewApproved ? "text-emerald-600/80" : "text-blue-600/80"}`}>
-                    这是即将送入 RunningHub 的裁剪输入图，仅作为抠图输入，不会写入正式资产包。
+                    这是即将送入 RunningHub 的裁剪输入图，不会作为正式资产交付。
                   </span>
                   <img src={confirmedCropInputUrl} alt="Crop Input Preview" className={`w-24 h-24 object-contain shadow border bg-white rounded-sm mb-3 ${isCropPreviewApproved ? "border-emerald-200" : "border-blue-200"}`} />
                   
@@ -991,7 +1008,7 @@ export const WhiteBgRefine: React.FC<WhiteBgRefineProps> = ({
                       className="flex-1 bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 py-1.5 rounded text-[10px] font-semibold transition-colors flex items-center justify-center space-x-1"
                     >
                       <Scissors className="w-3 h-3" />
-                      <span>重新编辑裁剪</span>
+                      <span>重新调整</span>
                     </button>
                     {!isCropPreviewApproved && (
                       <button
@@ -999,7 +1016,7 @@ export const WhiteBgRefine: React.FC<WhiteBgRefineProps> = ({
                         className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-1.5 rounded text-[10px] font-semibold shadow-sm transition-colors flex items-center justify-center space-x-1"
                       >
                         <CheckCircle className="w-3 h-3" />
-                        <span>确认预览无误</span>
+                        <span>确认无误</span>
                       </button>
                     )}
                   </div>
@@ -1008,22 +1025,28 @@ export const WhiteBgRefine: React.FC<WhiteBgRefineProps> = ({
             )}
 
             {!isCropConfirmed && sourceImageUrl && previewMode === "raw" && (
-                <button
-                onClick={handleConfirmCrop}
-                className="w-full bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold py-3 px-4 rounded-lg shadow transition-colors flex items-center justify-center space-x-2"
-                >
-                <Scissors className="w-4 h-4 text-slate-300" />
-                <span>确认裁剪并生成 RunningHub 输入图</span>
-                </button>
+                <div className="space-y-2 pb-2">
+                  <div className="text-[10px] text-slate-500 font-medium text-center bg-slate-50 border border-slate-100 rounded px-2 py-1">
+                    确认后将生成 {targetSize}×{targetSize} RunningHub 抠图输入图，画布会锁定。
+                  </div>
+                  <button
+                    onClick={handleConfirmCrop}
+                    className="w-full bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold py-3 px-4 rounded-lg shadow transition-colors flex items-center justify-center space-x-2"
+                  >
+                    <Scissors className="w-4 h-4 text-slate-300" />
+                    <span>确认输入图</span>
+                  </button>
+                </div>
             )}
 
             {/* Outbound file format selects */}
-            <div className="space-y-3">
-              <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-wide block">
-                抠图流程作业机制
+            <div className="space-y-3 pt-2">
+              <span className="text-[10px] font-bold text-neutral-800 uppercase tracking-wide block flex items-center">
+                ③ 确认预览并抠图
               </span>
 
               <div className="space-y-2.5 bg-slate-50 p-3 rounded-lg border border-slate-100">
+                <div className="text-[10px] text-slate-500 font-bold mb-2">抠图作业机制配置</div>
                 <label className="flex items-center space-x-2.5 text-xs text-neutral-700 cursor-pointer">
                   <input
                     type="checkbox"
