@@ -86,7 +86,7 @@ export const WhiteBgRefine: React.FC<WhiteBgRefineProps> = ({
     enabled: true
   };
 
-  const isWorkflowConfigured = !!(mattingWorkflow.workflowId && mattingWorkflow.baseImageNodeId);
+  const isWorkflowConfigured = !!(mattingWorkflow.workflowId && (mattingWorkflow.baseImageNodeId || mattingWorkflow.inputImageNodeId));
 
   // Automatically switch preview modes when results load
   useEffect(() => {
@@ -133,14 +133,13 @@ export const WhiteBgRefine: React.FC<WhiteBgRefineProps> = ({
     }
 
     if (!sourceImageUrl) {
-      setMattingError("请先点击左上角上传一张实拍原图，或选择包含已有素材的产品");
+      setMattingError("请先选择或在左上角上传一张实拍原图图片，以开始产品抠图。");
       setMattingStatus("failed");
       return;
     }
 
     if (!isWorkflowConfigured) {
-      // Allow placeholder but notify user as requested
-      setMattingError("请先在 src/data.ts 中填写真实 RunningHub 抠图工作流 (workflowId 与 baseImageNodeId)！");
+      setMattingError("请先配置 RunningHub 抠图工作流 workflowId 和输入输出节点。");
       setMattingStatus("failed");
       return;
     }
@@ -204,6 +203,7 @@ export const WhiteBgRefine: React.FC<WhiteBgRefineProps> = ({
                 id: `ast_${selectedProduct.productCode}_rh_png_${Date.now()}`,
                 productId: selectedProduct.id,
                 assetType: "transparent_png",
+                assetRole: "transparent_png",
                 fileUrl: transparentPngUrl,
                 width: 1000,
                 height: 1000,
@@ -217,6 +217,7 @@ export const WhiteBgRefine: React.FC<WhiteBgRefineProps> = ({
                 id: `ast_${selectedProduct.productCode}_rh_white_${Date.now()}`,
                 productId: selectedProduct.id,
                 assetType: "white_bg",
+                assetRole: "white_bg",
                 fileUrl: finalWhiteBg,
                 width: 1000,
                 height: 1000,
@@ -229,6 +230,7 @@ export const WhiteBgRefine: React.FC<WhiteBgRefineProps> = ({
                 id: `ast_${selectedProduct.productCode}_rh_mask_${Date.now()}`,
                 productId: selectedProduct.id,
                 assetType: "mask",
+                assetRole: "mask",
                 fileUrl: maskUrl,
                 width: 1000,
                 height: 1000,
@@ -236,8 +238,12 @@ export const WhiteBgRefine: React.FC<WhiteBgRefineProps> = ({
               });
             }
 
-            // Standardize output product state promotion to completed
-            onUpdateProductStatus(selectedProduct.id, "completed", updatedAssets);
+            // Status promotion logic based on assets presence
+            const hasPng = updatedAssets.some((a) => a.assetType === "transparent_png");
+            const hasWhite = updatedAssets.some((a) => a.assetType === "white_bg");
+            const targetStatus = (hasPng && hasWhite) ? "completed" : hasPng ? "png_done" : "white_bg_done";
+
+            onUpdateProductStatus(selectedProduct.id, targetStatus as any, updatedAssets);
           }
         } else if (res.status === "failed") {
           clearInterval(interval);

@@ -203,11 +203,13 @@ export interface GeneratedImage {
 export interface RunningHubWorkflowConfig {
   id: string;
   name: string;
+  description?: string;
   workflowId: string;
   apiMode?: "comfyui_openapi" | "run_workflow_v2";
   modelType: "flux_kontext" | "qwen_fusion_lora" | "qwen_image_edit";
   baseImageNodeId: string;
   baseImageFieldName?: string;
+  inputImageNodeId?: string;
   maskNodeId?: string;
   promptNodeId: string;
   promptFieldName?: string;
@@ -228,6 +230,9 @@ export interface RunningHubWorkflowConfig {
   defaultSteps?: number;
   defaultCfg?: number;
   enabled: boolean;
+  transparentOutputIndex?: number;
+  whiteBgOutputIndex?: number;
+  maskOutputIndex?: number;
 }
 
 export interface RunningHubTaskState {

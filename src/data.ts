@@ -857,18 +857,23 @@ export const PRESET_RUNNINGHUB_WORKFLOWS: RunningHubWorkflowConfig[] = [
   {
     id: "rh_matting_cutout",
     name: "RunningHub 产品抠图 / 透明PNG生成",
-    workflowId: "", // Let user configure later or placeholder
+    description: "用于从产品实拍图生成透明 PNG、白底图和可选 Mask",
+    workflowId: "",
     apiMode: "run_workflow_v2",
     modelType: "qwen_image_edit",
-    baseImageNodeId: "", // Node Id for product raw image input
+    baseImageNodeId: "",
     baseImageFieldName: "image",
+    inputImageNodeId: "",
     promptNodeId: "",
-    promptFieldName: "",
+    negativePromptNodeId: "",
     outputNodeId: "",
     defaultPrompt: "",
     defaultNegativePrompt: "",
     defaultDenoise: 1,
-    enabled: true
+    enabled: true,
+    transparentOutputIndex: 0,
+    whiteBgOutputIndex: 1,
+    maskOutputIndex: 2
   },
   {
     id: "rh_flux2_klein_light_fusion",

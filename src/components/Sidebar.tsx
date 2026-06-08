@@ -28,7 +28,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const menuItems = [
     { id: "workspace", label: "工作台首页", icon: LayoutDashboard },
     { id: "assets", label: "产品资产库", icon: FolderOpen },
-    { id: "refine", label: "白底精修", icon: Scissors, badge: "AI" },
+    { id: "refine", label: "抠图资产生成", icon: Scissors, badge: "AI" },
     { id: "templates", label: "模板套系库", icon: Layout },
     { id: "editor", label: "模板编辑器", icon: Edit },
     { id: "project_suite", label: "项目工作台", icon: Sparkles, badge: "全新" },
