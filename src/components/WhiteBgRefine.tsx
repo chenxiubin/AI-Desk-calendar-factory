@@ -7,10 +7,11 @@ import {
 } from "../utils/runningHubMatting";
 import { 
   calculateTransparentImageBoundingBox, 
-  BoundingBoxInfo 
+  BoundingBoxInfo,
+  renderCropCanvasToDataUrl
 } from "../utils/imagePreprocess";
-import ReactCrop, { type Crop, type PixelCrop, centerCrop, makeAspectCrop } from 'react-image-crop';
-import 'react-image-crop/dist/ReactCrop.css';
+import { CropCanvas, CropBox, ImageTransform, ViewportSize } from "./CropCanvas";
+
 import {
   Sparkles,
   Scissors,
@@ -83,10 +84,13 @@ export const WhiteBgRefine: React.FC<WhiteBgRefineProps> = ({
     "raw" | "png" | "white_bg" | "mask"
   >("raw");
 
-  const [crop, setCrop] = useState<Crop>();
-  const [completedCrop, setCompletedCrop] = useState<PixelCrop>();
+  const [cropBox, setCropBox] = useState<CropBox>({ x: 0, y: 0, width: 0, height: 0 });
+  const [imageTransform, setImageTransform] = useState<ImageTransform>({ x: 0, y: 0, scale: 1 });
+  const [viewportSize, setViewportSize] = useState<ViewportSize>({ width: 0, height: 0 });
+  const [cropAspectLocked, setCropAspectLocked] = useState(true);
+  const [snapEnabled, setSnapEnabled] = useState(true);
+
   const [targetSize, setTargetSize] = useState<1600 | 2048 | 2560>(2048);
-  const imgRef = useRef<HTMLImageElement>(null);
   const [boundingBox, setBoundingBox] = useState<BoundingBoxInfo | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -149,64 +153,28 @@ export const WhiteBgRefine: React.FC<WhiteBgRefineProps> = ({
       
       // Reset bounding box and crop
       setBoundingBox(null);
-      setCrop(undefined);
-      setCompletedCrop(undefined);
+      setCropBox({ x: 0, y: 0, width: 0, height: 0 });
     };
     reader.readAsDataURL(file);
   };
 
-  const handleImageLoad = (e: React.SyntheticEvent<HTMLImageElement>) => {
-    const { width, height } = e.currentTarget;
-    if (width && height) {
-      const paddingRatio = 0.08;
-      const minDim = Math.min(width, height);
-      const cropSize = minDim * (1 - paddingRatio * 2);
-
-      const initialCrop = centerCrop(
-        makeAspectCrop(
-          { unit: "px", width: cropSize },
-          1,
-          width,
-          height
-        ),
-        width,
-        height
-      );
-      setCrop(initialCrop);
-      setCompletedCrop(initialCrop);
-    }
-  };
-
   const getCroppedImgDataUrl = async (sourceImageUrl: string): Promise<string> => {
-    if (!imgRef.current || !completedCrop || previewMode !== "raw") {
-      return sourceImageUrl; // Fallback if no crop available or not in raw mode
+    if (previewMode !== "raw" || cropBox.width === 0 || cropBox.height === 0) {
+      return sourceImageUrl;
     }
-    const canvas = document.createElement("canvas");
-    const scaleX = imgRef.current.naturalWidth / imgRef.current.width;
-    const scaleY = imgRef.current.naturalHeight / imgRef.current.height;
-
-    canvas.width = targetSize;
-    canvas.height = targetSize;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return sourceImageUrl;
-
-    // Use white background for the padded area
-    ctx.fillStyle = "#ffffff";
-    ctx.fillRect(0, 0, targetSize, targetSize);
-    
-    ctx.drawImage(
-      imgRef.current,
-      completedCrop.x * scaleX,
-      completedCrop.y * scaleY,
-      completedCrop.width * scaleX,
-      completedCrop.height * scaleY,
-      0,
-      0,
-      targetSize,
-      targetSize
-    );
-    
-    return canvas.toDataURL("image/jpeg", 0.95);
+    try {
+      return await renderCropCanvasToDataUrl({
+        imageUrl: sourceImageUrl,
+        cropBox,
+        imageTransform,
+        viewportSize,
+        targetSize,
+        backgroundColor: "#ffffff",
+      });
+    } catch (e) {
+      console.error("Failed to render crop canvas:", e);
+      return sourceImageUrl;
+    }
   };
 
   // Helper to compose a white background from transparent PNG to resolve CORS/local rendering
@@ -736,22 +704,40 @@ export const WhiteBgRefine: React.FC<WhiteBgRefineProps> = ({
             ) : displayUrl ? (
               <div className="relative w-full h-full flex items-center justify-center pt-8">
                 {previewMode === "raw" ? (
-                  <ReactCrop
-                    crop={crop}
-                    onChange={(_, percentCrop) => setCrop(percentCrop)}
-                    onComplete={(c) => setCompletedCrop(c)}
-                    aspect={1}
-                    className="max-h-[350px] shadow-lg rounded"
-                  >
-                    <img
-                      ref={imgRef}
-                      src={displayUrl}
-                      alt={previewMode}
-                      className="max-h-[350px] object-contain bg-transparent"
-                      onLoad={handleImageLoad}
-                      crossOrigin="anonymous"
+                  <div className="absolute inset-0">
+                    <CropCanvas
+                      imageUrl={displayUrl}
+                      cropAspectLocked={cropAspectLocked}
+                      snapEnabled={snapEnabled}
+                      onStateChange={({ cropBox, imageTransform, viewportSize }) => {
+                        setCropBox(cropBox);
+                        setImageTransform(imageTransform);
+                        setViewportSize(viewportSize);
+                      }}
                     />
-                  </ReactCrop>
+                    
+                    {/* Floating Controls for CropCanvas (Top Right) */}
+                    <div className="absolute top-4 right-4 flex flex-col gap-2 bg-slate-900/80 backdrop-blur text-white px-3 py-2.5 rounded-xl border border-slate-700 shadow-xl z-20">
+                      <label className="flex items-center gap-2 cursor-pointer hover:text-blue-400 transition-colors">
+                        <input
+                          type="checkbox"
+                          checked={cropAspectLocked}
+                          onChange={(e) => setCropAspectLocked(e.target.checked)}
+                          className="rounded-sm border-slate-600 bg-slate-800 text-blue-500 w-3.5 h-3.5"
+                        />
+                        <span className="text-[10px] font-medium tracking-wide">锁定 1:1</span>
+                      </label>
+                      <label className="flex items-center gap-2 cursor-pointer hover:text-emerald-400 transition-colors">
+                        <input
+                          type="checkbox"
+                          checked={snapEnabled}
+                          onChange={(e) => setSnapEnabled(e.target.checked)}
+                          className="rounded-sm border-slate-600 bg-slate-800 text-emerald-500 w-3.5 h-3.5"
+                        />
+                        <span className="text-[10px] font-medium tracking-wide">吸附边框</span>
+                      </label>
+                    </div>
+                  </div>
                 ) : (
                   <img
                     src={displayUrl}
@@ -895,7 +881,7 @@ export const WhiteBgRefine: React.FC<WhiteBgRefineProps> = ({
               </span>
               <div className="bg-slate-50 p-3 rounded-lg border border-slate-100 space-y-2">
                 <div className="text-[10px] text-slate-500 mb-2 leading-relaxed">
-                  请尽量让产品完整落在方形裁剪框内，四周保留 5%–8% 安全边距；挂绳、底座、包装边缘不要被裁掉。
+                  抠图输入默认首选方形裁剪。<strong>裁剪框可以超出图片边界</strong>，超出区域会自动补纯白底。请尽量让产品完整落在裁剪框内，并保留 5%–8% 安全边距；挂绳、底座、包装边缘切勿被裁掉。
                 </div>
                 <div className="flex bg-white border border-slate-200 rounded p-0.5 shadow-sm">
                   {[1600, 2048, 2560].map((size) => (

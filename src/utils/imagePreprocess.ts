@@ -15,7 +15,9 @@ export interface BoundingBoxInfo {
   normalizedCenterY: number;
 }
 
-export const calculateTransparentImageBoundingBox = async (imageUrl: string): Promise<BoundingBoxInfo | null> => {
+export const calculateTransparentImageBoundingBox = async (
+  imageUrl: string
+): Promise<BoundingBoxInfo> => {
   return new Promise((resolve, reject) => {
     const img = new Image();
     img.crossOrigin = "anonymous";
@@ -88,3 +90,60 @@ export const calculateTransparentImageBoundingBox = async (imageUrl: string): Pr
     img.src = imageUrl;
   });
 };
+
+export async function renderCropCanvasToDataUrl(params: {
+  imageUrl: string;
+  cropBox: { x: number; y: number; width: number; height: number };
+  imageTransform: { x: number; y: number; scale: number };
+  viewportSize: { width: number; height: number };
+  targetSize: number;
+  backgroundColor?: string;
+  mimeType?: "image/jpeg" | "image/png";
+  quality?: number;
+}): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const {
+      imageUrl,
+      cropBox,
+      imageTransform,
+      targetSize,
+      backgroundColor = "#ffffff",
+      mimeType = "image/jpeg",
+      quality = 0.95,
+    } = params;
+
+    const img = new window.Image();
+    img.crossOrigin = "anonymous";
+    img.onload = () => {
+      const canvas = document.createElement("canvas");
+      canvas.width = targetSize;
+      canvas.height = targetSize;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) {
+        return reject(new Error("Failed to create canvas context"));
+      }
+
+      // Fill background
+      ctx.fillStyle = backgroundColor;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      const scaleX = targetSize / cropBox.width;
+      const scaleY = targetSize / cropBox.height;
+
+      // Calculate where the original image should be drawn in the targeted canvas
+      // imageTransform.x/y is the top-left of the image in the viewport
+      const dx = (imageTransform.x - cropBox.x) * scaleX;
+      const dy = (imageTransform.y - cropBox.y) * scaleY;
+      const dw = img.naturalWidth * imageTransform.scale * scaleX;
+      const dh = img.naturalHeight * imageTransform.scale * scaleY;
+
+      ctx.drawImage(img, dx, dy, dw, dh);
+      resolve(canvas.toDataURL(mimeType, quality));
+    };
+    img.onerror = (err) => {
+      reject(err);
+    };
+    img.src = imageUrl;
+  });
+}
+
