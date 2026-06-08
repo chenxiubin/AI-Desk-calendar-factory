@@ -117,19 +117,29 @@ export const CropCanvas: React.FC<CropCanvasProps> = ({
     return () => observer.disconnect();
   }, []);
 
-  const resetCanvasToFit = useCallback(() => {
+  const resetCanvasToFit = useCallback((): CropBox | undefined => {
     const container = containerRef.current;
     const img = imgRef.current;
     if (!container || !img) return;
 
-    const { width: viewportWidth, height: viewportHeight } = container.getBoundingClientRect();
+    const rect = container.getBoundingClientRect();
+    const viewportWidth = rect.width;
+    const viewportHeight = rect.height;
+
     const naturalWidth = img.naturalWidth;
     const naturalHeight = img.naturalHeight;
 
-    if (viewportWidth === 0 || viewportHeight === 0 || naturalWidth === 0 || naturalHeight === 0) return;
+    if (
+      viewportWidth <= 0 ||
+      viewportHeight <= 0 ||
+      naturalWidth <= 0 ||
+      naturalHeight <= 0
+    ) {
+      return;
+    }
 
     const cropSize = Math.min(viewportWidth, viewportHeight) * 0.78;
-    
+
     const nextCropBox = {
       x: (viewportWidth - cropSize) / 2,
       y: (viewportHeight - cropSize) / 2,
@@ -137,11 +147,12 @@ export const CropCanvas: React.FC<CropCanvasProps> = ({
       height: cropSize,
     };
 
-    const safeSize = cropSize * 0.84;
+    const safeWidth = cropSize * 0.84;
+    const safeHeight = cropSize * 0.84;
 
     const nextBaseScale = Math.min(
-      safeSize / naturalWidth,
-      safeSize / naturalHeight,
+      safeWidth / naturalWidth,
+      safeHeight / naturalHeight,
     );
 
     const displayWidth = naturalWidth * nextBaseScale;
@@ -153,13 +164,17 @@ export const CropCanvas: React.FC<CropCanvasProps> = ({
       scale: nextBaseScale,
     };
 
-    setViewportSize({ width: viewportWidth, height: viewportHeight });
+    setViewportSize({
+      width: viewportWidth,
+      height: viewportHeight,
+    });
+
     setCropBox(nextCropBox);
     setBaseScale(nextBaseScale);
     setZoom(1);
     setImageTransform(nextImageTransform);
     setIsReady(true);
-    
+
     return nextCropBox;
   }, []);
 
@@ -253,31 +268,45 @@ export const CropCanvas: React.FC<CropCanvasProps> = ({
       if (imageUrl !== lastAutoCroppedImageUrl) {
         const t = setTimeout(() => {
           const cb = resetCanvasToFit();
-          if (cb) {
+          if (!cb) return;
+
+          if (autoCropOnLoad) {
+            autoDetectProduct(cb)
+              .catch(() => fitProductToCropBox(cb))
+              .finally(() => setLastAutoCroppedImageUrl(imageUrl));
+          } else {
+            fitProductToCropBox(cb);
             setLastAutoCroppedImageUrl(imageUrl);
-            if (autoCropOnLoad) {
-              autoDetectProduct(cb);
-            }
           }
         }, 50);
         return () => clearTimeout(t);
       }
     }
-  }, [imageUrl, viewportSize.width, viewportSize.height, locked, autoCropOnLoad, lastAutoCroppedImageUrl, autoDetectProduct, resetCanvasToFit]);
+  }, [imageUrl, viewportSize.width, viewportSize.height, locked, autoCropOnLoad, lastAutoCroppedImageUrl, autoDetectProduct, resetCanvasToFit, fitProductToCropBox]);
 
   // Initialize bounds on image load
   const handleImageLoad = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
-    setImageSize({ w: e.currentTarget.naturalWidth, h: e.currentTarget.naturalHeight });
-    if (imageUrl !== lastAutoCroppedImageUrl) {
+    const img = e.currentTarget;
+    setImageSize({ w: img.naturalWidth, h: img.naturalHeight });
+    setLastAutoCroppedImageUrl("");
+
+    window.requestAnimationFrame(() => {
       const cb = resetCanvasToFit();
-      if (cb) {
+      if (!cb) return;
+
+      if (autoCropOnLoad) {
+        autoDetectProduct(cb)
+          .catch(() => {
+            fitProductToCropBox(cb);
+          })
+          .finally(() => {
+            setLastAutoCroppedImageUrl(imageUrl);
+          });
+      } else {
+        fitProductToCropBox(cb);
         setLastAutoCroppedImageUrl(imageUrl);
-        if (autoCropOnLoad) {
-          // autoDetectProduct is async and will run after the canvas is fitted
-          autoDetectProduct(cb);
-        }
       }
-    }
+    });
   };
 
   // Notify parent
@@ -487,8 +516,9 @@ export const CropCanvas: React.FC<CropCanvasProps> = ({
       onWheel={handleWheel}
     >
       {/* Container to handle image transforms correctly without issues related to max width limits */}
-      <div className="absolute origin-top-left" style={{
+      <div className="absolute top-0 left-0" style={{
         transform: `translate(${imageTransform.x}px, ${imageTransform.y}px) scale(${imageTransform.scale})`,
+        transformOrigin: "top left",
         opacity: isReady ? 1 : 0,
         zIndex: 0
       }}>
