@@ -83,19 +83,20 @@ export function calculateRawImageAutoCropBox(
         const totalPixels = detectWidth * detectHeight;
         
         // 检查 Alpha
-        let hasAlpha = false;
+        let transparentPixelCount = 0;
         for (let i = 3; i < data.length; i += 4) {
           if (data[i] < 255) {
-            hasAlpha = true;
-            break;
+            transparentPixelCount++;
           }
         }
+        const transparentRatio = transparentPixelCount / totalPixels;
+        const hasUsefulAlpha = transparentRatio > 0.001;
 
         const isForeground = new Uint8Array(totalPixels);
         let foregroundCount = 0;
         let method: "alpha" | "background-diff" = "background-diff";
 
-        if (hasAlpha) {
+        if (hasUsefulAlpha) {
           method = "alpha";
           for (let i = 0; i < totalPixels; i++) {
             if (data[i * 4 + 3] > alphaThreshold) {
@@ -218,66 +219,93 @@ export function calculateRawImageAutoCropBox(
                 }
               }
 
-              // Discard noise
-              if (area > totalPixels * 0.0005) {
-                components.push({ minX: compMinX, minY: compMinY, maxX: compMaxX, maxY: compMaxY, area });
-              }
+              components.push({ minX: compMinX, minY: compMinY, maxX: compMaxX, maxY: compMaxY, area });
             }
           }
         }
 
         components.sort((a, b) => b.area - a.area);
 
-        if (components.length > 0) {
-          const maxArea = components[0].area;
-          const keptComponents = components.filter((c, i) => i < 5 && c.area >= maxArea * 0.08);
+        const minArea = Math.max(16, totalPixels * 0.0005);
+        const validComponents = components.filter(c => c.area >= minArea);
 
-          for (const c of keptComponents) {
-            actualForeground += c.area;
-            if (c.minX < minX) minX = c.minX;
-            if (c.maxX > maxX) maxX = c.maxX;
-            if (c.minY < minY) minY = c.minY;
-            if (c.maxY > maxY) maxY = c.maxY;
-          }
-        }
-
-        if (actualForeground === 0) {
-          warnings.push("未检测到有效前景");
+        if (validComponents.length === 0) {
+          warnings.push("未找到有效主体连通区域");
           resolve(fallbackResult(originalWidth, originalHeight, warnings));
           return;
         }
 
+        const largestArea = validComponents[0].area;
+        const selectedComponents = validComponents
+          .filter((c, index) => {
+            if (index === 0) return true;
+            return c.area >= largestArea * 0.08;
+          })
+          .slice(0, 5);
+
+        for (const c of selectedComponents) {
+          actualForeground += c.area;
+          if (c.minX < minX) minX = c.minX;
+          if (c.maxX > maxX) maxX = c.maxX;
+          if (c.minY < minY) minY = c.minY;
+          if (c.maxY > maxY) maxY = c.maxY;
+        }
+
         const origMinX = minX / detectScale;
         const origMinY = minY / detectScale;
-        const origMaxX = maxX / detectScale;
-        const origMaxY = maxY / detectScale;
+        const origMaxX = (maxX + 1) / detectScale;
+        const origMaxY = (maxY + 1) / detectScale;
         
         const bboxWidth = Math.max(1, origMaxX - origMinX);
         const bboxHeight = Math.max(1, origMaxY - origMinY);
         const bboxCenterX = origMinX + bboxWidth / 2;
         const bboxCenterY = origMinY + bboxHeight / 2;
         
-        let confidence = 1.0;
-        if (foregroundRatio < 0.02 || foregroundRatio > 0.85) {
-          confidence *= 0.5;
-        }
-
         const bboxAreaRatio = (bboxWidth * bboxHeight) / (originalWidth * originalHeight);
+        const updatedForegroundRatio = actualForeground / totalPixels;
+        const touchesEdge = minX <= 2 || minY <= 2 || maxX >= detectWidth - 3 || maxY >= detectHeight - 3;
 
-        if (bboxAreaRatio > 0.9 || (bboxWidth > originalWidth * 0.96 && bboxHeight > originalHeight * 0.96)) {
-          confidence *= 0.2;
-          warnings.push("识别区域接近整图，自动识别结果无效");
+        if (updatedForegroundRatio < 0.02) {
+          warnings.push("主体前景面积过小，自动识别无效");
+          resolve(fallbackResult(originalWidth, originalHeight, warnings));
+          return;
         }
 
-        if (components.length > 20) {
+        if (bboxAreaRatio > 0.92) {
+          warnings.push("识别区域接近整图，自动识别无效");
+          resolve(fallbackResult(originalWidth, originalHeight, warnings));
+          return;
+        }
+
+        if (bboxWidth <= 4 || bboxHeight <= 4) {
+          warnings.push("主体 bbox 尺寸过小，自动识别无效");
+          resolve(fallbackResult(originalWidth, originalHeight, warnings));
+          return;
+        }
+
+        let confidence = 1.0;
+
+        if (touchesEdge) {
           confidence *= 0.7;
+          warnings.push("主体可能贴边");
+        }
+
+        if (validComponents.length > 20) {
+          confidence *= 0.75;
           warnings.push("检测到过多前景碎片，背景可能复杂");
         }
 
-        if (minX <= 2 || minY <= 2 || maxX >= detectWidth - 3 || maxY >= detectHeight - 3) {
-          warnings.push("产品可能贴边");
-          confidence *= 0.8;
+        if (bboxAreaRatio > 0.75) {
+          confidence *= 0.6;
+          warnings.push("识别区域偏大，请检查是否包含背景阴影");
         }
+
+        if (updatedForegroundRatio > 0.65) {
+          confidence *= 0.7;
+          warnings.push("前景占比偏大，可能把背景也识别为主体");
+        }
+
+        confidence = Math.max(0, Math.min(1, confidence));
 
         resolve({
           bbox: {

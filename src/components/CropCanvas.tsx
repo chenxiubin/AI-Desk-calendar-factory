@@ -77,6 +77,7 @@ export const CropCanvas: React.FC<CropCanvasProps> = ({
   const [isAutoCropping, setIsAutoCropping] = useState(false);
   const [lastAutoCroppedImageUrl, setLastAutoCroppedImageUrl] = useState("");
   const [imageSize, setImageSize] = useState({ w: 0, h: 0 });
+  const [debugAutoBBox, setDebugAutoBBox] = useState<RawImageAutoCropResult["bbox"] | null>(null);
 
   // Refs for native event listener
   const zoomRef = useRef(zoom);
@@ -265,6 +266,7 @@ export const CropCanvas: React.FC<CropCanvasProps> = ({
         warnings: result.warnings,
       });
       if (result.confidence >= 0.6 && result.method !== "fallback") {
+        setDebugAutoBBox(result.bbox);
         applyAutoCropResult(result.bbox, currentCropBox);
       } else {
         fitProductToCropBox(currentCropBox);
@@ -309,6 +311,7 @@ export const CropCanvas: React.FC<CropCanvasProps> = ({
     const img = e.currentTarget;
     setImageSize({ w: img.naturalWidth, h: img.naturalHeight });
     setLastAutoCroppedImageUrl("");
+    setDebugAutoBBox(null);
 
     window.requestAnimationFrame(() => {
       const cb = resetCanvasToFit();
@@ -584,6 +587,18 @@ export const CropCanvas: React.FC<CropCanvasProps> = ({
           }}
         />
       </div>
+
+      {debugAutoBBox && (
+        <div
+          className="pointer-events-none absolute border-2 border-yellow-400 z-10"
+          style={{
+            left: imageTransform.x + debugAutoBBox.x * imageTransform.scale,
+            top: imageTransform.y + debugAutoBBox.y * imageTransform.scale,
+            width: debugAutoBBox.width * imageTransform.scale,
+            height: debugAutoBBox.height * imageTransform.scale,
+          }}
+        />
+      )}
       
       {/* Dimmed Overlay removed based on request */}
 
@@ -697,8 +712,17 @@ export const CropCanvas: React.FC<CropCanvasProps> = ({
             disabled={locked || isAutoCropping}
             onClick={(e) => {
               e.stopPropagation();
-              if (locked) return;
-              autoDetectProduct();
+              if (locked || isAutoCropping) return;
+              setDebugAutoBBox(null);
+              const currentCropBox = cropBoxRef.current;
+              if (!currentCropBox || currentCropBox.width <= 0) {
+                const cb = resetCanvasToFit();
+                if (cb) {
+                  autoDetectProduct(cb);
+                }
+                return;
+              }
+              autoDetectProduct(currentCropBox);
             }}
             title="自动识别产品"
             className={`flex items-center gap-1 p-1.5 rounded transition-colors ${locked || isAutoCropping ? 'text-slate-600 cursor-not-allowed' : 'text-slate-300 hover:text-white hover:bg-slate-800'}`}
@@ -746,11 +770,12 @@ export const CropCanvas: React.FC<CropCanvasProps> = ({
               e.stopPropagation();
               if (locked) return;
               setLastAutoCroppedImageUrl("");
-              resetCanvasToFit();
-              if (autoCropOnLoad) {
-                autoDetectProduct();
-              } else {
-                fitProductToCropBox();
+              setDebugAutoBBox(null);
+              const cb = resetCanvasToFit();
+              if (autoCropOnLoad && cb) {
+                autoDetectProduct(cb);
+              } else if (cb) {
+                fitProductToCropBox(cb);
               }
             }}
             className={`flex items-center gap-1 text-[10px] font-medium tracking-wide transition-colors px-2 py-1 rounded ${locked ? 'text-slate-600 cursor-not-allowed' : 'text-slate-300 hover:text-blue-400 hover:bg-slate-800'}`}
