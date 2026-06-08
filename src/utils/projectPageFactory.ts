@@ -10,20 +10,6 @@ import {
 } from "../types";
 import { ExportFolderKey, PageRole, BusinessRatioType } from "../domain/calendarTaxonomy";
 
-// Allow dynamic attributes during generation and listing
-declare module "../types" {
-  interface GeneratedPage {
-    pageName?: string;
-    pageRole?: string;
-    businessRatioType?: string;
-    actualAspectRatio?: string;
-    isDeliverable?: boolean;
-    isRunningHubRecommended?: boolean;
-    isCanvasOnly?: boolean;
-    outputFolder?: string;
-  }
-}
-
 interface CreateGeneratedPagesFromSuiteParams {
   projectId: string;
   suite: TemplateSuite;

@@ -381,6 +381,17 @@ export interface GeneratedPage {
     | "needs_adjustment";
   reviewNote?: string;
   order: number;
+  // Page representation and delivery policy fields
+  pageName?: string;
+  pageRole?: string;
+  businessRatioType?: string;
+  actualAspectRatio?: string;
+  isDeliverable?: boolean;
+  isRunningHubRecommended?: boolean;
+  isCanvasOnly?: boolean;
+  outputFolder?: string;
+  outputFileNamePattern?: string;
+  groupKey?: string;
 }
 
 export interface GenerationProject {
