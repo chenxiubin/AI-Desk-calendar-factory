@@ -18,19 +18,23 @@ export interface ViewportSize {
   height: number;
 }
 
+export interface CropCanvasState {
+  cropBox: CropBox;
+  imageTransform: ImageTransform;
+  viewportSize: ViewportSize;
+}
+
 interface CropCanvasProps {
   imageUrl: string;
+  targetSize: number;
   cropAspectLocked: boolean;
   snapEnabled: boolean;
-  onStateChange: (state: {
-    cropBox: CropBox;
-    imageTransform: ImageTransform;
-    viewportSize: ViewportSize;
-  }) => void;
+  onStateChange: (state: CropCanvasState) => void;
 }
 
 export const CropCanvas: React.FC<CropCanvasProps> = ({
   imageUrl,
+  targetSize,
   cropAspectLocked,
   snapEnabled,
   onStateChange,
@@ -115,13 +119,15 @@ export const CropCanvas: React.FC<CropCanvasProps> = ({
 
   const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>, mode: typeof dragMode) => {
     e.preventDefault();
+    e.stopPropagation();
     setDragMode(mode);
     dragStartRef.current = { x: e.clientX, y: e.clientY };
     initTransformRef.current = { ...imageTransform };
     initCropBoxRef.current = { ...cropBox };
     
-    window.addEventListener("pointermove", handlePointerMove);
-    window.addEventListener("pointerup", handlePointerUp);
+    if (containerRef.current) {
+      containerRef.current.setPointerCapture(e.pointerId);
+    }
   };
 
   const applySnapping = (cb: CropBox): CropBox => {
@@ -155,7 +161,8 @@ export const CropCanvas: React.FC<CropCanvasProps> = ({
     return { x, y, width, height };
   };
 
-  const handlePointerMove = (e: PointerEvent) => {
+  const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (dragMode === "none") return;
     const dx = e.clientX - dragStartRef.current.x;
     const dy = e.clientY - dragStartRef.current.y;
 
@@ -213,18 +220,12 @@ export const CropCanvas: React.FC<CropCanvasProps> = ({
     }
   };
 
-  const handlePointerUp = () => {
+  const handlePointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
     setDragMode("none");
-    window.removeEventListener("pointermove", handlePointerMove);
-    window.removeEventListener("pointerup", handlePointerUp);
+    if (containerRef.current) {
+      containerRef.current.releasePointerCapture(e.pointerId);
+    }
   };
-
-  useEffect(() => {
-    return () => {
-      window.removeEventListener("pointermove", handlePointerMove);
-      window.removeEventListener("pointerup", handlePointerUp);
-    };
-  }, []);
 
   // Update cropBox to aspect 1:1 when locked
   useEffect(() => {
@@ -243,6 +244,9 @@ export const CropCanvas: React.FC<CropCanvasProps> = ({
       ref={containerRef}
       className="relative w-full h-full overflow-hidden select-none bg-slate-900 flex items-center justify-center cursor-move"
       onPointerDown={(e) => handlePointerDown(e, "image")}
+      onPointerMove={handlePointerMove}
+      onPointerUp={handlePointerUp}
+      onPointerCancel={handlePointerUp}
       onWheel={handleWheel}
       style={{ touchAction: "none" }}
     >
@@ -324,7 +328,10 @@ export const CropCanvas: React.FC<CropCanvasProps> = ({
         </div>
       )}
         {isReady && (
-        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-4 bg-slate-900/80 backdrop-blur text-white px-4 py-2 rounded-full border border-slate-700 shadow-xl z-20">
+        <div 
+          className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-4 bg-slate-900/80 backdrop-blur text-white px-4 py-2 rounded-full border border-slate-700 shadow-xl z-20"
+          onPointerDown={(e) => e.stopPropagation()}
+        >
           <div className="flex items-center gap-2">
              <span className="text-[9px] text-slate-400 font-mono">缩放</span>
              <input 

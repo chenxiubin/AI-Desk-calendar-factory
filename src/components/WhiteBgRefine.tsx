@@ -10,7 +10,7 @@ import {
   BoundingBoxInfo,
   renderCropCanvasToDataUrl
 } from "../utils/imagePreprocess";
-import { CropCanvas, CropBox, ImageTransform, ViewportSize } from "./CropCanvas";
+import { CropCanvas, CropCanvasState } from "./CropCanvas";
 
 import {
   Sparkles,
@@ -84,11 +84,10 @@ export const WhiteBgRefine: React.FC<WhiteBgRefineProps> = ({
     "raw" | "png" | "white_bg" | "mask"
   >("raw");
 
-  const [cropBox, setCropBox] = useState<CropBox>({ x: 0, y: 0, width: 0, height: 0 });
-  const [imageTransform, setImageTransform] = useState<ImageTransform>({ x: 0, y: 0, scale: 1 });
-  const [viewportSize, setViewportSize] = useState<ViewportSize>({ width: 0, height: 0 });
+  const [cropCanvasState, setCropCanvasState] = useState<CropCanvasState | null>(null);
   const [cropAspectLocked, setCropAspectLocked] = useState(true);
   const [snapEnabled, setSnapEnabled] = useState(true);
+  const [cropInputPreviewUrl, setCropInputPreviewUrl] = useState("");
 
   const [targetSize, setTargetSize] = useState<1600 | 2048 | 2560>(2048);
   const [boundingBox, setBoundingBox] = useState<BoundingBoxInfo | null>(null);
@@ -153,28 +152,10 @@ export const WhiteBgRefine: React.FC<WhiteBgRefineProps> = ({
       
       // Reset bounding box and crop
       setBoundingBox(null);
-      setCropBox({ x: 0, y: 0, width: 0, height: 0 });
+      setCropCanvasState(null);
+      setCropInputPreviewUrl("");
     };
     reader.readAsDataURL(file);
-  };
-
-  const getCroppedImgDataUrl = async (sourceImageUrl: string): Promise<string> => {
-    if (previewMode !== "raw" || cropBox.width === 0 || cropBox.height === 0) {
-      return sourceImageUrl;
-    }
-    try {
-      return await renderCropCanvasToDataUrl({
-        imageUrl: sourceImageUrl,
-        cropBox,
-        imageTransform,
-        viewportSize,
-        targetSize,
-        backgroundColor: "#ffffff",
-      });
-    } catch (e) {
-      console.error("Failed to render crop canvas:", e);
-      return sourceImageUrl;
-    }
   };
 
   // Helper to compose a white background from transparent PNG to resolve CORS/local rendering
@@ -264,13 +245,30 @@ export const WhiteBgRefine: React.FC<WhiteBgRefineProps> = ({
       setMattingStatus("queued");
       setMattingProgress(15);
       
-      const croppedImageUrl = await getCroppedImgDataUrl(sourceImageUrl);
+      let mattingInputUrl = sourceImageUrl;
+      if (cropCanvasState) {
+        try {
+          mattingInputUrl = await renderCropCanvasToDataUrl({
+            imageUrl: sourceImageUrl,
+            cropBox: cropCanvasState.cropBox,
+            imageTransform: cropCanvasState.imageTransform,
+            viewportSize: cropCanvasState.viewportSize,
+            targetSize,
+            backgroundColor: "#ffffff",
+            mimeType: "image/jpeg",
+            quality: 0.95,
+          });
+          setCropInputPreviewUrl(mattingInputUrl);
+        } catch (e) {
+          console.error("Failed to render crop canvas for matting input:", e);
+        }
+      }
       
       // Reset bounding box before new generation
       setBoundingBox(null);
 
       const res = await runRunningHubMatting({
-        imageUrlOrBase64: croppedImageUrl,
+        imageUrlOrBase64: mattingInputUrl,
         workflowConfig: mattingWorkflow as any,
       });
 
@@ -707,13 +705,10 @@ export const WhiteBgRefine: React.FC<WhiteBgRefineProps> = ({
                   <div className="absolute inset-0">
                     <CropCanvas
                       imageUrl={displayUrl}
+                      targetSize={targetSize}
                       cropAspectLocked={cropAspectLocked}
                       snapEnabled={snapEnabled}
-                      onStateChange={({ cropBox, imageTransform, viewportSize }) => {
-                        setCropBox(cropBox);
-                        setImageTransform(imageTransform);
-                        setViewportSize(viewportSize);
-                      }}
+                      onStateChange={setCropCanvasState}
                     />
                     
                     {/* Floating Controls for CropCanvas (Top Right) */}
@@ -900,6 +895,18 @@ export const WhiteBgRefine: React.FC<WhiteBgRefineProps> = ({
                 </div>
               </div>
             </div>
+
+            {cropInputPreviewUrl && (
+              <div className="space-y-3">
+                <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-wide block">
+                  裁剪输入预览
+                </span>
+                <div className="bg-slate-50 p-3 rounded-lg border border-slate-100 flex flex-col items-center">
+                  <span className="text-[9px] text-slate-500 mb-2">本次送入 RunningHub 的裁剪输入图（不作为正式资产）</span>
+                  <img src={cropInputPreviewUrl} alt="Crop Input Preview" className="w-24 h-24 object-contain shadow-sm border border-slate-200 bg-white" />
+                </div>
+              </div>
+            )}
 
             {/* Outbound file format selects */}
             <div className="space-y-3">
