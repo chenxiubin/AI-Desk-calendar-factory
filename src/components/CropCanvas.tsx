@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, MouseEvent, WheelEvent, useCallback } from "react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
 import { ZoomIn, ZoomOut, Maximize, Target, RotateCcw, Wand2 } from "lucide-react";
 import { 
   calculateRawImageAutoCropBox, 
@@ -101,15 +101,25 @@ export const CropCanvas: React.FC<CropCanvasProps> = ({
 
   const safeSetPointerCapture = (pointerId: number) => {
     const el = containerRef.current;
-    if (el && !el.hasPointerCapture(pointerId)) {
-      el.setPointerCapture(pointerId);
+    if (!el) return;
+    try {
+      if (!el.hasPointerCapture(pointerId)) {
+        el.setPointerCapture(pointerId);
+      }
+    } catch {
+      // ignore
     }
   };
 
   const safeReleasePointerCapture = (pointerId: number) => {
     const el = containerRef.current;
-    if (el && el.hasPointerCapture(pointerId)) {
-      el.releasePointerCapture(pointerId);
+    if (!el) return;
+    try {
+      if (el.hasPointerCapture(pointerId)) {
+        el.releasePointerCapture(pointerId);
+      }
+    } catch {
+      // ignore
     }
   };
 
@@ -580,6 +590,7 @@ export const CropCanvas: React.FC<CropCanvasProps> = ({
           onLoad={handleImageLoad}
           crossOrigin={imageUrl.startsWith("data:") || imageUrl.startsWith("blob:") ? undefined : "anonymous"}
           draggable={false}
+          onDragStart={(e) => e.preventDefault()}
           className="will-change-transform max-w-none max-h-none block"
           style={{
             width: imageSize.w > 0 ? `${imageSize.w}px` : 'auto',

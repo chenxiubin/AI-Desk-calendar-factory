@@ -85,7 +85,7 @@ export function calculateRawImageAutoCropBox(
         // 检查 Alpha
         let transparentPixelCount = 0;
         for (let i = 3; i < data.length; i += 4) {
-          if (data[i] < 255) {
+          if (data[i] < 250) {
             transparentPixelCount++;
           }
         }

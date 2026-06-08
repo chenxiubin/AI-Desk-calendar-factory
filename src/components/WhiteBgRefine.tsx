@@ -367,7 +367,7 @@ export const WhiteBgRefine: React.FC<WhiteBgRefineProps> = ({
 
       const res = await runRunningHubMatting({
         imageUrlOrBase64: confirmedCropInputUrl,
-        workflowConfig: mattingWorkflow as any,
+        workflowConfig: mattingWorkflow,
       });
 
       setMattingTaskId(res.taskId);
@@ -489,10 +489,10 @@ export const WhiteBgRefine: React.FC<WhiteBgRefineProps> = ({
         const hasWhite = updatedAssets.some((a) => a.assetType === "white_bg");
 
         if (hasPng) {
-          const targetStatus = hasPng && hasWhite ? "completed" : "png_done";
+          const targetStatus: Product["status"] = hasPng && hasWhite ? "completed" : "png_done";
           onUpdateProductStatus(
             selectedProduct.id,
-            targetStatus as any,
+            targetStatus,
             updatedAssets,
           );
         }
