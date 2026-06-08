@@ -5,6 +5,12 @@ import {
   runRunningHubMatting,
   pollRunningHubTask,
 } from "../utils/runningHubMatting";
+import { 
+  calculateTransparentImageBoundingBox, 
+  BoundingBoxInfo 
+} from "../utils/imagePreprocess";
+import ReactCrop, { type Crop, type PixelCrop, centerCrop, makeAspectCrop } from 'react-image-crop';
+import 'react-image-crop/dist/ReactCrop.css';
 import {
   Sparkles,
   Scissors,
@@ -77,6 +83,12 @@ export const WhiteBgRefine: React.FC<WhiteBgRefineProps> = ({
     "raw" | "png" | "white_bg" | "mask"
   >("raw");
 
+  const [crop, setCrop] = useState<Crop>();
+  const [completedCrop, setCompletedCrop] = useState<PixelCrop>();
+  const [targetSize, setTargetSize] = useState<1600 | 2048 | 2560>(2048);
+  const imgRef = useRef<HTMLImageElement>(null);
+  const [boundingBox, setBoundingBox] = useState<BoundingBoxInfo | null>(null);
+
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const selectedProduct =
@@ -134,8 +146,67 @@ export const WhiteBgRefine: React.FC<WhiteBgRefineProps> = ({
       setMattingProgress(0);
       setMattingError("");
       setPreviewMode("raw");
+      
+      // Reset bounding box and crop
+      setBoundingBox(null);
+      setCrop(undefined);
+      setCompletedCrop(undefined);
     };
     reader.readAsDataURL(file);
+  };
+
+  const handleImageLoad = (e: React.SyntheticEvent<HTMLImageElement>) => {
+    const { width, height } = e.currentTarget;
+    if (width && height) {
+      const paddingRatio = 0.08;
+      const minDim = Math.min(width, height);
+      const cropSize = minDim * (1 - paddingRatio * 2);
+
+      const initialCrop = centerCrop(
+        makeAspectCrop(
+          { unit: "px", width: cropSize },
+          1,
+          width,
+          height
+        ),
+        width,
+        height
+      );
+      setCrop(initialCrop);
+      setCompletedCrop(initialCrop);
+    }
+  };
+
+  const getCroppedImgDataUrl = async (sourceImageUrl: string): Promise<string> => {
+    if (!imgRef.current || !completedCrop || previewMode !== "raw") {
+      return sourceImageUrl; // Fallback if no crop available or not in raw mode
+    }
+    const canvas = document.createElement("canvas");
+    const scaleX = imgRef.current.naturalWidth / imgRef.current.width;
+    const scaleY = imgRef.current.naturalHeight / imgRef.current.height;
+
+    canvas.width = targetSize;
+    canvas.height = targetSize;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return sourceImageUrl;
+
+    // Use white background for the padded area
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, targetSize, targetSize);
+    
+    ctx.drawImage(
+      imgRef.current,
+      completedCrop.x * scaleX,
+      completedCrop.y * scaleY,
+      completedCrop.width * scaleX,
+      completedCrop.height * scaleY,
+      0,
+      0,
+      targetSize,
+      targetSize
+    );
+    
+    return canvas.toDataURL("image/jpeg", 0.95);
   };
 
   // Helper to compose a white background from transparent PNG to resolve CORS/local rendering
@@ -209,17 +280,13 @@ export const WhiteBgRefine: React.FC<WhiteBgRefineProps> = ({
     const sourceImageUrl = getMattingSourceImage(selectedProduct, uploadedRawUrl);
 
     if (!sourceImageUrl) {
-      setMattingError(
-        "当前产品缺少可用于抠图的原始实拍图，请先上传原图。",
-      );
+      setMattingError("当前产品缺少可用于抠图的原始实拍图，请先上传原图。");
       setMattingStatus("failed");
       return;
     }
 
     if (!isWorkflowConfigured) {
-      setMattingError(
-        "RunningHub 抠图工作流尚未配置，请先在系统设置或工作流配置中填写 workflowId 和节点映射。",
-      );
+      setMattingError("RunningHub 抠图工作流尚未配置，请先在系统设置或工作流配置中填写 workflowId 和节点映射。");
       setMattingStatus("failed");
       return;
     }
@@ -228,9 +295,14 @@ export const WhiteBgRefine: React.FC<WhiteBgRefineProps> = ({
       setMattingError("");
       setMattingStatus("queued");
       setMattingProgress(15);
+      
+      const croppedImageUrl = await getCroppedImgDataUrl(sourceImageUrl);
+      
+      // Reset bounding box before new generation
+      setBoundingBox(null);
 
       const res = await runRunningHubMatting({
-        imageUrlOrBase64: sourceImageUrl,
+        imageUrlOrBase64: croppedImageUrl,
         workflowConfig: mattingWorkflow as any,
       });
 
@@ -257,6 +329,17 @@ export const WhiteBgRefine: React.FC<WhiteBgRefineProps> = ({
 
       setMattingResultUrl(transparentPngUrl);
       setMaskResultUrl(maskUrl);
+
+      // Wait for bounding box calculation if transparent png exists
+      let calculatedBoundingBox: BoundingBoxInfo | null = null;
+      if (transparentPngUrl) {
+         try {
+           calculatedBoundingBox = await calculateTransparentImageBoundingBox(transparentPngUrl);
+           setBoundingBox(calculatedBoundingBox);
+         } catch (e) {
+           console.error("Bounding box calculation failed:", e);
+         }
+      }
 
       let finalWhiteBg = "";
       if (whiteBgUrl) {
@@ -290,6 +373,7 @@ export const WhiteBgRefine: React.FC<WhiteBgRefineProps> = ({
         );
 
         const updatedAssets: ProductAsset[] = [...preservedAssets];
+        const cropInputMeta = { aspectRatio: "1:1", targetSize, paddingRatio: 0.08 };
 
         if (outputPng && transparentPngUrl) {
           updatedAssets.push({
@@ -298,9 +382,13 @@ export const WhiteBgRefine: React.FC<WhiteBgRefineProps> = ({
             assetType: "transparent_png",
             assetRole: "transparent_png",
             fileUrl: transparentPngUrl,
-            width: 1000,
-            height: 1000,
+            width: targetSize,
+            height: targetSize,
             status: "ready",
+            metadata: {
+              cropInput: cropInputMeta,
+              ...(calculatedBoundingBox && { boundingBox: calculatedBoundingBox as unknown as Record<string, unknown> })
+            }
           });
         }
 
@@ -311,8 +399,8 @@ export const WhiteBgRefine: React.FC<WhiteBgRefineProps> = ({
             assetType: "white_bg",
             assetRole: "white_bg",
             fileUrl: finalWhiteBg,
-            width: 1000,
-            height: 1000,
+            width: targetSize,
+            height: targetSize,
             status: "ready",
           });
         }
@@ -324,8 +412,8 @@ export const WhiteBgRefine: React.FC<WhiteBgRefineProps> = ({
             assetType: "mask",
             assetRole: "mask",
             fileUrl: maskUrl,
-            width: 1000,
-            height: 1000,
+            width: targetSize,
+            height: targetSize,
             status: "ready",
           });
         }
@@ -646,14 +734,34 @@ export const WhiteBgRefine: React.FC<WhiteBgRefineProps> = ({
                 </div>
               </div>
             ) : displayUrl ? (
-              <div className="relative w-full h-full flex items-center justify-center">
-                <img
-                  src={displayUrl}
-                  alt={previewMode}
-                  className="max-w-full max-h-[350px] object-contain transition-all duration-300 rounded shadow-lg bg-transparent"
-                />
-                <div className="absolute top-2 left-2 bg-slate-900/90 text-white text-[9px] px-2 py-0.5 rounded border border-slate-700 font-mono">
-                  {previewMode === "raw" && "📷 原始素材原图"}
+              <div className="relative w-full h-full flex items-center justify-center pt-8">
+                {previewMode === "raw" ? (
+                  <ReactCrop
+                    crop={crop}
+                    onChange={(_, percentCrop) => setCrop(percentCrop)}
+                    onComplete={(c) => setCompletedCrop(c)}
+                    aspect={1}
+                    className="max-h-[350px] shadow-lg rounded"
+                  >
+                    <img
+                      ref={imgRef}
+                      src={displayUrl}
+                      alt={previewMode}
+                      className="max-h-[350px] object-contain bg-transparent"
+                      onLoad={handleImageLoad}
+                      crossOrigin="anonymous"
+                    />
+                  </ReactCrop>
+                ) : (
+                  <img
+                    src={displayUrl}
+                    alt={previewMode}
+                    className="max-w-full max-h-[350px] object-contain transition-all duration-300 rounded shadow-lg bg-transparent"
+                    crossOrigin="anonymous"
+                  />
+                )}
+                <div className="absolute top-2 left-2 bg-slate-900/90 text-white text-[9px] px-2 py-0.5 rounded border border-slate-700 font-mono z-10">
+                  {previewMode === "raw" && "📷 1:1 裁剪 / 原始实拍"}
                   {previewMode === "png" && "✨ RunningHub 抠图透明 PNG"}
                   {previewMode === "white_bg" && "🥚 渲染白底 JPG 资产"}
                   {previewMode === "mask" && "🖤 高精度黑白 Mask 蒙版"}
@@ -779,6 +887,33 @@ export const WhiteBgRefine: React.FC<WhiteBgRefineProps> = ({
                 </p>
               </div>
             )}
+
+            {/* Output Size Specification */}
+            <div className="space-y-3">
+              <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-wide block">
+                预处理输出尺寸
+              </span>
+              <div className="bg-slate-50 p-3 rounded-lg border border-slate-100 space-y-2">
+                <div className="text-[10px] text-slate-500 mb-2 leading-relaxed">
+                  请尽量让产品完整落在方形裁剪框内，四周保留 5%–8% 安全边距；挂绳、底座、包装边缘不要被裁掉。
+                </div>
+                <div className="flex bg-white border border-slate-200 rounded p-0.5 shadow-sm">
+                  {[1600, 2048, 2560].map((size) => (
+                    <button
+                      key={size}
+                      onClick={() => setTargetSize(size as 1600 | 2048 | 2560)}
+                      className={`flex-1 text-[10px] font-mono py-1 rounded transition-colors ${
+                        targetSize === size
+                          ? "bg-blue-600 text-white font-bold"
+                          : "text-slate-600 hover:bg-slate-100"
+                      }`}
+                    >
+                      {size}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
 
             {/* Outbound file format selects */}
             <div className="space-y-3">
@@ -935,6 +1070,22 @@ export const WhiteBgRefine: React.FC<WhiteBgRefineProps> = ({
                     )}
                     {hasMask && <li>Mask 已作为辅助资产写入产品资产包。</li>}
                   </ul>
+                  
+                  {/* Bounding Box Information display */}
+                  {boundingBox && (
+                    <div className="mt-2 pt-2 border-t border-emerald-200/50">
+                      <div className="font-semibold text-emerald-800 mb-1 flex justify-between">
+                        <span>主体轮廓 (Bounding Box)</span>
+                        <span>{Math.round(boundingBox.normalizedWidth * 100)}% 宽</span>
+                      </div>
+                      <div className="grid grid-cols-2 gap-1 font-mono text-[9px] text-emerald-600">
+                        <div>W: {boundingBox.width}px</div>
+                        <div>H: {boundingBox.height}px</div>
+                        <div>X: {Math.round(boundingBox.normalizedCenterX * 100)}%</div>
+                        <div>Y: {Math.round(boundingBox.normalizedCenterY * 100)}%</div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               );
             })()}

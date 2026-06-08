@@ -60,6 +60,7 @@ export interface ProductAsset {
   perspectiveType?: "front" | "left_3_4" | "right_3_4" | "top_45" | "detail";
   isPrimary?: boolean;
   qualityStatus?: "ready" | "need_adjustment" | "failed";
+  metadata?: Record<string, unknown>;
 }
 
 export interface Product {
