@@ -372,6 +372,7 @@ export const CropCanvas: React.FC<CropCanvasProps> = ({
       }
 
       setCropBox(nextCropBox);
+      cropBoxRef.current = nextCropBox;
 
       /**
        * 关键逻辑：
@@ -450,7 +451,7 @@ export const CropCanvas: React.FC<CropCanvasProps> = ({
       warnings: result.warnings,
       applied: shouldApply,
       reason: shouldApply
-        ? "已应用主体 bbox"
+        ? "已根据自动识别主体自动匹配 1:1 裁剪框"
         : isFallback
           ? "自动识别失败，复杂背景建议使用手动框选主体"
           : isWholeImage
@@ -1196,7 +1197,9 @@ export const CropCanvas: React.FC<CropCanvasProps> = ({
                 disabled={locked || !subjectGuideBox || subjectGuideBox.width < 20 || subjectGuideBox.height < 20}
                 onClick={(e) => {
                   e.stopPropagation();
-                  if (locked || !subjectGuideBox) return;
+                  if (locked || !subjectGuideBox || subjectGuideBox.width < 20 || subjectGuideBox.height < 20) {
+                    return;
+                  }
                   
                   const bbox = convertViewportGuideBoxToImageBBox(subjectGuideBox);
                   applySubjectBBoxToCanvas(bbox, "manual");
