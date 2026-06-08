@@ -855,6 +855,22 @@ export const SLOT_DEFINITIONS = [
 
 export const PRESET_RUNNINGHUB_WORKFLOWS: RunningHubWorkflowConfig[] = [
   {
+    id: "rh_matting_cutout",
+    name: "RunningHub 产品抠图 / 透明PNG生成",
+    workflowId: "", // Let user configure later or placeholder
+    apiMode: "run_workflow_v2",
+    modelType: "qwen_image_edit",
+    baseImageNodeId: "", // Node Id for product raw image input
+    baseImageFieldName: "image",
+    promptNodeId: "",
+    promptFieldName: "",
+    outputNodeId: "",
+    defaultPrompt: "",
+    defaultNegativePrompt: "",
+    defaultDenoise: 1,
+    enabled: true
+  },
+  {
     id: "rh_flux2_klein_light_fusion",
     name: "Flux2-Klein 产品光影融合",
     workflowId: "2062738205958565890",

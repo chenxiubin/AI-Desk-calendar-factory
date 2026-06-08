@@ -265,7 +265,12 @@ app.post("/api/runninghub/query-result", async (req, res) => {
       } else {
         res.json({
           status: "completed",
-          outputUrl: "https://images.unsplash.com/photo-1544816155-12df9643f363?auto=format&fit=crop&q=80&w=800"
+          outputUrl: "https://images.unsplash.com/photo-1544816155-12df9643f363?auto=format&fit=crop&q=80&w=800",
+          results: [
+            "https://images.unsplash.com/photo-1544816155-12df9643f363?auto=format&fit=crop&q=80&w=800",
+            "https://images.unsplash.com/photo-1544816155-12df9643f363?auto=format&fit=crop&q=80&w=800&bg=white",
+            "https://images.unsplash.com/photo-1544816155-12df9643f363?auto=format&fit=crop&q=80&w=800&monochrome=true"
+          ]
         });
       }
       return;
@@ -354,7 +359,8 @@ app.post("/api/runninghub/query-result", async (req, res) => {
       if (statusValue === "SUCCESS" && outputUrl) {
         res.json({
           status: "completed",
-          outputUrl
+          outputUrl,
+          results: result.results ? result.results.map((r: any) => r.url) : [outputUrl]
         });
       } else if (statusValue === "RUNNING" || statusValue === "QUEUED") {
         res.json({

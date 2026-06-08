@@ -17,9 +17,7 @@ interface CreateGeneratedPagesFromSuiteParams {
   templates: Template[];
 }
 
-/**
- * Helper to match product assets based on preferred roles.
- */
+// Helper to match product assets based on preferred roles.
 function matchAssetsForRoleOrFolder(
   outputFolder: string,
   pageType: string,
@@ -60,9 +58,7 @@ function matchAssetsForRoleOrFolder(
   return anyAsset ? [anyAsset.id] : [];
 }
 
-/**
- * Selection of templateId for padded pages.
- */
+// Selection of templateId for padded pages.
 function findTemplateId(
   outputFolder: string,
   ratioType: "square" | "vertical",
