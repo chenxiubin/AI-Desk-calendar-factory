@@ -119,6 +119,40 @@ export const WhiteBgRefine: React.FC<WhiteBgRefineProps> = ({
     reader.readAsDataURL(file);
   };
 
+  // Helper to compose a white background from transparent PNG to resolve CORS/local rendering
+  const composeWhiteBgFromTransparentPng = async (transparentPngUrl: string): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const img = new window.Image();
+      img.crossOrigin = "anonymous";
+      img.onload = () => {
+        try {
+          const canvas = document.createElement("canvas");
+          canvas.width = img.width || 1000;
+          canvas.height = img.height || 1000;
+          const ctx = canvas.getContext("2d");
+          if (!ctx) {
+            reject(new Error("无法创建 Canvas 2D 上下文"));
+            return;
+          }
+          // Fill pure white background
+          ctx.fillStyle = "#FFFFFF";
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+          // Overdraw transparent image
+          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+          // Export back
+          const dataUrl = canvas.toDataURL("image/jpeg", 0.95);
+          resolve(dataUrl);
+        } catch (e) {
+          reject(e);
+        }
+      };
+      img.onerror = () => {
+        reject(new Error("无法读取/装载透明 PNG 进行底色合成"));
+      };
+      img.src = transparentPngUrl;
+    });
+  };
+
   // Implement the core matting pipeline trigger
   const handleStartMatting = async () => {
     if (!selectedProduct) return;
@@ -168,6 +202,99 @@ export const WhiteBgRefine: React.FC<WhiteBgRefineProps> = ({
     }
   };
 
+  // Process completed workflow results with correct assets mapping and Canvas composition fallback
+  const handleCompletedStatus = async (results: string[]) => {
+    try {
+      const transparentPngUrl = results[0] || "";
+      const whiteBgUrl = results[1] || "";
+      const maskUrl = results[2] || "";
+
+      setMattingResultUrl(transparentPngUrl);
+      setMaskResultUrl(maskUrl);
+
+      let finalWhiteBg = "";
+      if (whiteBgUrl) {
+        finalWhiteBg = whiteBgUrl;
+        setWhiteBgResultUrl(whiteBgUrl);
+      } else if (autoGenWhiteJpg && transparentPngUrl) {
+        try {
+          finalWhiteBg = await composeWhiteBgFromTransparentPng(transparentPngUrl);
+          setWhiteBgResultUrl(finalWhiteBg);
+        } catch (composeErr) {
+          console.error("CORS canvas composition failed:", composeErr);
+          setMattingError("白底 JPG 自动合成失败，请使用同源图片或后续通过后端代理处理。");
+        }
+      } else {
+        setWhiteBgResultUrl("");
+      }
+
+      setMattingStatus("completed");
+      setMattingProgress(100);
+
+      // Write results to the product assets list if writeToAssets is enabled
+      if (writeToAssets && selectedProduct) {
+        const preservedAssets = selectedProduct.assets.filter(
+          (a) => a.assetType !== "transparent_png" && a.assetType !== "white_bg" && a.assetType !== "mask"
+        );
+
+        const updatedAssets: ProductAsset[] = [...preservedAssets];
+
+        if (outputPng && transparentPngUrl) {
+          updatedAssets.push({
+            id: `ast_${selectedProduct.productCode}_rh_png_${Date.now()}`,
+            productId: selectedProduct.id,
+            assetType: "transparent_png",
+            assetRole: "transparent_png",
+            fileUrl: transparentPngUrl,
+            width: 1000,
+            height: 1000,
+            status: "ready"
+          });
+        }
+
+        if (outputWhiteBg && finalWhiteBg) {
+          updatedAssets.push({
+            id: `ast_${selectedProduct.productCode}_rh_white_${Date.now()}`,
+            productId: selectedProduct.id,
+            assetType: "white_bg",
+            assetRole: "white_bg",
+            fileUrl: finalWhiteBg,
+            width: 1000,
+            height: 1000,
+            status: "ready"
+          });
+        }
+
+        if (outputMask && maskUrl) {
+          updatedAssets.push({
+            id: `ast_${selectedProduct.productCode}_rh_mask_${Date.now()}`,
+            productId: selectedProduct.id,
+            assetType: "mask",
+            assetRole: "mask",
+            fileUrl: maskUrl,
+            width: 1000,
+            height: 1000,
+            status: "ready"
+          });
+        }
+
+        // Status promotion logic based on assets presence
+        const hasPng = updatedAssets.some((a) => a.assetType === "transparent_png");
+        const hasWhite = updatedAssets.some((a) => a.assetType === "white_bg");
+        
+        if (hasPng) {
+          const targetStatus = (hasPng && hasWhite) ? "completed" : "png_done";
+          onUpdateProductStatus(selectedProduct.id, targetStatus as any, updatedAssets);
+        }
+      }
+    } catch (err: any) {
+      console.error(err);
+      setMattingError(err.message || "处理抠图结果归档时发生异常");
+      setMattingStatus("failed");
+      setMattingProgress(0);
+    }
+  };
+
   // Poll RunningHub task progress asynchronously
   const startPolling = (taskId: string) => {
     let tickCount = 0;
@@ -179,72 +306,7 @@ export const WhiteBgRefine: React.FC<WhiteBgRefineProps> = ({
         const res = await pollRunningHubTask(taskId);
         if (res.status === "completed") {
           clearInterval(interval);
-          setMattingStatus("completed");
-          setMattingProgress(100);
-
-          const transparentPngUrl = res.results?.[0] || "";
-          const whiteBgUrl = res.results?.[1] || "";
-          const maskUrl = res.results?.[2] || "";
-
-          setMattingResultUrl(transparentPngUrl);
-          setWhiteBgResultUrl(whiteBgUrl || (autoGenWhiteJpg ? transparentPngUrl : ""));
-          setMaskResultUrl(maskUrl);
-
-          // Write results to the product assets list if writeToAssets is enabled
-          if (writeToAssets && selectedProduct) {
-            const preservedAssets = selectedProduct.assets.filter(
-              (a) => a.assetType !== "transparent_png" && a.assetType !== "white_bg" && a.assetType !== "mask"
-            );
-
-            const updatedAssets: ProductAsset[] = [...preservedAssets];
-
-            if (outputPng && transparentPngUrl) {
-              updatedAssets.push({
-                id: `ast_${selectedProduct.productCode}_rh_png_${Date.now()}`,
-                productId: selectedProduct.id,
-                assetType: "transparent_png",
-                assetRole: "transparent_png",
-                fileUrl: transparentPngUrl,
-                width: 1000,
-                height: 1000,
-                status: "ready"
-              });
-            }
-
-            const finalWhiteBg = whiteBgUrl || (autoGenWhiteJpg ? transparentPngUrl : "");
-            if (outputWhiteBg && finalWhiteBg) {
-              updatedAssets.push({
-                id: `ast_${selectedProduct.productCode}_rh_white_${Date.now()}`,
-                productId: selectedProduct.id,
-                assetType: "white_bg",
-                assetRole: "white_bg",
-                fileUrl: finalWhiteBg,
-                width: 1000,
-                height: 1000,
-                status: "ready"
-              });
-            }
-
-            if (outputMask && maskUrl) {
-              updatedAssets.push({
-                id: `ast_${selectedProduct.productCode}_rh_mask_${Date.now()}`,
-                productId: selectedProduct.id,
-                assetType: "mask",
-                assetRole: "mask",
-                fileUrl: maskUrl,
-                width: 1000,
-                height: 1000,
-                status: "ready"
-              });
-            }
-
-            // Status promotion logic based on assets presence
-            const hasPng = updatedAssets.some((a) => a.assetType === "transparent_png");
-            const hasWhite = updatedAssets.some((a) => a.assetType === "white_bg");
-            const targetStatus = (hasPng && hasWhite) ? "completed" : hasPng ? "png_done" : "white_bg_done";
-
-            onUpdateProductStatus(selectedProduct.id, targetStatus as any, updatedAssets);
-          }
+          handleCompletedStatus(res.results || []);
         } else if (res.status === "failed") {
           clearInterval(interval);
           setMattingStatus("failed");
@@ -571,11 +633,10 @@ export const WhiteBgRefine: React.FC<WhiteBgRefineProps> = ({
             <div className="bg-amber-50 border border-amber-200 text-amber-800 text-[10px] p-2.5 rounded-lg mb-3">
               <div className="font-semibold flex items-center mb-1">
                 <AlertTriangle className="w-3.5 h-3.5 text-amber-600 mr-1 shrink-0" />
-                提示：未配置抠图工作流连接
+                提示：模块尚未就绪
               </div>
-              <p className="text-[9px] text-amber-700/90 leading-relaxed">
-                当前 <code>rh_matting_cutout</code> 工作流的 <code>workflowId</code> 或 <code>baseImageNodeId</code> 为空。
-                点击下方按钮将引导进行配置，也可在此添加您的专属 ComfyUI 流程。
+              <p className="text-[9px] text-amber-700/90 leading-relaxed font-semibold">
+                RunningHub 抠图工作流尚未配置，请先配置 workflowId 和输入输出节点。
               </p>
             </div>
           )}
@@ -679,6 +740,34 @@ export const WhiteBgRefine: React.FC<WhiteBgRefineProps> = ({
             </ul>
           </div>
         </div>
+
+        {/* Dynamic status/result message block */}
+        {!isPending && !mattingError && selectedProduct && (() => {
+          const hasPng = (mattingStatus === "completed" && !!mattingResultUrl) || selectedProduct.assets?.some((a) => a.assetType === "transparent_png");
+          const hasWhite = (mattingStatus === "completed" && !!whiteBgResultUrl) || selectedProduct.assets?.some((a) => a.assetType === "white_bg");
+          const hasMask = (mattingStatus === "completed" && !!maskResultUrl) || selectedProduct.assets?.some((a) => a.assetType === "mask");
+
+          if (!hasPng) return null;
+
+          return (
+            <div className="mt-3 bg-emerald-50 border border-emerald-250 text-emerald-900 text-[10px] p-2.5 rounded-lg">
+              <span className="font-bold flex items-center mb-1 text-emerald-850">
+                <CheckCircle className="w-3.5 h-3.5 text-emerald-600 mr-1 shrink-0" />
+                抠图资产已入库
+              </span>
+              <ul className="space-y-1 list-disc list-inside leading-relaxed text-[10px] text-emerald-700">
+                {hasPng && hasWhite ? (
+                  <li>透明 PNG 和白底 JPG 已写入产品资产包。</li>
+                ) : (
+                  <li>已生成透明 PNG；白底 JPG 未返回，可后续由透明 PNG 合成。</li>
+                )}
+                {hasMask && (
+                  <li>Mask 已作为辅助资产写入产品资产包。</li>
+                )}
+              </ul>
+            </div>
+          );
+        })()}
 
         {/* Display Error Message cleanly */}
         {mattingError && (

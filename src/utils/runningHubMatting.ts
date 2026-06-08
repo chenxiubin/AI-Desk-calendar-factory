@@ -14,6 +14,11 @@ export async function runRunningHubMatting({
     throw new Error("请先配置 RunningHub 抠图工作流 (workflowId 为空)");
   }
 
+  const imageNodeId = workflowConfig.baseImageNodeId || workflowConfig.inputImageNodeId;
+  if (!imageNodeId) {
+    throw new Error("RunningHub 抠图工作流缺少输入图片节点配置。");
+  }
+
   let fileName = "";
   if (imageUrlOrBase64) {
     let blob: Blob;
@@ -28,8 +33,12 @@ export async function runRunningHubMatting({
       }
       blob = new Blob([ab], { type: mimeString });
     } else if (imageUrlOrBase64.startsWith("http")) {
-      const res = await fetch(imageUrlOrBase64);
-      blob = await res.blob();
+      try {
+        const res = await fetch(imageUrlOrBase64);
+        blob = await res.blob();
+      } catch (error) {
+        throw new Error("无法从浏览器直接读取远程图片，可能是 CORS 限制。请使用本地上传图片，或后续通过后端代理上传到 RunningHub。");
+      }
     } else {
       throw new Error("无效的图片格式或 URL");
     }
@@ -41,9 +50,9 @@ export async function runRunningHubMatting({
 
   // Construct node list for matting
   const nodeInfoList: any[] = [];
-  if (workflowConfig.baseImageNodeId && fileName) {
+  if (imageNodeId && fileName) {
     nodeInfoList.push({
-      nodeId: workflowConfig.baseImageNodeId,
+      nodeId: imageNodeId,
       fieldName: workflowConfig.baseImageFieldName || "image",
       fieldValue: fileName
     });
@@ -59,6 +68,44 @@ export async function runRunningHubMatting({
   return {
     taskId: result.taskId
   };
+}
+
+function normalizeResultUrl(item: unknown): string {
+  if (!item) return "";
+  if (typeof item === "string") return item;
+
+  if (typeof item === "object") {
+    const obj = item as Record<string, unknown>;
+    return String(
+      obj.url ||
+      obj.fileUrl ||
+      obj.imageUrl ||
+      obj.outputUrl ||
+      obj.resultUrl ||
+      ""
+    ).trim();
+  }
+
+  return "";
+}
+
+function normalizeResultUrls(data: any): string[] {
+  if (!data) return [];
+  const rawResults =
+    data.results ||
+    data.data?.results ||
+    data.outputs ||
+    data.data?.outputs ||
+    data.result ||
+    data.data?.result ||
+    [];
+
+  if (Array.isArray(rawResults)) {
+    return rawResults.map(normalizeResultUrl).filter(Boolean);
+  }
+
+  const singleUrl = normalizeResultUrl(rawResults) || normalizeResultUrl(data.outputUrl);
+  return singleUrl ? [singleUrl] : [];
 }
 
 export async function pollRunningHubTask(taskId: string): Promise<{
@@ -80,18 +127,26 @@ export async function pollRunningHubTask(taskId: string): Promise<{
   }
 
   const data = await res.json();
-  const status: "queued" | "running" | "completed" | "failed" =
-    data.status === "completed"
-      ? "completed"
-      : data.status === "failed"
-      ? "failed"
-      : data.status === "running"
-      ? "running"
-      : "queued";
+  const rawStatus = String(data.status || "").toLowerCase();
+  let status: "queued" | "running" | "completed" | "failed" = "queued";
+
+  if (["completed", "success", "succeeded", "finish", "finished"].includes(rawStatus)) {
+    status = "completed";
+  } else if (["failed", "error", "fail"].includes(rawStatus)) {
+    status = "failed";
+  } else if (["running", "processing", "pending", "queued"].includes(rawStatus)) {
+    status = "running";
+  } else {
+    // Fallback: if we have valid results URLs, assume completed
+    const results = normalizeResultUrls(data);
+    if (results.length > 0) {
+      status = "completed";
+    }
+  }
 
   return {
     status,
-    results: data.results || (data.outputUrl ? [data.outputUrl] : undefined),
-    errorMessage: data.errorMessage
+    results: normalizeResultUrls(data),
+    errorMessage: data.errorMessage || data.message
   };
 }

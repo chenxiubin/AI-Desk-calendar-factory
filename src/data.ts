@@ -870,7 +870,7 @@ export const PRESET_RUNNINGHUB_WORKFLOWS: RunningHubWorkflowConfig[] = [
     defaultPrompt: "",
     defaultNegativePrompt: "",
     defaultDenoise: 1,
-    enabled: true,
+    enabled: false,
     transparentOutputIndex: 0,
     whiteBgOutputIndex: 1,
     maskOutputIndex: 2
