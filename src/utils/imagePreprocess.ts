@@ -151,15 +151,93 @@ export function calculateRawImageAutoCropBox(
         let maxY = 0;
         let actualForeground = 0;
 
+        // Connected Components
+        const components: { minX: number, minY: number, maxX: number, maxY: number, area: number }[] = [];
+        const visited = new Uint8Array(totalPixels);
+
+        // Simple arrays for BFS queue instead of Array.prototype.shift() which is slow on large arrays.
+        // We can preallocate a large enough array based on the image size.
+        const q = new Int32Array(totalPixels);
+        let qHead = 0;
+        let qTail = 0;
+
         for (let y = 0; y < detectHeight; y++) {
           for (let x = 0; x < detectWidth; x++) {
-            if (isForeground[y * detectWidth + x]) {
-              actualForeground++;
-              if (x < minX) minX = x;
-              if (x > maxX) maxX = x;
-              if (y < minY) minY = y;
-              if (y > maxY) maxY = y;
+            const idx = y * detectWidth + x;
+            if (isForeground[idx] && !visited[idx]) {
+              let compMinX = x;
+              let compMaxX = x;
+              let compMinY = y;
+              let compMaxY = y;
+              let area = 0;
+
+              qHead = 0;
+              qTail = 0;
+              q[qTail++] = idx;
+              visited[idx] = 1;
+
+              while(qHead < qTail) {
+                const cur = q[qHead++];
+                const cy = Math.floor(cur / detectWidth);
+                const cx = cur % detectWidth;
+
+                area++;
+                if (cx < compMinX) compMinX = cx;
+                if (cx > compMaxX) compMaxX = cx;
+                if (cy < compMinY) compMinY = cy;
+                if (cy > compMaxY) compMaxY = cy;
+
+                // Neighbors
+                if (cx > 0) {
+                  const nidx = cy * detectWidth + (cx - 1);
+                  if (isForeground[nidx] && !visited[nidx]) {
+                    visited[nidx] = 1;
+                    q[qTail++] = nidx;
+                  }
+                }
+                if (cx < detectWidth - 1) {
+                  const nidx = cy * detectWidth + (cx + 1);
+                  if (isForeground[nidx] && !visited[nidx]) {
+                    visited[nidx] = 1;
+                    q[qTail++] = nidx;
+                  }
+                }
+                if (cy > 0) {
+                  const nidx = (cy - 1) * detectWidth + cx;
+                  if (isForeground[nidx] && !visited[nidx]) {
+                    visited[nidx] = 1;
+                    q[qTail++] = nidx;
+                  }
+                }
+                if (cy < detectHeight - 1) {
+                  const nidx = (cy + 1) * detectWidth + cx;
+                  if (isForeground[nidx] && !visited[nidx]) {
+                    visited[nidx] = 1;
+                    q[qTail++] = nidx;
+                  }
+                }
+              }
+
+              // Discard noise
+              if (area > totalPixels * 0.0005) {
+                components.push({ minX: compMinX, minY: compMinY, maxX: compMaxX, maxY: compMaxY, area });
+              }
             }
+          }
+        }
+
+        components.sort((a, b) => b.area - a.area);
+
+        if (components.length > 0) {
+          const maxArea = components[0].area;
+          const keptComponents = components.filter((c, i) => i < 5 && c.area >= maxArea * 0.08);
+
+          for (const c of keptComponents) {
+            actualForeground += c.area;
+            if (c.minX < minX) minX = c.minX;
+            if (c.maxX > maxX) maxX = c.maxX;
+            if (c.minY < minY) minY = c.minY;
+            if (c.maxY > maxY) maxY = c.maxY;
           }
         }
 
@@ -182,6 +260,18 @@ export function calculateRawImageAutoCropBox(
         let confidence = 1.0;
         if (foregroundRatio < 0.02 || foregroundRatio > 0.85) {
           confidence *= 0.5;
+        }
+
+        const bboxAreaRatio = (bboxWidth * bboxHeight) / (originalWidth * originalHeight);
+
+        if (bboxAreaRatio > 0.9 || (bboxWidth > originalWidth * 0.96 && bboxHeight > originalHeight * 0.96)) {
+          confidence *= 0.2;
+          warnings.push("识别区域接近整图，自动识别结果无效");
+        }
+
+        if (components.length > 20) {
+          confidence *= 0.7;
+          warnings.push("检测到过多前景碎片，背景可能复杂");
         }
 
         if (minX <= 2 || minY <= 2 || maxX >= detectWidth - 3 || maxY >= detectHeight - 3) {

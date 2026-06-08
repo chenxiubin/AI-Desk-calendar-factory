@@ -78,6 +78,19 @@ export const CropCanvas: React.FC<CropCanvasProps> = ({
   const [lastAutoCroppedImageUrl, setLastAutoCroppedImageUrl] = useState("");
   const [imageSize, setImageSize] = useState({ w: 0, h: 0 });
 
+  // Refs for native event listener
+  const zoomRef = useRef(zoom);
+  const baseScaleRef = useRef(baseScale);
+  const imageTransformRef = useRef(imageTransform);
+  const cropBoxRef = useRef(cropBox);
+  const lockedRef = useRef(locked);
+
+  useEffect(() => { zoomRef.current = zoom; }, [zoom]);
+  useEffect(() => { baseScaleRef.current = baseScale; }, [baseScale]);
+  useEffect(() => { imageTransformRef.current = imageTransform; }, [imageTransform]);
+  useEffect(() => { cropBoxRef.current = cropBox; }, [cropBox]);
+  useEffect(() => { lockedRef.current = locked; }, [locked]);
+
   // Interaction State
   const dragModeRef = useRef<DragMode>("none");
   const [dragMode, setDragMode] = useState<DragMode>("none");
@@ -245,7 +258,13 @@ export const CropCanvas: React.FC<CropCanvasProps> = ({
       const result = await calculateRawImageAutoCropBox(imageUrl, {
         paddingRatio: safetyPaddingRatio,
       });
-      if (result.confidence >= 0.4) {
+      console.log("[CropCanvas] auto crop result", {
+        confidence: result.confidence,
+        method: result.method,
+        bbox: result.bbox,
+        warnings: result.warnings,
+      });
+      if (result.confidence >= 0.6 && result.method !== "fallback") {
         applyAutoCropResult(result.bbox, currentCropBox);
       } else {
         fitProductToCropBox(currentCropBox);
@@ -254,6 +273,7 @@ export const CropCanvas: React.FC<CropCanvasProps> = ({
     } catch (err) {
       console.warn("Auto crop failed:", err);
       fitProductToCropBox(currentCropBox);
+      throw err;
     } finally {
       setIsAutoCropping(false);
     }
@@ -328,42 +348,66 @@ export const CropCanvas: React.FC<CropCanvasProps> = ({
 
   const clampZoom = (z: number) => Math.max(0.1, Math.min(z, 4));
 
-  const handleWheel = (e: WheelEvent<HTMLDivElement>) => {
-    if (locked || !containerRef.current || baseScale === 0) return;
-    e.preventDefault();
-    
-    const rect = containerRef.current.getBoundingClientRect();
-    const mx = e.clientX - rect.left;
-    const my = e.clientY - rect.top;
+  const zoomAtPoint = useCallback(
+    (anchorX: number, anchorY: number, nextZoom: number) => {
+      const currentBaseScale = baseScaleRef.current;
+      const currentTransform = imageTransformRef.current;
 
-    const delta = e.deltaY > 0 ? 0.9 : 1.1;
-    const nextZoom = clampZoom(zoom * delta);
-    const nextScale = baseScale * nextZoom;
-    
-    // Zoom around mouse
-    const scaleRatio = nextScale / imageTransform.scale;
-    const nx = mx - (mx - imageTransform.x) * scaleRatio;
-    const ny = my - (my - imageTransform.y) * scaleRatio;
+      if (!currentBaseScale || currentBaseScale === 0 || !currentTransform.scale) return;
 
-    setZoom(nextZoom);
-    setImageTransform({ x: nx, y: ny, scale: nextScale });
-  };
+      const clampedZoom = clampZoom(nextZoom);
+      const nextScale = currentBaseScale * clampedZoom;
+      const scaleRatio = nextScale / currentTransform.scale;
+
+      const nextTransform = {
+        x: anchorX - (anchorX - currentTransform.x) * scaleRatio,
+        y: anchorY - (anchorY - currentTransform.y) * scaleRatio,
+        scale: nextScale,
+      };
+
+      setZoom(clampedZoom);
+      setImageTransform(nextTransform);
+    },
+    []
+  );
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+
+    const handleNativeWheel = (event: WheelEvent) => {
+      if (lockedRef.current) return;
+
+      event.preventDefault();
+      event.stopPropagation();
+
+      const rect = el.getBoundingClientRect();
+      const anchorX = event.clientX - rect.left;
+      const anchorY = event.clientY - rect.top;
+
+      const currentZoom = zoomRef.current;
+      const delta = event.deltaY > 0 ? 0.9 : 1.1;
+
+      zoomAtPoint(anchorX, anchorY, currentZoom * delta);
+    };
+
+    el.addEventListener("wheel", handleNativeWheel, {
+      passive: false,
+    });
+
+    return () => {
+      el.removeEventListener("wheel", handleNativeWheel);
+    };
+  }, [zoomAtPoint]);
 
   const handleZoom = (direction: "in" | "out") => {
-    if (locked || !containerRef.current || baseScale === 0) return;
-    const mx = cropBox.x + cropBox.width / 2;
-    const my = cropBox.y + cropBox.height / 2;
+    if (locked || baseScale === 0) return;
+    const cb = cropBoxRef.current;
+    const mx = cb.x + cb.width / 2;
+    const my = cb.y + cb.height / 2;
     
     const delta = direction === "in" ? 1.1 : 0.9;
-    const nextZoom = clampZoom(zoom * delta);
-    const nextScale = baseScale * nextZoom;
-
-    const scaleRatio = nextScale / imageTransform.scale;
-    const nx = mx - (mx - imageTransform.x) * scaleRatio;
-    const ny = my - (my - imageTransform.y) * scaleRatio;
-    
-    setZoom(nextZoom);
-    setImageTransform({ x: nx, y: ny, scale: nextScale });
+    zoomAtPoint(mx, my, zoomRef.current * delta);
   };
 
   const centerImage = useCallback(() => {
@@ -422,8 +466,12 @@ export const CropCanvas: React.FC<CropCanvasProps> = ({
   };
 
   const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (locked) return;
     const mode = dragModeRef.current;
     if (mode === "none") return;
+    
+    e.preventDefault();
+    e.stopPropagation();
     
     const dx = e.clientX - dragStartRef.current.x;
     const dy = e.clientY - dragStartRef.current.y;
@@ -506,14 +554,15 @@ export const CropCanvas: React.FC<CropCanvasProps> = ({
       className="relative w-full h-full overflow-hidden select-none flex items-center justify-center cursor-move"
       style={{ 
         touchAction: "none",
+        overscrollBehavior: "contain",
         backgroundImage: 'url("data:image/svg+xml,%3Csvg width=\'20\' height=\'20\' viewBox=\'0 0 20 20\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cg fill=\'%23cbd5e1\' fill-opacity=\'0.1\' fill-rule=\'evenodd\'%3E%3Crect x=\'0\' y=\'0\' width=\'10\' height=\'10\'/%3E%3Crect x=\'10\' y=\'10\' width=\'10\' height=\'10\'/%3E%3C/g%3E%3C/svg%3E")',
         backgroundColor: '#1e293b'
       }}
+      onContextMenu={(e) => e.preventDefault()}
       onPointerDown={(e) => handlePointerDown(e, "image")}
       onPointerMove={handlePointerMove}
       onPointerUp={handlePointerUp}
       onPointerCancel={handlePointerUp}
-      onWheel={handleWheel}
     >
       {/* Container to handle image transforms correctly without issues related to max width limits */}
       <div className="absolute top-0 left-0" style={{
@@ -623,16 +672,12 @@ export const CropCanvas: React.FC<CropCanvasProps> = ({
                onChange={(e) => {
                  if (locked || baseScale === 0) return;
                  const nextZoom = Number(e.target.value);
-                 const nextScale = baseScale * nextZoom;
                  
-                 const mx = cropBox.x + cropBox.width / 2;
-                 const my = cropBox.y + cropBox.height / 2;
-                 const scaleRatio = nextScale / imageTransform.scale;
-                 const nx = mx - (mx - imageTransform.x) * scaleRatio;
-                 const ny = my - (my - imageTransform.y) * scaleRatio;
+                 const cb = cropBoxRef.current;
+                 const mx = cb.x + cb.width / 2;
+                 const my = cb.y + cb.height / 2;
                  
-                 setZoom(nextZoom);
-                 setImageTransform({ x: nx, y: ny, scale: nextScale });
+                 zoomAtPoint(mx, my, nextZoom);
                }}
                className="w-20 accent-blue-500 disabled:opacity-50"
                onPointerDown={(e) => e.stopPropagation()}
@@ -659,7 +704,7 @@ export const CropCanvas: React.FC<CropCanvasProps> = ({
             className={`flex items-center gap-1 p-1.5 rounded transition-colors ${locked || isAutoCropping ? 'text-slate-600 cursor-not-allowed' : 'text-slate-300 hover:text-white hover:bg-slate-800'}`}
           >
             <Wand2 className={`w-4 h-4 ${isAutoCropping ? 'animate-pulse' : ''}`} />
-            <span className="text-[10px] hidden sm:inline">自动识别产品</span>
+            <span className="text-[10px] hidden sm:inline">{isAutoCropping ? '识别中...' : '自动识别产品'}</span>
           </button>
           
           <button 
