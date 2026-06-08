@@ -29,6 +29,7 @@ interface CropCanvasProps {
   targetSize: number;
   cropAspectLocked: boolean;
   snapEnabled: boolean;
+  locked?: boolean;
   onStateChange: (state: CropCanvasState) => void;
 }
 
@@ -37,6 +38,7 @@ export const CropCanvas: React.FC<CropCanvasProps> = ({
   targetSize,
   cropAspectLocked,
   snapEnabled,
+  locked = false,
   onStateChange,
 }) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -88,11 +90,16 @@ export const CropCanvas: React.FC<CropCanvasProps> = ({
   // For now, we manage it here.
 
   // Notify parent
+  const onStateChangeRef = useRef(onStateChange);
+  useEffect(() => {
+    onStateChangeRef.current = onStateChange;
+  }, [onStateChange]);
+
   useEffect(() => {
     if (isReady) {
-      onStateChange({ cropBox, imageTransform, viewportSize });
+      onStateChangeRef.current({ cropBox, imageTransform, viewportSize });
     }
-  }, [cropBox, imageTransform, viewportSize, isReady, onStateChange]);
+  }, [cropBox, imageTransform, viewportSize, isReady]);
 
   const snapThreshold = snapEnabled ? 10 : 0;
 
@@ -100,7 +107,7 @@ export const CropCanvas: React.FC<CropCanvasProps> = ({
 
   const handleWheel = (e: WheelEvent<HTMLDivElement>) => {
     e.preventDefault();
-    if (!containerRef.current) return;
+    if (locked || !containerRef.current) return;
     
     const rect = containerRef.current.getBoundingClientRect();
     const mx = e.clientX - rect.left;
@@ -120,6 +127,7 @@ export const CropCanvas: React.FC<CropCanvasProps> = ({
   const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>, mode: typeof dragMode) => {
     e.preventDefault();
     e.stopPropagation();
+    if (locked) return;
     setDragMode(mode);
     dragStartRef.current = { x: e.clientX, y: e.clientY };
     initTransformRef.current = { ...imageTransform };
@@ -327,7 +335,7 @@ export const CropCanvas: React.FC<CropCanvasProps> = ({
           />
         </div>
       )}
-        {isReady && (
+         {isReady && (
         <div 
           className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-4 bg-slate-900/80 backdrop-blur text-white px-4 py-2 rounded-full border border-slate-700 shadow-xl z-20"
           onPointerDown={(e) => e.stopPropagation()}
@@ -336,10 +344,11 @@ export const CropCanvas: React.FC<CropCanvasProps> = ({
              <span className="text-[9px] text-slate-400 font-mono">缩放</span>
              <input 
                type="range" 
+               disabled={locked}
                min="0.25" max="4" step="0.05"
                value={imageTransform.scale}
                onChange={(e) => setImageTransform((prev) => ({ ...prev, scale: parseFloat(e.target.value) }))}
-               className="w-20 accent-blue-500"
+               className="w-20 accent-blue-500 disabled:opacity-50"
                onPointerDown={(e) => e.stopPropagation()} // Prevent dragging the canvas when sliding
              />
              <span className="text-[9px] text-slate-300 font-mono w-6 text-right">
@@ -349,14 +358,20 @@ export const CropCanvas: React.FC<CropCanvasProps> = ({
           <div className="w-px h-3 bg-slate-700" />
           <button 
             type="button"
+            disabled={locked}
             onClick={(e) => {
               e.stopPropagation();
               handleImageLoad(); // Reposition and fit image again
             }}
-            className="text-[10px] font-medium tracking-wide hover:text-blue-400 transition-colors"
+            className={`text-[10px] font-medium tracking-wide transition-colors ${locked ? 'text-slate-500 cursor-not-allowed' : 'hover:text-blue-400'}`}
           >
             重置裁剪
           </button>
+        </div>
+      )}
+      {locked && (
+        <div className="absolute top-4 left-4 bg-emerald-500/90 text-white text-[10px] px-2 py-1 rounded font-bold tracking-wide z-30 shadow-sm border border-emerald-400">
+          画布已锁定
         </div>
       )}
     </div>

@@ -89,6 +89,8 @@ export const WhiteBgRefine: React.FC<WhiteBgRefineProps> = ({
   const [snapEnabled, setSnapEnabled] = useState(true);
   const [confirmedCropInputUrl, setConfirmedCropInputUrl] = useState("");
   const [isCropConfirmed, setIsCropConfirmed] = useState(false);
+  const [isCanvasLocked, setIsCanvasLocked] = useState(false);
+  const [isCropPreviewApproved, setIsCropPreviewApproved] = useState(false);
 
   const [targetSize, setTargetSize] = useState<1600 | 2048 | 2560>(2048);
   const [boundingBox, setBoundingBox] = useState<BoundingBoxInfo | null>(null);
@@ -251,11 +253,30 @@ export const WhiteBgRefine: React.FC<WhiteBgRefineProps> = ({
 
       setConfirmedCropInputUrl(dataUrl);
       setIsCropConfirmed(true);
+      setIsCanvasLocked(true);
+      setIsCropPreviewApproved(false);
       setMattingError("");
     } catch (e) {
       console.error("Failed to render confirmed crop input:", e);
       setMattingError("确认裁剪失败，请重试。");
     }
+  };
+
+  const handleEditCrop = () => {
+    setIsCanvasLocked(false);
+    setIsCropConfirmed(false);
+    setIsCropPreviewApproved(false);
+    setConfirmedCropInputUrl("");
+    setMattingError("");
+  };
+
+  const handleApproveCropPreview = () => {
+    if (!confirmedCropInputUrl) {
+      setMattingError("请先确认裁剪，生成预览图。");
+      return;
+    }
+    setIsCropPreviewApproved(true);
+    setMattingError("");
   };
 
   // Implement the core matting pipeline trigger
@@ -264,6 +285,12 @@ export const WhiteBgRefine: React.FC<WhiteBgRefineProps> = ({
 
     if (!confirmedCropInputUrl) {
       setMattingError("请先确认裁剪，生成 RunningHub 输入图。");
+      setMattingStatus("failed");
+      return;
+    }
+
+    if (!isCropPreviewApproved) {
+      setMattingError("请先确认裁剪预览图，再开始 RunningHub 抠图。");
       setMattingStatus("failed");
       return;
     }
@@ -486,6 +513,15 @@ export const WhiteBgRefine: React.FC<WhiteBgRefineProps> = ({
 
   const isPending = mattingStatus === "queued" || mattingStatus === "running";
   const isFinished = mattingStatus === "completed";
+
+  const handleCropCanvasStateChange = React.useCallback((state: CropCanvasState) => {
+    setCropCanvasState(state);
+    if (!isCanvasLocked) {
+      setIsCropConfirmed(false);
+      setIsCropPreviewApproved(false);
+      setConfirmedCropInputUrl("");
+    }
+  }, [isCanvasLocked]);
 
   return (
     <div className="flex flex-col gap-4 h-full min-h-[600px] text-left font-sans">
@@ -723,11 +759,8 @@ export const WhiteBgRefine: React.FC<WhiteBgRefineProps> = ({
                       targetSize={targetSize}
                       cropAspectLocked={cropAspectLocked}
                       snapEnabled={snapEnabled}
-                      onStateChange={(state) => {
-                        setCropCanvasState(state);
-                        setIsCropConfirmed(false);
-                        setConfirmedCropInputUrl("");
-                      }}
+                      locked={isCanvasLocked}
+                      onStateChange={handleCropCanvasStateChange}
                     />
                     
                     {/* Floating Controls for CropCanvas (Top Right) */}
@@ -917,12 +950,33 @@ export const WhiteBgRefine: React.FC<WhiteBgRefineProps> = ({
 
             {confirmedCropInputUrl && (
               <div className="space-y-3">
-                <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-wide block">
-                  裁剪已确认
+                <span className={`text-[10px] font-bold uppercase tracking-wide block ${isCropPreviewApproved ? "text-emerald-500" : "text-blue-500"}`}>
+                  {isCropPreviewApproved ? "预览已确认" : "RunningHub 输入图预览"}
                 </span>
-                <div className="bg-emerald-50/50 p-3 rounded-lg border border-emerald-100 flex flex-col items-center">
-                  <span className="text-[9px] text-emerald-600/80 mb-2 font-medium">该图仅做RunningHub输入，不写入正式资产</span>
-                  <img src={confirmedCropInputUrl} alt="Crop Input Preview" className="w-24 h-24 object-contain shadow border border-emerald-200 bg-white rounded-sm" />
+                <div className={`${isCropPreviewApproved ? "bg-emerald-50/50 border-emerald-100" : "bg-blue-50/50 border-blue-100"} p-3 rounded-lg border flex flex-col items-center`}>
+                  <span className={`text-[9px] mb-2 font-medium text-center ${isCropPreviewApproved ? "text-emerald-600/80" : "text-blue-600/80"}`}>
+                    这是即将送入 RunningHub 的裁剪输入图，仅作为抠图输入，不会写入正式资产包。
+                  </span>
+                  <img src={confirmedCropInputUrl} alt="Crop Input Preview" className={`w-24 h-24 object-contain shadow border bg-white rounded-sm mb-3 ${isCropPreviewApproved ? "border-emerald-200" : "border-blue-200"}`} />
+                  
+                  <div className="flex gap-2 w-full">
+                    <button
+                      onClick={handleEditCrop}
+                      className="flex-1 bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 py-1.5 rounded text-[10px] font-semibold transition-colors flex items-center justify-center space-x-1"
+                    >
+                      <Scissors className="w-3 h-3" />
+                      <span>重新编辑裁剪</span>
+                    </button>
+                    {!isCropPreviewApproved && (
+                      <button
+                        onClick={handleApproveCropPreview}
+                        className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-1.5 rounded text-[10px] font-semibold shadow-sm transition-colors flex items-center justify-center space-x-1"
+                      >
+                        <CheckCircle className="w-3 h-3" />
+                        <span>确认预览无误</span>
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
             )}
@@ -1128,12 +1182,13 @@ export const WhiteBgRefine: React.FC<WhiteBgRefineProps> = ({
             onClick={handleStartMatting}
             disabled={
               isPending ||
-              !uploadedRawUrl ||
+              (!uploadedRawUrl && !selectedProduct) ||
               !isCropConfirmed ||
+              !isCropPreviewApproved ||
               !isWorkflowConfigured
             }
             className={`w-full mt-4 font-bold py-2.5 px-4 rounded-xl text-xs flex items-center justify-center space-x-1.5 shadow transition-all duration-300 active:scale-[0.98] ${
-              isPending || !uploadedRawUrl || !isCropConfirmed || !isWorkflowConfigured
+              isPending || (!uploadedRawUrl && !selectedProduct) || !isCropConfirmed || !isCropPreviewApproved || !isWorkflowConfigured
                 ? "bg-slate-200 text-slate-400 cursor-not-allowed"
                 : "bg-blue-650 hover:bg-blue-700 text-white"
             }`}
@@ -1142,10 +1197,12 @@ export const WhiteBgRefine: React.FC<WhiteBgRefineProps> = ({
             <span>
               {isPending
                 ? "抠图执行中..."
-                : !uploadedRawUrl
-                ? "请先上传原图"
+                : (!uploadedRawUrl && !selectedProduct)
+                ? "请先上传或选择原始图"
                 : !isCropConfirmed
                 ? "请先确认裁剪"
+                : !isCropPreviewApproved
+                ? "请先确认预览图"
                 : !isWorkflowConfigured
                 ? "工作流未配置"
                 : "开始 RunningHub 抠图"}
