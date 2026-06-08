@@ -104,7 +104,11 @@ function normalizeResultUrls(data: any): string[] {
     return rawResults.map(normalizeResultUrl).filter(Boolean);
   }
 
-  const singleUrl = normalizeResultUrl(rawResults) || normalizeResultUrl(data.outputUrl);
+  const singleUrl =
+    normalizeResultUrl(rawResults) ||
+    normalizeResultUrl(data.outputUrl) ||
+    (data.data && normalizeResultUrl(data.data.outputUrl)) ||
+    "";
   return singleUrl ? [singleUrl] : [];
 }
 
