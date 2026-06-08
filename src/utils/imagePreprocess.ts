@@ -215,12 +215,6 @@ export function calculateRawImageAutoCropBox(
           warnings.push("检测到的前景区域过大 (> 85%)");
         }
 
-        let minX = detectWidth;
-        let minY = detectHeight;
-        let maxX = 0;
-        let maxY = 0;
-        let actualForeground = 0;
-
         const components = findConnectedComponents(isForeground, detectWidth, detectHeight);
         components.sort((a, b) => b.area - a.area);
 
@@ -241,29 +235,26 @@ export function calculateRawImageAutoCropBox(
           })
           .slice(0, 5);
 
-        for (const c of selectedComponents) {
-          actualForeground += c.area;
-          if (c.minX < minX) minX = c.minX;
-          if (c.maxX > maxX) maxX = c.maxX;
-          if (c.minY < minY) minY = c.minY;
-          if (c.maxY > maxY) maxY = c.maxY;
-        }
+        const minX = Math.min(...selectedComponents.map((c) => c.minX));
+        const minY = Math.min(...selectedComponents.map((c) => c.minY));
+        const maxX = Math.max(...selectedComponents.map((c) => c.maxX));
+        const maxY = Math.max(...selectedComponents.map((c) => c.maxY));
 
         const origMinX = minX / detectScale;
         const origMinY = minY / detectScale;
         const origMaxX = (maxX + 1) / detectScale;
         const origMaxY = (maxY + 1) / detectScale;
         
-        const bboxWidth = Math.max(1, origMaxX - origMinX);
-        const bboxHeight = Math.max(1, origMaxY - origMinY);
+        const bboxWidth = origMaxX - origMinX;
+        const bboxHeight = origMaxY - origMinY;
         const bboxCenterX = origMinX + bboxWidth / 2;
         const bboxCenterY = origMinY + bboxHeight / 2;
         
-        const bboxAreaRatio = (bboxWidth * bboxHeight) / (originalWidth * originalHeight);
-        const updatedForegroundRatio = actualForeground / totalPixels;
+        const bboxAreaRatio = (bboxWidth * bboxHeight) / totalPixels;
+        const selectedForegroundRatio = selectedComponents.reduce((sum, c) => sum + c.area, 0) / totalPixels;
         const touchesEdge = minX <= 2 || minY <= 2 || maxX >= detectWidth - 3 || maxY >= detectHeight - 3;
 
-        if (updatedForegroundRatio < 0.02) {
+        if (selectedForegroundRatio < 0.02) {
           warnings.push("主体前景面积过小，自动识别无效");
           resolve(fallbackResult(originalWidth, originalHeight, warnings));
           return;
@@ -298,7 +289,7 @@ export function calculateRawImageAutoCropBox(
           warnings.push("识别区域偏大，请检查是否包含背景阴影");
         }
 
-        if (updatedForegroundRatio > 0.65) {
+        if (selectedForegroundRatio > 0.65) {
           confidence *= 0.7;
           warnings.push("前景占比偏大，可能把背景也识别为主体");
         }
