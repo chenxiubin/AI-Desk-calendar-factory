@@ -51,6 +51,15 @@ type DragMode =
   | "resize-sw"
   | "resize-se";
 
+type AutoCropDebugState = {
+  confidence: number;
+  method: RawImageAutoCropResult["method"];
+  warnings: string[];
+  applied: boolean;
+  reason: string;
+  bbox: RawImageAutoCropResult["bbox"];
+};
+
 export const CropCanvas: React.FC<CropCanvasProps> = ({
   imageUrl,
   targetSize,
@@ -78,6 +87,8 @@ export const CropCanvas: React.FC<CropCanvasProps> = ({
   const [lastAutoCroppedImageUrl, setLastAutoCroppedImageUrl] = useState("");
   const [imageSize, setImageSize] = useState({ w: 0, h: 0 });
   const [debugAutoBBox, setDebugAutoBBox] = useState<RawImageAutoCropResult["bbox"] | null>(null);
+  const [autoCropDebug, setAutoCropDebug] = useState<AutoCropDebugState | null>(null);
+  const activeAutoCropRunIdRef = useRef<string | null>(null);
 
   // Refs for native event listener
   const zoomRef = useRef(zoom);
@@ -262,84 +273,176 @@ export const CropCanvas: React.FC<CropCanvasProps> = ({
     }));
   }, [locked, cropBox]);
 
-  const autoDetectProduct = useCallback(async (currentCropBox?: CropBox) => {
+  const handleAutoCropResult = useCallback((
+    result: RawImageAutoCropResult,
+    currentCropBox?: CropBox,
+  ) => {
+    const isFallback = result.method === "fallback";
+  
+    const isWholeImage =
+      result.bbox.normalizedWidth > 0.92 &&
+      result.bbox.normalizedHeight > 0.92;
+  
+    const shouldApply =
+      !isFallback &&
+      !isWholeImage &&
+      result.confidence >= 0.45;
+  
+    setDebugAutoBBox(result.bbox);
+  
+    setAutoCropDebug({
+      confidence: result.confidence,
+      method: result.method,
+      warnings: result.warnings,
+      applied: shouldApply,
+      reason: shouldApply
+        ? "已应用主体 bbox"
+        : isFallback
+          ? "fallback：未应用，已完整适应原图"
+          : isWholeImage
+            ? "bbox 接近整图：未应用，已完整适应原图"
+            : "confidence 过低：未应用，已完整适应原图",
+      bbox: result.bbox,
+    });
+  
+    console.log("[CropCanvas] auto crop result", {
+      confidence: result.confidence,
+      method: result.method,
+      bbox: result.bbox,
+      normalized: {
+        x: result.bbox.normalizedX,
+        y: result.bbox.normalizedY,
+        w: result.bbox.normalizedWidth,
+        h: result.bbox.normalizedHeight,
+      },
+      warnings: result.warnings,
+      applied: shouldApply,
+    });
+  
+    if (shouldApply) {
+      applyAutoCropResult(result.bbox, currentCropBox);
+    } else {
+      fitProductToCropBox(currentCropBox);
+    }
+  }, [applyAutoCropResult, fitProductToCropBox]);
+
+  const autoDetectProduct = useCallback(async (currentCropBox?: CropBox, runId?: string) => {
     if (locked || isAutoCropping || !imgRef.current || !containerRef.current) return;
+
+    const currentRunId = runId || crypto.randomUUID();
+    activeAutoCropRunIdRef.current = currentRunId;
+
     setIsAutoCropping(true);
+
     try {
       const result = await calculateRawImageAutoCropBox(imageUrl, {
         paddingRatio: safetyPaddingRatio,
       });
-      console.log("[CropCanvas] auto crop result", {
-        confidence: result.confidence,
-        method: result.method,
-        bbox: result.bbox,
-        warnings: result.warnings,
-      });
-      if (result.confidence >= 0.6 && result.method !== "fallback") {
-        setDebugAutoBBox(result.bbox);
-        applyAutoCropResult(result.bbox, currentCropBox);
-      } else {
-        fitProductToCropBox(currentCropBox);
+
+      if (activeAutoCropRunIdRef.current !== currentRunId) {
+        return;
       }
+
+      handleAutoCropResult(result, currentCropBox);
       onAutoCropResult?.(result);
     } catch (err) {
-      console.warn("Auto crop failed:", err);
-      fitProductToCropBox(currentCropBox);
-      throw err;
+      if (activeAutoCropRunIdRef.current === currentRunId) {
+        const fallback = {
+          confidence: 0,
+          method: "fallback" as const,
+          warnings: [(err as Error).message || "自动识别异常"],
+          bbox: {
+            x: 0,
+            y: 0,
+            width: imageSize.w || 1,
+            height: imageSize.h || 1,
+            centerX: (imageSize.w || 1) / 2,
+            centerY: (imageSize.h || 1) / 2,
+            imageWidth: imageSize.w || 1,
+            imageHeight: imageSize.h || 1,
+            normalizedX: 0,
+            normalizedY: 0,
+            normalizedWidth: 1,
+            normalizedHeight: 1,
+            normalizedCenterX: 0.5,
+            normalizedCenterY: 0.5,
+          },
+        };
+
+        handleAutoCropResult(fallback, currentCropBox);
+        onAutoCropResult?.(fallback);
+      }
     } finally {
-      setIsAutoCropping(false);
-    }
-  }, [imageUrl, locked, isAutoCropping, safetyPaddingRatio, applyAutoCropResult, fitProductToCropBox, onAutoCropResult]);
-
-  useEffect(() => {
-    setLastAutoCroppedImageUrl("");
-  }, [imageUrl]);
-
-  useEffect(() => {
-    if (!locked && viewportSize.width > 0 && imgRef.current?.complete && imageUrl) {
-      if (imageUrl !== lastAutoCroppedImageUrl) {
-        const t = setTimeout(() => {
-          const cb = resetCanvasToFit();
-          if (!cb) return;
-
-          if (autoCropOnLoad) {
-            autoDetectProduct(cb)
-              .catch(() => fitProductToCropBox(cb))
-              .finally(() => setLastAutoCroppedImageUrl(imageUrl));
-          } else {
-            fitProductToCropBox(cb);
-            setLastAutoCroppedImageUrl(imageUrl);
-          }
-        }, 50);
-        return () => clearTimeout(t);
+      if (activeAutoCropRunIdRef.current === currentRunId) {
+        setIsAutoCropping(false);
       }
     }
-  }, [imageUrl, viewportSize.width, viewportSize.height, locked, autoCropOnLoad, lastAutoCroppedImageUrl, autoDetectProduct, resetCanvasToFit, fitProductToCropBox]);
+  }, [
+    imageUrl,
+    locked,
+    isAutoCropping,
+    safetyPaddingRatio,
+    imageSize.w,
+    imageSize.h,
+    handleAutoCropResult,
+    onAutoCropResult,
+  ]);
+
+  useEffect(() => {
+    if (locked) return;
+    if (!imageUrl) return;
+    if (!imgRef.current?.complete) return;
+    if (imageSize.w <= 0 || imageSize.h <= 0) return;
+    if (viewportSize.width <= 0 || viewportSize.height <= 0) return;
+    if (imageUrl === lastAutoCroppedImageUrl) return;
+  
+    const runId = crypto.randomUUID();
+    activeAutoCropRunIdRef.current = runId;
+  
+    const cb = resetCanvasToFit();
+    if (!cb) return;
+  
+    async function run() {
+      try {
+        if (autoCropOnLoad) {
+          await autoDetectProduct(cb, runId);
+        } else {
+          fitProductToCropBox(cb);
+        }
+      } finally {
+        if (activeAutoCropRunIdRef.current === runId) {
+          setLastAutoCroppedImageUrl(imageUrl);
+        }
+      }
+    }
+  
+    run();
+  }, [
+    imageUrl,
+    imageSize.w,
+    imageSize.h,
+    viewportSize.width,
+    viewportSize.height,
+    locked,
+    autoCropOnLoad,
+    lastAutoCroppedImageUrl,
+    resetCanvasToFit,
+    autoDetectProduct,
+    fitProductToCropBox,
+  ]);
 
   // Initialize bounds on image load
   const handleImageLoad = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
     const img = e.currentTarget;
-    setImageSize({ w: img.naturalWidth, h: img.naturalHeight });
+  
+    setImageSize({
+      w: img.naturalWidth,
+      h: img.naturalHeight,
+    });
+  
     setLastAutoCroppedImageUrl("");
     setDebugAutoBBox(null);
-
-    window.requestAnimationFrame(() => {
-      const cb = resetCanvasToFit();
-      if (!cb) return;
-
-      if (autoCropOnLoad) {
-        autoDetectProduct(cb)
-          .catch(() => {
-            fitProductToCropBox(cb);
-          })
-          .finally(() => {
-            setLastAutoCroppedImageUrl(imageUrl);
-          });
-      } else {
-        fitProductToCropBox(cb);
-        setLastAutoCroppedImageUrl(imageUrl);
-      }
-    });
+    setAutoCropDebug(null);
   };
 
   // Notify parent
@@ -601,7 +704,13 @@ export const CropCanvas: React.FC<CropCanvasProps> = ({
 
       {debugAutoBBox && (
         <div
-          className="pointer-events-none absolute border-2 border-yellow-400 z-10"
+          className={`pointer-events-none absolute border-2 z-10 ${
+            autoCropDebug?.applied
+              ? "border-yellow-400"
+              : autoCropDebug?.method === "fallback"
+                ? "border-red-400"
+                : "border-orange-400"
+          }`}
           style={{
             left: imageTransform.x + debugAutoBBox.x * imageTransform.scale,
             top: imageTransform.y + debugAutoBBox.y * imageTransform.scale,
@@ -681,6 +790,46 @@ export const CropCanvas: React.FC<CropCanvasProps> = ({
         </div>
       )}
 
+      {autoCropDebug && (
+        <div className="absolute top-4 right-4 z-20 bg-slate-900/90 backdrop-blur rounded-lg border border-slate-700 shadow-xl p-3 text-[10px] text-slate-300 pointer-events-none max-w-[220px]">
+          <div className="font-medium text-white mb-1 flex items-center justify-between">
+            <span>主体检测诊断</span>
+            <span className={`w-1.5 h-1.5 rounded-full ${autoCropDebug.applied ? 'bg-emerald-500' : 'bg-amber-500'}`} />
+          </div>
+          <div className="space-y-1">
+            <div className="flex justify-between">
+              <span className="text-slate-400">状态:</span>
+              <span className={autoCropDebug.applied ? "text-emerald-400" : "text-amber-400"}>
+                {autoCropDebug.applied ? "已应用" : "未应用"}
+              </span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-slate-400">模式:</span>
+              <span>{autoCropDebug.method}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-slate-400">置信度:</span>
+              <span>{(autoCropDebug.confidence * 100).toFixed(1)}%</span>
+            </div>
+            <div className="break-words mt-1 pt-1 border-t border-slate-700/50 text-amber-200 leading-tight">
+              {autoCropDebug.reason}
+            </div>
+            {autoCropDebug.warnings.length > 0 && (
+              <div className="mt-1 pt-1 border-t border-slate-700/50">
+                {autoCropDebug.warnings.map((w, i) => (
+                  <div key={i} className="text-rose-400 leading-tight mb-0.5">• {w}</div>
+                ))}
+              </div>
+            )}
+            <div className="text-[9px] text-slate-500 font-mono mt-1 pt-1 border-t border-slate-700/50">
+              h: {(autoCropDebug.bbox.normalizedHeight * 100).toFixed(1)}%
+              <br/>
+              w: {(autoCropDebug.bbox.normalizedWidth * 100).toFixed(1)}%
+            </div>
+          </div>
+        </div>
+      )}
+
       {isReady && (
         <div 
           className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-3 bg-slate-900/90 backdrop-blur text-white px-4 py-2 rounded-full border border-slate-700 shadow-xl z-20"
@@ -724,16 +873,22 @@ export const CropCanvas: React.FC<CropCanvasProps> = ({
             onClick={(e) => {
               e.stopPropagation();
               if (locked || isAutoCropping) return;
+              
+              const runId = crypto.randomUUID();
+              activeAutoCropRunIdRef.current = runId;
+              
               setDebugAutoBBox(null);
+              setAutoCropDebug(null);
+              
               const currentCropBox = cropBoxRef.current;
               if (!currentCropBox || currentCropBox.width <= 0) {
                 const cb = resetCanvasToFit();
                 if (cb) {
-                  autoDetectProduct(cb);
+                  autoDetectProduct(cb, runId);
                 }
                 return;
               }
-              autoDetectProduct(currentCropBox);
+              autoDetectProduct(currentCropBox, runId);
             }}
             title="自动识别产品"
             className={`flex items-center gap-1 p-1.5 rounded transition-colors ${locked || isAutoCropping ? 'text-slate-600 cursor-not-allowed' : 'text-slate-300 hover:text-white hover:bg-slate-800'}`}
@@ -782,9 +937,14 @@ export const CropCanvas: React.FC<CropCanvasProps> = ({
               if (locked) return;
               setLastAutoCroppedImageUrl("");
               setDebugAutoBBox(null);
+              setAutoCropDebug(null);
+              
+              const runId = crypto.randomUUID();
+              activeAutoCropRunIdRef.current = runId;
+              
               const cb = resetCanvasToFit();
               if (autoCropOnLoad && cb) {
-                autoDetectProduct(cb);
+                autoDetectProduct(cb, runId);
               } else if (cb) {
                 fitProductToCropBox(cb);
               }

@@ -269,7 +269,7 @@ export function calculateRawImageAutoCropBox(
           return;
         }
 
-        if (bboxAreaRatio > 0.92) {
+        if (bboxAreaRatio > 0.97) {
           warnings.push("识别区域接近整图，自动识别无效");
           resolve(fallbackResult(originalWidth, originalHeight, warnings));
           return;
