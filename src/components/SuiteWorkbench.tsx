@@ -41,6 +41,8 @@ import { PRESET_TEMPLATE_SUITES, PRESET_PRODUCT_ASSET_PACKS } from "../data";
 import { renderFullPreviewImage } from "../utils/renderTemplate";
 import { LayeredCanvasWorkbench } from "./LayeredCanvasWorkbench";
 import { getSuiteDeliveryCompleteness } from "../utils/businessRuleHelpers";
+import { createGeneratedPagesFromSuite } from "../utils/projectPageFactory";
+import { EXPORT_FOLDER_NAMES, ExportFolderKey } from "../domain/calendarTaxonomy";
 
 interface SuiteWorkbenchProps {
   products: Product[];
@@ -110,24 +112,13 @@ export const SuiteWorkbench: React.FC<SuiteWorkbenchProps> = ({
   useEffect(() => {
     if (projects.length === 0 && assetPacks.length > 0 && suites.length > 0) {
       const defaultPack = assetPacks[0];
-      const defaultSuite = suites[0];
+      const defaultSuite = PRESET_TEMPLATE_SUITES[0] || suites[0];
 
-      // Auto-matching algorithm for demo project
-      const demoPages: GeneratedPage[] = defaultSuite.pages.map((page, index) => {
-        const assignedIds = autoMatchAssetForPageType(page.pageType, defaultPack.assets);
-        return {
-          id: `gp_${Date.now()}_${index}`,
-          projectId: "project_demo_01",
-          templateSuiteId: defaultSuite.id,
-          templatePageId: page.id,
-          templateId: page.templateId,
-          pageType: page.pageType,
-          productId: defaultPack.productId,
-          assignedAssetIds: assignedIds,
-          fileUrl: "", // initially unrendered to allow clicking "Render Base Image"
-          status: assignedIds.length > 0 ? "base_ready" : "needs_adjustment",
-          order: page.order
-        };
+      const demoPages = createGeneratedPagesFromSuite({
+        projectId: "project_demo_01",
+        suite: defaultSuite,
+        productPack: defaultPack,
+        templates
       });
 
       const demoProject: GenerationProject = {
@@ -144,7 +135,7 @@ export const SuiteWorkbench: React.FC<SuiteWorkbenchProps> = ({
       setProjects([demoProject]);
       setSelectedProjectId(demoProject.id);
     }
-  }, [assetPacks, suites]);
+  }, [assetPacks, suites, templates]);
 
   // Automated Matching Helper
   function autoMatchAssetForPageType(pageType: TemplatePageType, assets: ProductAsset[]): string[] {
@@ -249,20 +240,11 @@ export const SuiteWorkbench: React.FC<SuiteWorkbenchProps> = ({
     if (!pack || !suite) return;
 
     const projectId = `proj_${Date.now()}`;
-    const generatedPages: GeneratedPage[] = suite.pages.map((page, index) => {
-      const assignedIds = autoMatchAssetForPageType(page.pageType, pack.assets);
-      return {
-        id: `gp_${Date.now()}_${index}`,
-        projectId,
-        templateSuiteId: suite.id,
-        templatePageId: page.id,
-        templateId: page.templateId,
-        pageType: page.pageType,
-        productId: pack.productId,
-        assignedAssetIds: assignedIds,
-        status: assignedIds.length > 0 ? "base_ready" : "needs_adjustment",
-        order: page.order
-      };
+    const generatedPages = createGeneratedPagesFromSuite({
+      projectId,
+      suite,
+      productPack: pack,
+      templates
     });
 
     const newProject: GenerationProject = {
@@ -357,20 +339,15 @@ export const SuiteWorkbench: React.FC<SuiteWorkbenchProps> = ({
     const suite = suites.find((s) => s.id === suiteId);
     if (!suite) return;
 
-    const newPages: GeneratedPage[] = suite.pages.map((page, index) => {
-      const assignedIds = autoMatchAssetForPageType(page.pageType, activePack.assets);
-      return {
-        id: `gp_swap_${Date.now()}_${index}`,
-        projectId: activeProject.id,
-        templateSuiteId: suite.id,
-        templatePageId: page.id,
-        templateId: page.templateId,
-        pageType: page.pageType,
-        productId: activePack.productId,
-        assignedAssetIds: assignedIds,
-        status: assignedIds.length > 0 ? "base_ready" : "needs_adjustment",
-        order: page.order
-      };
+    if (!window.confirm("切换套系会重新生成页面清单，原页面调整可能需要重新确认。")) {
+      return;
+    }
+
+    const newPages = createGeneratedPagesFromSuite({
+      projectId: activeProject.id,
+      suite,
+      productPack: activePack,
+      templates
     });
 
     setProjects((prev) =>
@@ -995,6 +972,19 @@ export const SuiteWorkbench: React.FC<SuiteWorkbenchProps> = ({
                 {activeProject.pages.map((page, pIdx) => {
                   const targetTemplate = templates.find((t) => t.id === page.templateId);
                   
+                  const matchingTp = activeSuite?.pages.find((tp) => tp.id === page.templatePageId);
+                  const pageAny = page as any;
+                  const resolvedPageName = pageAny.pageName || matchingTp?.pageName || "单页";
+                  const resolvedOutputFolder = pageAny.outputFolder || matchingTp?.outputFolder;
+                  const resolvedPageRole = pageAny.pageRole || matchingTp?.pageRole;
+                  const resolvedBusinessRatioType = pageAny.businessRatioType || matchingTp?.businessRatioType;
+                  const resolvedActualAspectRatio = pageAny.actualAspectRatio || matchingTp?.actualAspectRatio || "1:1";
+                  const resolvedIsRunningHub = pageAny.isRunningHubRecommended !== undefined ? pageAny.isRunningHubRecommended : matchingTp?.isRunningHubRecommended;
+                  const resolvedIsCanvasOnly = pageAny.isCanvasOnly !== undefined ? pageAny.isCanvasOnly : matchingTp?.isCanvasOnly;
+                  const resolvedIsDeliverable = pageAny.isDeliverable !== undefined ? pageAny.isDeliverable : matchingTp?.isDeliverable;
+
+                  const folderName = resolvedOutputFolder ? (EXPORT_FOLDER_NAMES[resolvedOutputFolder as ExportFolderKey] || resolvedOutputFolder) : "未分类";
+                  
                   return (
                     <div
                       key={page.id}
@@ -1005,7 +995,7 @@ export const SuiteWorkbench: React.FC<SuiteWorkbenchProps> = ({
                         {page.fileUrl ? (
                           <img
                             src={page.fileUrl}
-                            alt={page.pageName}
+                            alt={resolvedPageName}
                             className="w-full h-full object-contain"
                             referrerPolicy="no-referrer"
                           />
@@ -1034,12 +1024,47 @@ export const SuiteWorkbench: React.FC<SuiteWorkbenchProps> = ({
                       <div className="flex-1 space-y-4 text-left">
                         <div className="flex flex-col md:flex-row justify-between items-start md:items-center border-b pb-2 gap-2">
                           <div>
-                            <span className="text-[10px] font-extrabold uppercase tracking-wider text-indigo-700 bg-indigo-50 px-2.5 py-0.5 rounded">
-                              {page.pageType.toUpperCase()}
-                            </span>
+                            <div className="flex flex-wrap items-center gap-1.5">
+                              <span className="text-[10px] font-extrabold uppercase tracking-wider text-indigo-700 bg-indigo-50 px-2.5 py-0.5 rounded">
+                                {page.pageType.toUpperCase()}
+                              </span>
+                              {page.reviewNote === "根据套系最低交付规则自动补齐" && (
+                                <span className="text-[9px] font-bold text-amber-700 bg-amber-50 border border-amber-200 px-1.5 py-0.2 rounded">
+                                  🤖 自动补齐清单项
+                                </span>
+                              )}
+                            </div>
                             <h4 className="text-sm font-black text-slate-900 mt-1.5">
-                              {page.pageName}
+                              {resolvedPageName}
                             </h4>
+                            
+                            {/* Metadata Badges list */}
+                            <div className="flex flex-wrap gap-1.5 mt-2 text-[10px]">
+                              <span className="bg-slate-100 text-slate-700 px-2 py-0.5 rounded font-medium">
+                                目录: {folderName} ({resolvedOutputFolder})
+                              </span>
+                              {resolvedPageRole && (
+                                <span className="bg-indigo-50/70 text-indigo-700 px-2 py-0.5 rounded font-mono">
+                                  角色: {resolvedPageRole}
+                                </span>
+                              )}
+                              {resolvedBusinessRatioType && (
+                                <span className="bg-amber-50 text-amber-800 px-2 py-0.5 rounded">
+                                  比例类型: {resolvedBusinessRatioType} ({resolvedActualAspectRatio})
+                                </span>
+                              )}
+                              <span className={`px-2 py-0.5 rounded font-bold ${resolvedIsDeliverable ? "bg-emerald-50 text-emerald-700" : "bg-gray-100 text-gray-500"}`}>
+                                {resolvedIsDeliverable ? "正式主干交付页" : "设计辅页"}
+                              </span>
+                              <span className={`px-2 py-0.5 rounded font-bold ${resolvedIsCanvasOnly ? "bg-purple-50 text-purple-700" : "bg-blue-50 text-blue-700"}`}>
+                                {resolvedIsCanvasOnly ? "仅Canvas排版层" : "AI融合工作流"}
+                              </span>
+                              {resolvedIsRunningHub && (
+                                <span className="bg-rose-50 text-rose-700 px-2 py-0.5 rounded font-black">
+                                  ⚡ 推荐 RunningHub 渲染
+                                </span>
+                              )}
+                            </div>
                           </div>
 
                           <div className="flex items-center space-x-2">
@@ -1407,6 +1432,8 @@ const SuitePreview: React.FC<SuitePreviewProps> = ({
 
                 // prioritize: finalCompositeUrl -> aiFusionUrl -> fileUrl
                 const displayUrl = page.finalCompositeUrl || page.aiFusionUrl || page.fileUrl;
+                const pageAny = page as any;
+                const resolvedPageName = pageAny.pageName || "单页";
 
                 return (
                   <div
@@ -1416,11 +1443,11 @@ const SuitePreview: React.FC<SuitePreviewProps> = ({
                     {/* Top Canvas aspect square placeholder */}
                     <div className="aspect-square bg-slate-50 border-b relative flex items-center justify-center p-4">
                       {displayUrl ? (
-                        <img
-                          src={displayUrl}
-                          alt={page.pageName}
-                          className="w-full h-full object-contain max-h-80"
-                        />
+                         <img
+                           src={displayUrl}
+                           alt={resolvedPageName}
+                           className="w-full h-full object-contain max-h-80"
+                         />
                       ) : (
                         <div className="text-center p-6 space-y-2">
                           <Eye className="w-8 h-8 text-slate-305 mx-auto" />
@@ -1444,7 +1471,7 @@ const SuitePreview: React.FC<SuitePreviewProps> = ({
                       <div className="space-y-1">
                         <span className="text-[10px] text-indigo-600 font-bold">{page.pageType}</span>
                         <h4 className="text-xs font-black text-slate-900 leading-tight">
-                          {page.pageName}
+                          {resolvedPageName}
                         </h4>
                         <div className="flex items-center space-x-1.5 text-[11px] text-slate-400 pt-1">
                           <span>模板: {targetTemplate?.templateName || "未选"}</span>
