@@ -49,16 +49,20 @@ export const WhiteBgRefine: React.FC<WhiteBgRefineProps> = ({
   const [activeProductId, setActiveProductId] = useState<string>("");
 
   useEffect(() => {
-    if (selectedProductFromLib) {
-      setActiveProductId(selectedProductFromLib.id);
-    } else if (products.length > 0) {
-      // Prioritize raw products first
+    if (selectedProductFromLib?.id) {
+      setActiveProductId((prev) =>
+        prev === selectedProductFromLib.id ? prev : selectedProductFromLib.id,
+      );
+      return;
+    }
+
+    if (!activeProductId && products.length > 0) {
       const raw = products.find(
         (p) => p.status === "raw" || p.status === "white_bg_done",
       );
       setActiveProductId(raw ? raw.id : products[0].id);
     }
-  }, [selectedProductFromLib, products]);
+  }, [selectedProductFromLib?.id, products.length, activeProductId]);
 
   // Core configs requested by user
   const [outputPng, setOutputPng] = useState(true);
@@ -103,7 +107,19 @@ export const WhiteBgRefine: React.FC<WhiteBgRefineProps> = ({
   const selectedProduct =
     products.find((p) => p.id === activeProductId) || products[0];
 
+  const prevActiveProductIdRef = useRef<string | null>(null);
+
   useEffect(() => {
+    if (!activeProductId) return;
+
+    const prevId = prevActiveProductIdRef.current;
+
+    if (prevId === activeProductId) {
+      return;
+    }
+
+    prevActiveProductIdRef.current = activeProductId;
+
     // Reset state when product changes
     setUploadedRawUrl("");
     setMattingResultUrl("");
@@ -165,6 +181,11 @@ export const WhiteBgRefine: React.FC<WhiteBgRefineProps> = ({
     reader.onload = (event) => {
       const dataUrl = event.target?.result as string;
       setUploadedRawUrl(dataUrl);
+
+      console.log("[WhiteBgRefine] uploaded raw image loaded", {
+        productId: selectedProduct?.id,
+        size: dataUrl.length,
+      });
 
       // Reset previous results for clean state
       setMattingResultUrl("");

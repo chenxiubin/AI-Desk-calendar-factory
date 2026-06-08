@@ -129,18 +129,38 @@ export const CropCanvas: React.FC<CropCanvasProps> = ({
     if (viewportWidth === 0 || viewportHeight === 0 || naturalWidth === 0 || naturalHeight === 0) return;
 
     const cropSize = Math.min(viewportWidth, viewportHeight) * 0.78;
-    const newCropBox = {
+    
+    const nextCropBox = {
       x: (viewportWidth - cropSize) / 2,
       y: (viewportHeight - cropSize) / 2,
       width: cropSize,
       height: cropSize,
     };
 
+    const safeSize = cropSize * 0.84;
+
+    const nextBaseScale = Math.min(
+      safeSize / naturalWidth,
+      safeSize / naturalHeight,
+    );
+
+    const displayWidth = naturalWidth * nextBaseScale;
+    const displayHeight = naturalHeight * nextBaseScale;
+
+    const nextImageTransform = {
+      x: nextCropBox.x + (nextCropBox.width - displayWidth) / 2,
+      y: nextCropBox.y + (nextCropBox.height - displayHeight) / 2,
+      scale: nextBaseScale,
+    };
+
     setViewportSize({ width: viewportWidth, height: viewportHeight });
-    setCropBox(newCropBox);
+    setCropBox(nextCropBox);
+    setBaseScale(nextBaseScale);
+    setZoom(1);
+    setImageTransform(nextImageTransform);
     setIsReady(true);
     
-    return newCropBox;
+    return nextCropBox;
   }, []);
 
   const applyAutoCropResult = useCallback((bbox: RawImageAutoCropResult["bbox"], overrideCropBox?: CropBox) => {
@@ -225,7 +245,11 @@ export const CropCanvas: React.FC<CropCanvasProps> = ({
   }, [imageUrl, locked, isAutoCropping, safetyPaddingRatio, applyAutoCropResult, fitProductToCropBox, onAutoCropResult]);
 
   useEffect(() => {
-    if (!locked && viewportSize.width > 0 && imgRef.current?.complete) {
+    setLastAutoCroppedImageUrl("");
+  }, [imageUrl]);
+
+  useEffect(() => {
+    if (!locked && viewportSize.width > 0 && imgRef.current?.complete && imageUrl) {
       if (imageUrl !== lastAutoCroppedImageUrl) {
         const t = setTimeout(() => {
           const cb = resetCanvasToFit();
@@ -233,15 +257,13 @@ export const CropCanvas: React.FC<CropCanvasProps> = ({
             setLastAutoCroppedImageUrl(imageUrl);
             if (autoCropOnLoad) {
               autoDetectProduct(cb);
-            } else {
-              fitProductToCropBox(cb);
             }
           }
         }, 50);
         return () => clearTimeout(t);
       }
     }
-  }, [imageUrl, viewportSize.width, viewportSize.height, locked, autoCropOnLoad, lastAutoCroppedImageUrl, autoDetectProduct, fitProductToCropBox, resetCanvasToFit]);
+  }, [imageUrl, viewportSize.width, viewportSize.height, locked, autoCropOnLoad, lastAutoCroppedImageUrl, autoDetectProduct, resetCanvasToFit]);
 
   // Initialize bounds on image load
   const handleImageLoad = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
@@ -251,9 +273,8 @@ export const CropCanvas: React.FC<CropCanvasProps> = ({
       if (cb) {
         setLastAutoCroppedImageUrl(imageUrl);
         if (autoCropOnLoad) {
+          // autoDetectProduct is async and will run after the canvas is fitted
           autoDetectProduct(cb);
-        } else {
-          fitProductToCropBox(cb);
         }
       }
     }
