@@ -123,19 +123,22 @@ export async function renderCropCanvasToDataUrl(params: {
         return reject(new Error("Failed to create canvas context"));
       }
 
+      if (Math.abs(cropBox.width - cropBox.height) > 1) {
+        return reject(new Error("裁剪输入必须为 1:1 方形，不能使用非等比裁剪框。"));
+      }
+
       // Fill background
       ctx.fillStyle = backgroundColor;
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-      const scaleX = targetSize / cropBox.width;
-      const scaleY = targetSize / cropBox.height;
+      const scaleToOutput = targetSize / cropBox.width;
 
       // Calculate where the original image should be drawn in the targeted canvas
       // imageTransform.x/y is the top-left of the image in the viewport
-      const dx = (imageTransform.x - cropBox.x) * scaleX;
-      const dy = (imageTransform.y - cropBox.y) * scaleY;
-      const dw = img.naturalWidth * imageTransform.scale * scaleX;
-      const dh = img.naturalHeight * imageTransform.scale * scaleY;
+      const dx = (imageTransform.x - cropBox.x) * scaleToOutput;
+      const dy = (imageTransform.y - cropBox.y) * scaleToOutput;
+      const dw = img.naturalWidth * imageTransform.scale * scaleToOutput;
+      const dh = img.naturalHeight * imageTransform.scale * scaleToOutput;
 
       ctx.drawImage(img, dx, dy, dw, dh);
       resolve(canvas.toDataURL(mimeType, quality));

@@ -100,6 +100,24 @@ export const WhiteBgRefine: React.FC<WhiteBgRefineProps> = ({
   const selectedProduct =
     products.find((p) => p.id === activeProductId) || products[0];
 
+  useEffect(() => {
+    // Reset state when product changes
+    setUploadedRawUrl("");
+    setMattingResultUrl("");
+    setWhiteBgResultUrl("");
+    setMaskResultUrl("");
+    setMattingStatus("idle");
+    setMattingProgress(0);
+    setMattingError("");
+    setPreviewMode("raw");
+    setBoundingBox(null);
+    setCropCanvasState(null);
+    setConfirmedCropInputUrl("");
+    setIsCropConfirmed(false);
+    setIsCanvasLocked(false);
+    setIsCropPreviewApproved(false);
+  }, [activeProductId]);
+
   // Retrieve the preset matting workflow configuration
   const mattingWorkflow = PRESET_RUNNINGHUB_WORKFLOWS.find(
     (w) => w.id === "rh_matting_cutout",
@@ -158,6 +176,8 @@ export const WhiteBgRefine: React.FC<WhiteBgRefineProps> = ({
       setCropCanvasState(null);
       setConfirmedCropInputUrl("");
       setIsCropConfirmed(false);
+      setIsCanvasLocked(false);
+      setIsCropPreviewApproved(false);
     };
     reader.readAsDataURL(file);
   };
@@ -225,9 +245,12 @@ export const WhiteBgRefine: React.FC<WhiteBgRefineProps> = ({
     return preferred?.fileUrl || "";
   };
 
+  const sourceImageUrl = selectedProduct
+    ? getMattingSourceImage(selectedProduct, uploadedRawUrl)
+    : "";
+
   const handleConfirmCrop = async () => {
     if (!selectedProduct) return;
-    const sourceImageUrl = getMattingSourceImage(selectedProduct, uploadedRawUrl);
 
     if (!sourceImageUrl) {
       setMattingError("请先上传或选择原始实拍图。");
@@ -236,6 +259,11 @@ export const WhiteBgRefine: React.FC<WhiteBgRefineProps> = ({
 
     if (!cropCanvasState) {
       setMattingError("请先在裁剪画布中调整裁剪区域。");
+      return;
+    }
+    
+    if (Math.abs(cropCanvasState.cropBox.width - cropCanvasState.cropBox.height) > 1) {
+      setMattingError("抠图输入必须为 1:1 方形，请开启锁定 1:1 或调整为正方形后再确认。");
       return;
     }
 
@@ -268,6 +296,7 @@ export const WhiteBgRefine: React.FC<WhiteBgRefineProps> = ({
     setIsCropPreviewApproved(false);
     setConfirmedCropInputUrl("");
     setMattingError("");
+    setPreviewMode("raw");
   };
 
   const handleApproveCropPreview = () => {
@@ -487,11 +516,7 @@ export const WhiteBgRefine: React.FC<WhiteBgRefineProps> = ({
   // Determine current active display candidate
   let displayUrl = "";
   if (previewMode === "raw") {
-    displayUrl =
-      uploadedRawUrl ||
-      selectedProduct?.assets?.find((a) => a.assetType === "transparent_png")
-        ?.fileUrl ||
-      "";
+    displayUrl = sourceImageUrl;
   } else if (previewMode === "png") {
     displayUrl =
       mattingResultUrl ||
@@ -981,7 +1006,7 @@ export const WhiteBgRefine: React.FC<WhiteBgRefineProps> = ({
               </div>
             )}
 
-            {!isCropConfirmed && uploadedRawUrl && previewMode === "raw" && (
+            {!isCropConfirmed && sourceImageUrl && previewMode === "raw" && (
                 <button
                 onClick={handleConfirmCrop}
                 className="w-full bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold py-3 px-4 rounded-lg shadow transition-colors flex items-center justify-center space-x-2"
@@ -1182,13 +1207,13 @@ export const WhiteBgRefine: React.FC<WhiteBgRefineProps> = ({
             onClick={handleStartMatting}
             disabled={
               isPending ||
-              (!uploadedRawUrl && !selectedProduct) ||
+              !sourceImageUrl ||
               !isCropConfirmed ||
               !isCropPreviewApproved ||
               !isWorkflowConfigured
             }
             className={`w-full mt-4 font-bold py-2.5 px-4 rounded-xl text-xs flex items-center justify-center space-x-1.5 shadow transition-all duration-300 active:scale-[0.98] ${
-              isPending || (!uploadedRawUrl && !selectedProduct) || !isCropConfirmed || !isCropPreviewApproved || !isWorkflowConfigured
+              isPending || !sourceImageUrl || !isCropConfirmed || !isCropPreviewApproved || !isWorkflowConfigured
                 ? "bg-slate-200 text-slate-400 cursor-not-allowed"
                 : "bg-blue-650 hover:bg-blue-700 text-white"
             }`}
@@ -1197,7 +1222,7 @@ export const WhiteBgRefine: React.FC<WhiteBgRefineProps> = ({
             <span>
               {isPending
                 ? "抠图执行中..."
-                : (!uploadedRawUrl && !selectedProduct)
+                : !sourceImageUrl
                 ? "请先上传或选择原始图"
                 : !isCropConfirmed
                 ? "请先确认裁剪"
