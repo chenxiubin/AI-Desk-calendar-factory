@@ -22,6 +22,75 @@ export type RawImageAutoCropResult = {
   warnings: string[];
 };
 
+type ComponentBox = {
+  area: number;
+  minX: number;
+  minY: number;
+  maxX: number;
+  maxY: number;
+};
+
+function findConnectedComponents(
+  mask: Uint8Array,
+  width: number,
+  height: number
+): ComponentBox[] {
+  const visited = new Uint8Array(width * height);
+  const components: ComponentBox[] = [];
+  const queue: number[] = [];
+
+  for (let start = 0; start < mask.length; start++) {
+    if (!mask[start] || visited[start]) continue;
+
+    visited[start] = 1;
+    queue.length = 0;
+    queue.push(start);
+
+    let area = 0;
+    let minX = width;
+    let minY = height;
+    let maxX = 0;
+    let maxY = 0;
+    let head = 0;
+
+    while (head < queue.length) {
+      const idx = queue[head++];
+      const x = idx % width;
+      const y = Math.floor(idx / width);
+
+      area++;
+      if (x < minX) minX = x;
+      if (x > maxX) maxX = x;
+      if (y < minY) minY = y;
+      if (y > maxY) maxY = y;
+
+      const neighbors = [
+        idx - 1,
+        idx + 1,
+        idx - width,
+        idx + width,
+      ];
+
+      for (const next of neighbors) {
+        if (next < 0 || next >= mask.length) continue;
+
+        const nx = next % width;
+        const ny = Math.floor(next / width);
+
+        if (Math.abs(nx - x) + Math.abs(ny - y) !== 1) continue;
+        if (!mask[next] || visited[next]) continue;
+
+        visited[next] = 1;
+        queue.push(next);
+      }
+    }
+
+    components.push({ area, minX, minY, maxX, maxY });
+  }
+
+  return components;
+}
+
 export function calculateRawImageAutoCropBox(
   imageUrl: string,
   options?: {
@@ -152,78 +221,7 @@ export function calculateRawImageAutoCropBox(
         let maxY = 0;
         let actualForeground = 0;
 
-        // Connected Components
-        const components: { minX: number, minY: number, maxX: number, maxY: number, area: number }[] = [];
-        const visited = new Uint8Array(totalPixels);
-
-        // Simple arrays for BFS queue instead of Array.prototype.shift() which is slow on large arrays.
-        // We can preallocate a large enough array based on the image size.
-        const q = new Int32Array(totalPixels);
-        let qHead = 0;
-        let qTail = 0;
-
-        for (let y = 0; y < detectHeight; y++) {
-          for (let x = 0; x < detectWidth; x++) {
-            const idx = y * detectWidth + x;
-            if (isForeground[idx] && !visited[idx]) {
-              let compMinX = x;
-              let compMaxX = x;
-              let compMinY = y;
-              let compMaxY = y;
-              let area = 0;
-
-              qHead = 0;
-              qTail = 0;
-              q[qTail++] = idx;
-              visited[idx] = 1;
-
-              while(qHead < qTail) {
-                const cur = q[qHead++];
-                const cy = Math.floor(cur / detectWidth);
-                const cx = cur % detectWidth;
-
-                area++;
-                if (cx < compMinX) compMinX = cx;
-                if (cx > compMaxX) compMaxX = cx;
-                if (cy < compMinY) compMinY = cy;
-                if (cy > compMaxY) compMaxY = cy;
-
-                // Neighbors
-                if (cx > 0) {
-                  const nidx = cy * detectWidth + (cx - 1);
-                  if (isForeground[nidx] && !visited[nidx]) {
-                    visited[nidx] = 1;
-                    q[qTail++] = nidx;
-                  }
-                }
-                if (cx < detectWidth - 1) {
-                  const nidx = cy * detectWidth + (cx + 1);
-                  if (isForeground[nidx] && !visited[nidx]) {
-                    visited[nidx] = 1;
-                    q[qTail++] = nidx;
-                  }
-                }
-                if (cy > 0) {
-                  const nidx = (cy - 1) * detectWidth + cx;
-                  if (isForeground[nidx] && !visited[nidx]) {
-                    visited[nidx] = 1;
-                    q[qTail++] = nidx;
-                  }
-                }
-                if (cy < detectHeight - 1) {
-                  const nidx = (cy + 1) * detectWidth + cx;
-                  if (isForeground[nidx] && !visited[nidx]) {
-                    visited[nidx] = 1;
-                    q[qTail++] = nidx;
-                  }
-                }
-              }
-
-              components.push({ minX: compMinX, minY: compMinY, maxX: compMaxX, maxY: compMaxY, area });
-            }
-          }
-        }
-
+        const components = findConnectedComponents(isForeground, detectWidth, detectHeight);
         components.sort((a, b) => b.area - a.area);
 
         const minArea = Math.max(16, totalPixels * 0.0005);
