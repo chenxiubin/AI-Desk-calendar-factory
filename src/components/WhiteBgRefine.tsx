@@ -188,7 +188,9 @@ export const WhiteBgRefine: React.FC<WhiteBgRefineProps> = ({
   ): Promise<string> => {
     return new Promise((resolve, reject) => {
       const img = new window.Image();
-      img.crossOrigin = "anonymous";
+      if (!transparentPngUrl.startsWith("data:")) {
+        img.crossOrigin = "anonymous";
+      }
       img.onload = () => {
         try {
           const canvas = document.createElement("canvas");
@@ -780,6 +782,7 @@ export const WhiteBgRefine: React.FC<WhiteBgRefineProps> = ({
                 {previewMode === "raw" ? (
                   <div className="absolute inset-0">
                     <CropCanvas
+                      key={displayUrl}
                       imageUrl={displayUrl}
                       targetSize={targetSize}
                       cropAspectLocked={cropAspectLocked}
@@ -815,7 +818,7 @@ export const WhiteBgRefine: React.FC<WhiteBgRefineProps> = ({
                     src={displayUrl}
                     alt={previewMode}
                     className="max-w-full max-h-[350px] object-contain transition-all duration-300 rounded shadow-lg bg-transparent"
-                    crossOrigin="anonymous"
+                    crossOrigin={displayUrl.startsWith("data:") ? undefined : "anonymous"}
                   />
                 )}
                 <div className="absolute top-2 left-2 bg-slate-900/90 text-white text-[9px] px-2 py-0.5 rounded border border-slate-700 font-mono z-10">

@@ -20,7 +20,9 @@ export const calculateTransparentImageBoundingBox = async (
 ): Promise<BoundingBoxInfo> => {
   return new Promise((resolve, reject) => {
     const img = new Image();
-    img.crossOrigin = "anonymous";
+    if (!imageUrl.startsWith("data:")) {
+      img.crossOrigin = "anonymous";
+    }
     img.onload = () => {
       const canvas = document.createElement("canvas");
       canvas.width = img.width;
@@ -113,7 +115,9 @@ export async function renderCropCanvasToDataUrl(params: {
     } = params;
 
     const img = new window.Image();
-    img.crossOrigin = "anonymous";
+    if (!imageUrl.startsWith("data:")) {
+      img.crossOrigin = "anonymous";
+    }
     img.onload = () => {
       const canvas = document.createElement("canvas");
       canvas.width = targetSize;
