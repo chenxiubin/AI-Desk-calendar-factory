@@ -264,7 +264,7 @@ export const CropCanvas: React.FC<CropCanvasProps> = ({
         onLoad={handleImageLoad}
         crossOrigin="anonymous"
         draggable={false}
-        className="absolute origin-top-left will-change-transform"
+        className="absolute origin-top-left will-change-transform max-w-none max-h-none"
         style={{
           transform: `translate(${imageTransform.x}px, ${imageTransform.y}px) scale(${imageTransform.scale})`,
           opacity: isReady ? 1 : 0
