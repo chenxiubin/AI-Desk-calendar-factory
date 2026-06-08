@@ -109,10 +109,16 @@ export function getPageExportFolder(
 /**
  * 将页面按导出文件夹顺序进行分组
  */
-export function groupPagesByExportFolder<T extends GeneratedPage | TemplatePage>(
+export function groupPagesByExportFolder<
+  T extends GeneratedPage | TemplatePage
+>(
   pages: T[],
   suite?: TemplateSuite | null
-) {
+): Array<{
+  folderKey: ExportFolderKey | "unclassified";
+  folderName: string;
+  pagesList: T[];
+}> {
   const folderOrder: (ExportFolderKey | "unclassified")[] = [
     ExportFolderKey.main_square,
     ExportFolderKey.main_vertical,
