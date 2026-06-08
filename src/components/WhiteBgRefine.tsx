@@ -77,7 +77,7 @@ export const WhiteBgRefine: React.FC<WhiteBgRefineProps> = ({
     "raw" | "png" | "white_bg" | "mask"
   >("raw");
 
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const selectedProduct =
     products.find((p) => p.id === activeProductId) || products[0];
@@ -174,32 +174,31 @@ export const WhiteBgRefine: React.FC<WhiteBgRefineProps> = ({
     });
   };
 
-  const getMattingSourceImage = (product: Product): string => {
+  const getMattingSourceImage = (
+    product: Product,
+    uploadedRawUrl: string
+  ): string => {
     if (uploadedRawUrl) return uploadedRawUrl;
 
-    if (!product.assets || product.assets.length === 0) return "";
+    const excludedAssetTypes = new Set(["transparent_png", "white_bg", "mask"]);
+    const excludedAssetRoles = new Set(["transparent_png", "white_bg", "mask"]);
 
-    const excludedTypes = ["transparent_png", "white_bg", "mask"];
-    const validAssets = product.assets.filter(
-      (a) =>
-        !excludedTypes.includes(a.assetType || "") &&
-        !excludedTypes.includes(a.assetRole || "") &&
-        a.fileUrl &&
-        a.fileUrl.startsWith("http")
-    );
+    const priorityAssets = product.assets?.filter((asset) => {
+      if (!asset.fileUrl) return false;
+      if (asset.assetType && excludedAssetTypes.has(asset.assetType)) return false;
+      if (asset.assetRole && excludedAssetRoles.has(asset.assetRole)) return false;
+      return true;
+    }) || [];
 
-    if (validAssets.length === 0) return "";
+    const preferred =
+      priorityAssets.find((a) => a.assetType === "raw") ||
+      priorityAssets.find((a) => a.assetType === "photo") ||
+      priorityAssets.find((a) => a.assetRole === "main_product") ||
+      priorityAssets.find((a) => a.assetRole === "front") ||
+      priorityAssets.find((a) => a.assetRole === "sku_product") ||
+      priorityAssets[0];
 
-    // Priority ordering
-    const rawAsset = validAssets.find((a) => a.assetType === "raw" || a.assetType === "photo");
-    if (rawAsset) return rawAsset.fileUrl;
-
-    const mainAsset = validAssets.find(
-      (a) => a.assetRole === "main_product" || a.assetRole === "front" || a.assetRole === "sku_product"
-    );
-    if (mainAsset) return mainAsset.fileUrl;
-
-    return validAssets[0].fileUrl;
+    return preferred?.fileUrl || "";
   };
 
   // Implement the core matting pipeline trigger
@@ -207,7 +206,7 @@ export const WhiteBgRefine: React.FC<WhiteBgRefineProps> = ({
     if (!selectedProduct) return;
 
     // Pick source image: prefers user's uploaded local raw image, else uses any existing asset URL as fallback
-    const sourceImageUrl = getMattingSourceImage(selectedProduct);
+    const sourceImageUrl = getMattingSourceImage(selectedProduct, uploadedRawUrl);
 
     if (!sourceImageUrl) {
       setMattingError(
