@@ -286,28 +286,45 @@ export const CropCanvas: React.FC<CropCanvasProps> = ({
     }));
   }, [locked, cropBox]);
 
-  const fitCropBoxToSubjectBBox = useCallback(
+  const imageBBoxToViewportBox = useCallback(
+    (bbox: RawImageAutoCropResult["bbox"]) => {
+      const transform = imageTransformRef.current;
+
+      return {
+        x: transform.x + bbox.x * transform.scale,
+        y: transform.y + bbox.y * transform.scale,
+        width: bbox.width * transform.scale,
+        height: bbox.height * transform.scale,
+        centerX: transform.x + bbox.centerX * transform.scale,
+        centerY: transform.y + bbox.centerY * transform.scale,
+      };
+    },
+    [],
+  );
+
+  const createCropBoxAroundViewportSubject = useCallback(
     (
-      bbox: RawImageAutoCropResult["bbox"],
+      subjectBox: {
+        x: number;
+        y: number;
+        width: number;
+        height: number;
+        centerX: number;
+        centerY: number;
+      },
       options?: {
         paddingRatio?: number;
         minSize?: number;
         maxSizeRatio?: number;
       },
     ): CropBox | undefined => {
-      const img = imgRef.current;
-      if (!img) return;
-
-      const currentTransform = imageTransformRef.current;
       const viewport = viewportSize;
 
       if (
-        !currentTransform ||
-        currentTransform.scale <= 0 ||
         viewport.width <= 0 ||
         viewport.height <= 0 ||
-        bbox.width <= 0 ||
-        bbox.height <= 0
+        subjectBox.width <= 0 ||
+        subjectBox.height <= 0
       ) {
         return;
       }
@@ -316,44 +333,24 @@ export const CropCanvas: React.FC<CropCanvasProps> = ({
       const minSize = options?.minSize ?? 80;
       const maxSizeRatio = options?.maxSizeRatio ?? 0.92;
 
-      // 原图 bbox 转 viewport 坐标
-      const subjectViewportBox = {
-        x: currentTransform.x + bbox.x * currentTransform.scale,
-        y: currentTransform.y + bbox.y * currentTransform.scale,
-        width: bbox.width * currentTransform.scale,
-        height: bbox.height * currentTransform.scale,
-      };
+      const safeRatio = Math.max(0.1, 1 - paddingRatio * 2);
 
-      const subjectCenterX =
-        subjectViewportBox.x + subjectViewportBox.width / 2;
-      const subjectCenterY =
-        subjectViewportBox.y + subjectViewportBox.height / 2;
-
-      // 根据主体较长边生成 1:1 裁剪框，并加入安全边距
-      const subjectMaxSide = Math.max(
-        subjectViewportBox.width,
-        subjectViewportBox.height,
-      );
-
-      const paddedSize = subjectMaxSide / Math.max(0.1, 1 - paddingRatio * 2);
+      const desiredSize =
+        Math.max(subjectBox.width, subjectBox.height) / safeRatio;
 
       const maxSize = Math.min(viewport.width, viewport.height) * maxSizeRatio;
 
       const cropSize = Math.max(
         minSize,
-        Math.min(paddedSize, maxSize),
+        Math.min(desiredSize, maxSize),
       );
 
-      const nextCropBox: CropBox = {
-        x: subjectCenterX - cropSize / 2,
-        y: subjectCenterY - cropSize / 2,
+      return {
+        x: subjectBox.centerX - cropSize / 2,
+        y: subjectBox.centerY - cropSize / 2,
         width: cropSize,
         height: cropSize,
       };
-
-      setCropBox(nextCropBox);
-
-      return nextCropBox;
     },
     [viewportSize, safetyPaddingRatio],
   );
@@ -363,18 +360,41 @@ export const CropCanvas: React.FC<CropCanvasProps> = ({
       bbox: RawImageAutoCropResult["bbox"],
       source: "auto" | "manual",
     ) => {
-      const nextCropBox = fitCropBoxToSubjectBBox(bbox, {
+      const subjectViewportBox = imageBBoxToViewportBox(bbox);
+
+      const nextCropBox = createCropBoxAroundViewportSubject(subjectViewportBox, {
         paddingRatio: safetyPaddingRatio,
       });
 
-      const effectiveCropBox = nextCropBox || cropBoxRef.current;
+      if (!nextCropBox) {
+        applyAutoCropResult(bbox, cropBoxRef.current);
+        return;
+      }
 
-      // 再确保主体在裁剪框安全区内
-      applyAutoCropResult(bbox, effectiveCropBox);
+      setCropBox(nextCropBox);
+
+      /**
+       * 关键逻辑：
+       * 如果根据当前显示状态生成的新 cropBox 足够容纳主体，
+       * 就不要再移动图片，避免用户框选后画面跳动。
+       *
+       * 如果主体太大，cropBox 已经达到 viewport 最大值，
+       * 再调用 applyAutoCropResult，把主体缩放到新 cropBox 的安全区。
+       */
+      const safeW = nextCropBox.width * (1 - safetyPaddingRatio * 2);
+      const safeH = nextCropBox.height * (1 - safetyPaddingRatio * 2);
+
+      const subjectTooLarge =
+        subjectViewportBox.width > safeW ||
+        subjectViewportBox.height > safeH;
+
+      if (subjectTooLarge) {
+        applyAutoCropResult(bbox, nextCropBox);
+      }
 
       setDebugAutoBBox(bbox);
 
-      setAutoCropDebug({
+      const debugResult: AutoCropDebugState = {
         confidence: source === "manual" ? 1 : 0.8,
         method: source === "manual" ? "manual-roi" : "background-diff",
         warnings:
@@ -387,20 +407,20 @@ export const CropCanvas: React.FC<CropCanvasProps> = ({
             ? "已根据手动主体框自动匹配 1:1 裁剪框"
             : "已根据自动识别主体自动匹配 1:1 裁剪框",
         bbox,
-      });
+      };
+
+      setAutoCropDebug(debugResult);
 
       onAutoCropResult?.({
         bbox,
-        confidence: source === "manual" ? 1 : 0.8,
-        method: source === "manual" ? "manual-roi" : "background-diff",
-        warnings:
-          source === "manual"
-            ? ["已使用手动主体框"]
-            : ["已根据自动识别主体匹配裁剪框"],
+        confidence: debugResult.confidence,
+        method: debugResult.method,
+        warnings: debugResult.warnings,
       });
     },
     [
-      fitCropBoxToSubjectBBox,
+      imageBBoxToViewportBox,
+      createCropBoxAroundViewportSubject,
       applyAutoCropResult,
       safetyPaddingRatio,
       onAutoCropResult,
