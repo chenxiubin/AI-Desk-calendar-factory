@@ -18,7 +18,7 @@ export interface BoundingBoxInfo {
 export type RawImageAutoCropResult = {
   bbox: BoundingBoxInfo;
   confidence: number;
-  method: "alpha" | "background-diff" | "fallback";
+  method: "alpha" | "background-diff" | "manual-roi" | "fallback";
   warnings: string[];
 };
 

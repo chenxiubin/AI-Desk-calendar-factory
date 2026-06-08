@@ -867,7 +867,7 @@ export const WhiteBgRefine: React.FC<WhiteBgRefineProps> = ({
                 )}
                 <div className="absolute top-2 left-2 flex flex-col gap-1 z-10 pointer-events-none">
                   <div className="bg-slate-900/90 text-white text-[9px] px-2 py-0.5 rounded border border-slate-700 font-mono shadow-sm flex items-center justify-center inline-block w-max">
-                    {previewMode === "raw" && "📷 调整抠图输入 (1:1)"}
+                    {previewMode === "raw" && "📷 调整抠图输入 (1:1) - 纯色背景可自动识别；复杂背景请使用手动框选主体"}
                     {previewMode === "crop_input" && "📐 RunningHub 输入图预览"}
                     {previewMode === "png" && "✨ RunningHub 抠图透明 PNG"}
                     {previewMode === "white_bg" && "🥚 渲染白底 JPG 资产"}
@@ -876,15 +876,16 @@ export const WhiteBgRefine: React.FC<WhiteBgRefineProps> = ({
                   
                   {previewMode === "raw" && autoCropResult && (
                     <div className={`text-[10px] px-2 py-1.5 rounded border font-medium shadow-sm w-max backdrop-blur ${
-                      autoCropResult.confidence >= 0.6 && autoCropResult.method !== "fallback" ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/30" :
+                      (autoCropResult.confidence >= 0.6 && autoCropResult.method !== "fallback") || autoCropResult.method === "manual-roi" ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/30" :
                       autoCropResult.confidence > 0 && autoCropResult.method !== "fallback" ? "bg-amber-500/20 text-amber-400 border-amber-500/30" :
                       "bg-slate-800/80 text-slate-300 border-slate-600"
                     }`}>
                       <div className="flex items-center justify-between gap-3">
                         <span>
-                          {autoCropResult.confidence >= 0.6 && autoCropResult.method !== "fallback" && "✨ 已自动识别产品主体并居中"}
-                          {autoCropResult.confidence > 0 && autoCropResult.confidence < 0.6 && autoCropResult.method !== "fallback" && "⚠️ 自动识别可能不准确，请手动微调"}
-                          {(autoCropResult.confidence === 0 || autoCropResult.method === "fallback") && "🔄 自动识别结果无效，已完整适应原图，请手动调整"}
+                          {autoCropResult.method === "manual-roi" && "✨ 已应用手动框选主体"}
+                          {autoCropResult.confidence >= 0.6 && autoCropResult.method !== "fallback" && autoCropResult.method !== "manual-roi" && "✨ 已自动识别产品主体并居中"}
+                          {autoCropResult.confidence > 0 && autoCropResult.confidence < 0.6 && autoCropResult.method !== "fallback" && autoCropResult.method !== "manual-roi" && "⚠️ 自动识别可能不准确，请手动微调"}
+                          {(autoCropResult.confidence === 0 || autoCropResult.method === "fallback") && "🔄 自动识别失败：复杂背景建议回到裁剪区手动框选主体"}
                         </span>
                         <span className="text-[8px] opacity-60 font-mono tracking-tight uppercase">
                           {autoCropResult.method} | {(autoCropResult.confidence * 100).toFixed(0)}%

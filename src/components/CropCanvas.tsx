@@ -60,6 +60,15 @@ type AutoCropDebugState = {
   bbox: RawImageAutoCropResult["bbox"];
 };
 
+type SubjectGuideMode = "off" | "drawing" | "editing";
+
+type SubjectGuideBox = {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+};
+
 export const CropCanvas: React.FC<CropCanvasProps> = ({
   imageUrl,
   targetSize,
@@ -89,6 +98,10 @@ export const CropCanvas: React.FC<CropCanvasProps> = ({
   const [debugAutoBBox, setDebugAutoBBox] = useState<RawImageAutoCropResult["bbox"] | null>(null);
   const [autoCropDebug, setAutoCropDebug] = useState<AutoCropDebugState | null>(null);
   const activeAutoCropRunIdRef = useRef<string | null>(null);
+  
+  const [subjectGuideMode, setSubjectGuideMode] = useState<SubjectGuideMode>("off");
+  const [subjectGuideBox, setSubjectGuideBox] = useState<SubjectGuideBox | null>(null);
+  const subjectGuideStartRef = useRef<{ x: number; y: number } | null>(null);
 
   // Refs for native event listener
   const zoomRef = useRef(zoom);
@@ -298,10 +311,10 @@ export const CropCanvas: React.FC<CropCanvasProps> = ({
       reason: shouldApply
         ? "已应用主体 bbox"
         : isFallback
-          ? "fallback：未应用，已完整适应原图"
+          ? "自动识别失败，复杂背景建议使用手动框选主体"
           : isWholeImage
-            ? "bbox 接近整图：未应用，已完整适应原图"
-            : "confidence 过低：未应用，已完整适应原图",
+            ? "bbox 接近整图，复杂背景建议使用手动框选主体"
+            : "confidence 过低，建议使用手动框选主体",
       bbox: result.bbox,
     });
   
@@ -464,6 +477,46 @@ export const CropCanvas: React.FC<CropCanvasProps> = ({
 
   const clampZoom = (z: number) => Math.max(0.1, Math.min(z, 4));
 
+  const convertViewportGuideBoxToImageBBox = (
+    guideBox: SubjectGuideBox,
+  ): RawImageAutoCropResult["bbox"] => {
+    const currentTransform = imageTransformRef.current;
+    const imageWidth = imageSize.w;
+    const imageHeight = imageSize.h;
+
+    const imageX = (guideBox.x - currentTransform.x) / currentTransform.scale;
+    const imageY = (guideBox.y - currentTransform.y) / currentTransform.scale;
+    const imageW = guideBox.width / currentTransform.scale;
+    const imageH = guideBox.height / currentTransform.scale;
+
+    const x = Math.max(0, Math.min(imageWidth, imageX));
+    const y = Math.max(0, Math.min(imageHeight, imageY));
+    const right = Math.max(0, Math.min(imageWidth, imageX + imageW));
+    const bottom = Math.max(0, Math.min(imageHeight, imageY + imageH));
+
+    const width = Math.max(1, right - x);
+    const height = Math.max(1, bottom - y);
+    const centerX = x + width / 2;
+    const centerY = y + height / 2;
+
+    return {
+      x,
+      y,
+      width,
+      height,
+      centerX,
+      centerY,
+      imageWidth,
+      imageHeight,
+      normalizedX: x / imageWidth,
+      normalizedY: y / imageHeight,
+      normalizedWidth: width / imageWidth,
+      normalizedHeight: height / imageHeight,
+      normalizedCenterX: centerX / imageWidth,
+      normalizedCenterY: centerY / imageHeight,
+    };
+  };
+
   const zoomAtPoint = useCallback(
     (anchorX: number, anchorY: number, nextZoom: number) => {
       const currentBaseScale = baseScaleRef.current;
@@ -541,6 +594,25 @@ export const CropCanvas: React.FC<CropCanvasProps> = ({
     e.preventDefault();
     e.stopPropagation();
     if (locked) return;
+
+    if (subjectGuideMode === "drawing") {
+      const rect = containerRef.current?.getBoundingClientRect();
+      if (!rect) return;
+    
+      const px = e.clientX - rect.left;
+      const py = e.clientY - rect.top;
+    
+      subjectGuideStartRef.current = { x: px, y: py };
+      setSubjectGuideBox({
+        x: px,
+        y: py,
+        width: 0,
+        height: 0,
+      });
+      safeSetPointerCapture(e.pointerId);
+      return;
+    }
+
     dragModeRef.current = mode;
     setDragMode(mode);
     dragStartRef.current = { x: e.clientX, y: e.clientY };
@@ -583,6 +655,29 @@ export const CropCanvas: React.FC<CropCanvasProps> = ({
 
   const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
     if (locked) return;
+
+    if (subjectGuideMode === "drawing" && subjectGuideStartRef.current) {
+      e.preventDefault();
+      e.stopPropagation();
+
+      const rect = containerRef.current?.getBoundingClientRect();
+      if (!rect) return;
+
+      const px = e.clientX - rect.left;
+      const py = e.clientY - rect.top;
+
+      const start = subjectGuideStartRef.current;
+
+      setSubjectGuideBox({
+        x: Math.min(start.x, px),
+        y: Math.min(start.y, py),
+        width: Math.abs(px - start.x),
+        height: Math.abs(py - start.y),
+      });
+
+      return;
+    }
+
     const mode = dragModeRef.current;
     if (mode === "none") return;
     
@@ -647,6 +742,13 @@ export const CropCanvas: React.FC<CropCanvasProps> = ({
   };
 
   const handlePointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (subjectGuideMode === "drawing") {
+      subjectGuideStartRef.current = null;
+      setSubjectGuideMode("editing");
+      safeReleasePointerCapture(e.pointerId);
+      return;
+    }
+
     dragModeRef.current = "none";
     setDragMode("none");
     safeReleasePointerCapture(e.pointerId);
@@ -701,6 +803,22 @@ export const CropCanvas: React.FC<CropCanvasProps> = ({
           }}
         />
       </div>
+
+      {subjectGuideBox && (
+        <div
+          className="pointer-events-none absolute border-2 border-emerald-400 bg-emerald-400/10 z-10"
+          style={{
+            left: subjectGuideBox.x,
+            top: subjectGuideBox.y,
+            width: subjectGuideBox.width,
+            height: subjectGuideBox.height,
+          }}
+        >
+          <div className="absolute -top-5 left-0 bg-emerald-400 text-slate-900 text-[10px] px-1.5 py-0.5 rounded-sm font-medium">
+            主体辅助框
+          </div>
+        </div>
+      )}
 
       {debugAutoBBox && (
         <div
@@ -911,6 +1029,70 @@ export const CropCanvas: React.FC<CropCanvasProps> = ({
             <Maximize className="w-4 h-4" />
             <span className="text-[10px] hidden sm:inline">完整适应原图</span>
           </button>
+
+          <div className="w-px h-4 bg-slate-700 mx-1 hidden sm:block" />
+
+          {subjectGuideMode === "off" ? (
+            <button 
+              type="button"
+              disabled={locked}
+              onClick={(e) => {
+                e.stopPropagation();
+                if (locked) return;
+                setSubjectGuideMode("drawing");
+                setSubjectGuideBox(null);
+              }}
+              title="手动框选主体"
+              className={`flex items-center gap-1 p-1.5 rounded transition-colors ${locked ? 'text-slate-600 cursor-not-allowed' : 'text-slate-300 hover:text-white hover:bg-slate-800'}`}
+            >
+              <Target className="w-4 h-4" />
+              <span className="text-[10px] hidden sm:inline">手动辅助框选</span>
+            </button>
+          ) : (
+            <>
+              <button 
+                type="button"
+                disabled={locked || !subjectGuideBox || subjectGuideBox.width < 20 || subjectGuideBox.height < 20}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (locked || !subjectGuideBox) return;
+                  
+                  const bbox = convertViewportGuideBoxToImageBBox(subjectGuideBox);
+                  applyAutoCropResult(bbox, cropBoxRef.current);
+                  
+                  setDebugAutoBBox(bbox);
+                  setAutoCropDebug({
+                    confidence: 1,
+                    method: "manual-roi",
+                    warnings: ["已使用手动主体框"],
+                    applied: true,
+                    reason: "已根据手动主体框居中产品",
+                    bbox,
+                  });
+                  
+                  setSubjectGuideMode("off");
+                  setSubjectGuideBox(null);
+                }}
+                className={`flex items-center gap-1 p-1.5 rounded transition-colors ${(!subjectGuideBox || subjectGuideBox.width < 20) ? 'text-slate-600 cursor-not-allowed' : 'text-emerald-400 hover:bg-emerald-400/20'}`}
+              >
+                <span className="text-[10px] hidden sm:inline">应用框选</span>
+              </button>
+              
+              <button 
+                type="button"
+                disabled={locked}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setSubjectGuideMode("off");
+                  setSubjectGuideBox(null);
+                }}
+                className="flex items-center gap-1 p-1.5 rounded transition-colors text-slate-300 hover:text-white hover:bg-slate-800"
+              >
+                <RotateCcw className="w-4 h-4" />
+                <span className="text-[10px] hidden sm:inline">取消框选</span>
+              </button>
+            </>
+          )}
           
           <button 
             type="button"
