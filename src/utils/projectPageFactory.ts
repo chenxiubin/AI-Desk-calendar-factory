@@ -8,7 +8,6 @@ import {
   ProductAsset,
   ProductAssetRole
 } from "../types";
-import { ExportFolderKey, PageRole, BusinessRatioType } from "../domain/calendarTaxonomy";
 
 interface CreateGeneratedPagesFromSuiteParams {
   projectId: string;
@@ -135,7 +134,6 @@ export function createGeneratedPagesFromSuite(
       assignedAssetIds: assignedIds,
       status: assignedIds.length > 0 ? "base_ready" : "needs_adjustment",
       order: page.order,
-      // Pass dynamic metadata fields directly to keep information rich
       pageName: page.pageName,
       pageRole: page.pageRole,
       businessRatioType: page.businessRatioType,
@@ -156,7 +154,7 @@ export function createGeneratedPagesFromSuite(
     let added = 0;
     for (let i = 1; i <= expectedSquare; i++) {
       if (added >= targetToPad) break;
-      const targetName = `1:1主图卖点图_${String(i).padStart(2, "0")}`;
+      const targetName = `1:1 Main Square Marketing ${String(i).padStart(2, "0")}`; // 1:1主图卖点图_${String(i).padStart(2, "0")}
 
       // Check if a page has that exact targetName to avoid name collision
       const nameExists = generatedPages.some((p) => p.pageName === targetName);
@@ -183,7 +181,9 @@ export function createGeneratedPagesFromSuite(
           isDeliverable: true,
           isRunningHubRecommended: true,
           isCanvasOnly: false,
-          reviewNote: templId ? "根据套系最低交付规则自动补齐" : "缺少匹配模板"
+          reviewNote: templId 
+            ? "Auto-constructed based on suite minimum delivery rule" // 根据套系最低交付规则自动补齐
+            : "Missing matching template" // 缺少匹配模板
         });
         added++;
       }
@@ -199,7 +199,7 @@ export function createGeneratedPagesFromSuite(
     let added = 0;
     for (let i = 1; i <= expectedVertical; i++) {
       if (added >= targetToPad) break;
-      const targetName = `3:4主图卖点图_${String(i).padStart(2, "0")}`;
+      const targetName = `3:4 Main Vertical Marketing ${String(i).padStart(2, "0")}`; // 3:4主图卖点图_${String(i).padStart(2, "0")}
 
       const nameExists = generatedPages.some((p) => p.pageName === targetName);
       if (!nameExists) {
@@ -225,7 +225,9 @@ export function createGeneratedPagesFromSuite(
           isDeliverable: true,
           isRunningHubRecommended: true,
           isCanvasOnly: false,
-          reviewNote: templId ? "根据套系最低交付规则自动补齐" : "缺少匹配模板"
+          reviewNote: templId 
+            ? "Auto-constructed based on suite minimum delivery rule" // 根据套系最低交付规则自动补齐
+            : "Missing matching template" // 缺少匹配模板
         });
         added++;
       }
@@ -253,7 +255,7 @@ export function createGeneratedPagesFromSuite(
       status: matchingAsset ? "final_ready" : "needs_adjustment",
       fileUrl: matchingAsset?.fileUrl || "",
       order: 300,
-      pageName: "白底精修图",
+      pageName: "White BG Refined", // 白底精修图
       pageRole: "white_bg",
       outputFolder: "white_bg",
       businessRatioType: "square",
@@ -261,7 +263,9 @@ export function createGeneratedPagesFromSuite(
       isDeliverable: true,
       isRunningHubRecommended: false,
       isCanvasOnly: true,
-      reviewNote: matchingAsset ? "根据套系最低交付规则自动补齐" : "缺少白底精修交付资产"
+      reviewNote: matchingAsset 
+        ? "Auto-constructed based on suite minimum delivery rule" // 根据套系最低交付规则自动补齐
+        : "Missing white background refined asset" // 缺少白底精修交付资产
     });
   }
 
@@ -286,7 +290,7 @@ export function createGeneratedPagesFromSuite(
       status: matchingAsset ? "final_ready" : "needs_adjustment",
       fileUrl: matchingAsset?.fileUrl || "",
       order: 400,
-      pageName: "透明PNG",
+      pageName: "Transparent PNG", // 透明PNG
       pageRole: "transparent_png",
       outputFolder: "transparent_png",
       businessRatioType: "square",
@@ -294,7 +298,9 @@ export function createGeneratedPagesFromSuite(
       isDeliverable: true,
       isRunningHubRecommended: false,
       isCanvasOnly: true,
-      reviewNote: matchingAsset ? "根据套系最低交付规则自动补齐" : "缺少透明PNG交付资产"
+      reviewNote: matchingAsset 
+        ? "Auto-constructed based on suite minimum delivery rule" // 根据套系最低交付规则自动补齐
+        : "Missing transparent PNG asset" // 缺少透明PNG交付资产
     });
   }
 

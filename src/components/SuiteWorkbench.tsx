@@ -1028,7 +1028,7 @@ export const SuiteWorkbench: React.FC<SuiteWorkbenchProps> = ({
                               <span className="text-[10px] font-extrabold uppercase tracking-wider text-indigo-700 bg-indigo-50 px-2.5 py-0.5 rounded">
                                 {page.pageType.toUpperCase()}
                               </span>
-                              {page.reviewNote === "根据套系最低交付规则自动补齐" && (
+                              {page.reviewNote === "Auto-constructed based on suite minimum delivery rule" && (
                                 <span className="text-[9px] font-bold text-amber-700 bg-amber-50 border border-amber-200 px-1.5 py-0.2 rounded">
                                   🤖 自动补齐清单项
                                 </span>
