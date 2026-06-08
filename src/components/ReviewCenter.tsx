@@ -1,9 +1,18 @@
 import React, { useState } from "react";
 import { GeneratedImage, Product, Template } from "../types";
 import { VisualCalendar } from "./VisualCalendar";
-import { renderTemplateToCanvas, getTemplateComponents, renderFusionBaseImage, renderFinalCompositeImage, renderFullPreviewImage } from "../utils/renderTemplate";
+import {
+  renderTemplateToCanvas,
+  getTemplateComponents,
+  renderFusionBaseImage,
+  renderFinalCompositeImage,
+  renderFullPreviewImage,
+} from "../utils/renderTemplate";
 import { PRESET_RUNNINGHUB_WORKFLOWS } from "../data";
-import { queryRunningHubOutputs, runSceneFusion } from "../services/runninghubClient";
+import {
+  queryRunningHubOutputs,
+  runSceneFusion,
+} from "../services/runninghubClient";
 import {
   ShieldCheck,
   CheckCircle,
@@ -17,7 +26,7 @@ import {
   HelpCircle,
   RefreshCw,
   FolderLock,
-  Layers
+  Layers,
 } from "lucide-react";
 
 interface ReviewCenterProps {
@@ -33,19 +42,25 @@ export const ReviewCenter: React.FC<ReviewCenterProps> = ({
   products,
   templates,
   onUpdateImage,
-  onBatchAction
+  onBatchAction,
 }) => {
   const [filterStatus, setFilterStatus] = useState<string>("pending");
   const [filterType, setFilterType] = useState<string>("all");
   const [filterIssue, setFilterIssue] = useState<string>("all");
   const [selectedImageId, setSelectedImageId] = useState<string | null>(
-    generatedImages.length > 0 ? generatedImages[0].id : null
+    generatedImages.length > 0 ? generatedImages[0].id : null,
   );
 
   // Grab the active selected image details
-  const activeImage = generatedImages.find((img) => img.id === selectedImageId) || generatedImages[0];
-  const activeProduct = activeImage ? products.find((p) => p.id === activeImage.productId) : null;
-  const activeTemplate = activeImage ? templates.find((t) => t.id === activeImage.templateId) : null;
+  const activeImage =
+    generatedImages.find((img) => img.id === selectedImageId) ||
+    generatedImages[0];
+  const activeProduct = activeImage
+    ? products.find((p) => p.id === activeImage.productId)
+    : null;
+  const activeTemplate = activeImage
+    ? templates.find((t) => t.id === activeImage.templateId)
+    : null;
 
   // Manual fine-tune sliders local states
   const [currentXOffset, setCurrentXOffset] = useState<number>(0);
@@ -71,7 +86,7 @@ export const ReviewCenter: React.FC<ReviewCenterProps> = ({
       renderFusionBaseImage(activeProduct, activeTemplate, {
         hOffset: currentXOffset,
         vOffset: currentYOffset,
-        scale: currentScale
+        scale: currentScale,
       })
         .then((url) => {
           if (active) {
@@ -83,17 +98,20 @@ export const ReviewCenter: React.FC<ReviewCenterProps> = ({
         });
 
       // 2. Render Final layout (integrates Completed RunningHub fused output with high-performance overlay texts and logos)
-      const fusedUrl = activeImage.aiFusionStatus === "completed" ? activeImage.aiFusionUrl : undefined;
-      const renderPromise = fusedUrl 
+      const fusedUrl =
+        activeImage.aiFusionStatus === "completed"
+          ? activeImage.aiFusionUrl
+          : undefined;
+      const renderPromise = fusedUrl
         ? renderFinalCompositeImage(fusedUrl, activeTemplate, activeProduct, {
             hOffset: currentXOffset,
             vOffset: currentYOffset,
-            scale: currentScale
+            scale: currentScale,
           })
         : renderFullPreviewImage(activeProduct, activeTemplate, {
             hOffset: currentXOffset,
             vOffset: currentYOffset,
-            scale: currentScale
+            scale: currentScale,
           });
 
       renderPromise
@@ -109,16 +127,31 @@ export const ReviewCenter: React.FC<ReviewCenterProps> = ({
     return () => {
       active = false;
     };
-  }, [activeImage, activeProduct, activeTemplate, currentXOffset, currentYOffset, currentScale, activeImage?.aiFusionUrl, activeImage?.aiFusionStatus]);
+  }, [
+    activeImage,
+    activeProduct,
+    activeTemplate,
+    currentXOffset,
+    currentYOffset,
+    currentScale,
+    activeImage?.aiFusionUrl,
+    activeImage?.aiFusionStatus,
+  ]);
 
   // RunningHub scene-fusion states
   const defaultWorkflow = PRESET_RUNNINGHUB_WORKFLOWS[0];
-  const [selectedWorkflowId, setSelectedWorkflowId] = useState<string>(defaultWorkflow.id);
-  const activeWorkflow = PRESET_RUNNINGHUB_WORKFLOWS.find((w) => w.id === selectedWorkflowId) || defaultWorkflow;
+  const [selectedWorkflowId, setSelectedWorkflowId] = useState<string>(
+    defaultWorkflow.id,
+  );
+  const activeWorkflow =
+    PRESET_RUNNINGHUB_WORKFLOWS.find((w) => w.id === selectedWorkflowId) ||
+    defaultWorkflow;
 
   const [promptInput, setPromptInput] = useState<string>("");
   const [negPromptInput, setNegPromptInput] = useState<string>("");
-  const [denoiseInput, setDenoiseInput] = useState<number>(defaultWorkflow.defaultDenoise ?? 1);
+  const [denoiseInput, setDenoiseInput] = useState<number>(
+    defaultWorkflow.defaultDenoise ?? 1,
+  );
   const [seedInput, setSeedInput] = useState<number>(12154);
   const [stepsInput, setStepsInput] = useState<number>(4);
   const [cfgInput, setCfgInput] = useState<number>(1);
@@ -147,7 +180,7 @@ export const ReviewCenter: React.FC<ReviewCenterProps> = ({
         setPollingTasks((prev) => ({ ...prev, [img.aiFusionTaskId!]: true }));
         let attempts = 0;
         const maxAttempts = 50; // ~2.5 mins
-        
+
         const poll = setInterval(async () => {
           attempts++;
           if (attempts > maxAttempts) {
@@ -155,7 +188,7 @@ export const ReviewCenter: React.FC<ReviewCenterProps> = ({
             const updated = {
               ...img,
               aiFusionStatus: "failed" as const,
-              aiFusionError: "轮询超时(2.5分钟)"
+              aiFusionError: "轮询超时(2.5分钟)",
             };
             onUpdateImage(updated);
             setPollingTasks((prev) => {
@@ -167,19 +200,33 @@ export const ReviewCenter: React.FC<ReviewCenterProps> = ({
           }
 
           try {
-            const mode = img.aiFusionWorkflowId === "comfyui_openapi" ? "comfyui_openapi" : "run_workflow_v2";
+            const mode =
+              img.aiFusionWorkflowId === "comfyui_openapi"
+                ? "comfyui_openapi"
+                : "run_workflow_v2";
             const res = await queryRunningHubOutputs(img.aiFusionTaskId!, mode);
-            
+
             if (res.status === "completed" && res.outputUrl) {
               clearInterval(poll);
-              const matchedTemplate = templates.find((t) => t.id === img.templateId);
-              const matchedProduct = products.find((p) => p.id === img.productId);
+              const matchedTemplate = templates.find(
+                (t) => t.id === img.templateId,
+              );
+              const matchedProduct = products.find(
+                (p) => p.id === img.productId,
+              );
               let finalComp = "";
               if (matchedTemplate) {
                 try {
-                  finalComp = await renderFinalCompositeImage(res.outputUrl, matchedTemplate, matchedProduct);
+                  finalComp = await renderFinalCompositeImage(
+                    res.outputUrl,
+                    matchedTemplate,
+                    matchedProduct,
+                  );
                 } catch (err) {
-                  console.error("Auto renderFinalCompositeImage on complete failed:", err);
+                  console.error(
+                    "Auto renderFinalCompositeImage on complete failed:",
+                    err,
+                  );
                 }
               }
               const updated = {
@@ -187,7 +234,7 @@ export const ReviewCenter: React.FC<ReviewCenterProps> = ({
                 aiFusionStatus: "completed" as const,
                 aiFusionUrl: res.outputUrl,
                 finalCompositeUrl: finalComp || res.outputUrl,
-                aiFusionError: undefined
+                aiFusionError: undefined,
               };
               onUpdateImage(updated);
               setPollingTasks((prev) => {
@@ -200,7 +247,7 @@ export const ReviewCenter: React.FC<ReviewCenterProps> = ({
               const updated = {
                 ...img,
                 aiFusionStatus: "failed" as const,
-                aiFusionError: res.errorMessage || "RunningHub 任务执行失败"
+                aiFusionError: res.errorMessage || "RunningHub 任务执行失败",
               };
               onUpdateImage(updated);
               setPollingTasks((prev) => {
@@ -210,7 +257,11 @@ export const ReviewCenter: React.FC<ReviewCenterProps> = ({
               });
             }
           } catch (err: any) {
-            console.error("Polling error for image taskId:", img.aiFusionTaskId, err);
+            console.error(
+              "Polling error for image taskId:",
+              img.aiFusionTaskId,
+              err,
+            );
           }
         }, 3000);
 
@@ -223,7 +274,8 @@ export const ReviewCenter: React.FC<ReviewCenterProps> = ({
 
   // Filter matrix execution
   const filtered = generatedImages.filter((img) => {
-    const matchesStatus = filterStatus === "all" || img.reviewStatus === filterStatus;
+    const matchesStatus =
+      filterStatus === "all" || img.reviewStatus === filterStatus;
     const matchesType = filterType === "all" || img.imageType === filterType;
     const matchesIssue =
       filterIssue === "all" ||
@@ -248,10 +300,22 @@ export const ReviewCenter: React.FC<ReviewCenterProps> = ({
   };
 
   const statusTags: Record<string, { label: string; color: string }> = {
-    pending: { label: "待质素质检", color: "bg-amber-50 text-amber-800 border-amber-200" },
-    approved: { label: "质检通过", color: "bg-emerald-50 text-emerald-800 border-emerald-200" },
-    rejected: { label: "拦截退回", color: "bg-rose-50 text-rose-700 border-rose-200" },
-    needs_adjustment: { label: "待微调微移", color: "bg-purple-50 text-purple-700 border-purple-200" }
+    pending: {
+      label: "待质素质检",
+      color: "bg-amber-50 text-amber-800 border-amber-200",
+    },
+    approved: {
+      label: "质检通过",
+      color: "bg-emerald-50 text-emerald-800 border-emerald-200",
+    },
+    rejected: {
+      label: "拦截退回",
+      color: "bg-rose-50 text-rose-700 border-rose-200",
+    },
+    needs_adjustment: {
+      label: "待微调微移",
+      color: "bg-purple-50 text-purple-700 border-purple-200",
+    },
   };
 
   const saveAuditChange = (newStatus: GeneratedImage["reviewStatus"]) => {
@@ -261,10 +325,12 @@ export const ReviewCenter: React.FC<ReviewCenterProps> = ({
       reviewStatus: newStatus,
       horizontalOffset: currentXOffset,
       verticalOffset: currentYOffset,
-      scaleFactor: currentScale
+      scaleFactor: currentScale,
     };
     onUpdateImage(updated);
-    alert(`【质检更新】该台历图状态已被标记为：「${statusTags[newStatus].label}」。`);
+    alert(
+      `【质检更新】该台历图状态已被标记为：「${statusTags[newStatus].label}」。`,
+    );
   };
 
   // Helpers to draw template backgrounds mockups
@@ -295,8 +361,12 @@ export const ReviewCenter: React.FC<ReviewCenterProps> = ({
             <div className="flex items-center space-x-2">
               <ShieldCheck className="w-5 h-5 text-blue-600" />
               <div>
-                <h3 className="text-sm font-bold text-slate-800">套版图片批量质检与审核柜</h3>
-                <p className="text-[11px] text-slate-400 mt-0.5">自动阻断遮线圈、防文字切边溢出、人工精调定位对齐百分比</p>
+                <h3 className="text-sm font-bold text-slate-800">
+                  套版图片批量质检与审核柜
+                </h3>
+                <p className="text-[11px] text-slate-400 mt-0.5">
+                  自动阻断遮线圈、防文字切边溢出、人工精调定位对齐百分比
+                </p>
               </div>
             </div>
 
@@ -388,24 +458,30 @@ export const ReviewCenter: React.FC<ReviewCenterProps> = ({
                   isSel
                     ? "ring-2 ring-blue-600 shadow-md scale-98 border-transparent"
                     : hasFlaws
-                    ? "border-amber-300 bg-amber-50/5 hover:border-amber-400"
-                    : "border-slate-150 hover:border-slate-300 hover:shadow-2xs"
+                      ? "border-amber-300 bg-amber-50/5 hover:border-amber-400"
+                      : "border-slate-150 hover:border-slate-300 hover:shadow-2xs"
                 }`}
               >
                 {/* Visual miniature mockup canvas preview */}
                 <div
                   className={`flex-1 rounded-lg border border-slate-100 min-h-0 relative flex items-center justify-center p-2 overflow-hidden ${getReviewBackgroundStyle(
-                    temp.background.sceneStyle
+                    temp.background.sceneStyle,
                   )}`}
                 >
                   {img.fileUrl && img.fileUrl !== "url" ? (
-                    <img src={img.fileUrl} className="max-w-full max-h-full object-contain rounded animate-fade-in" alt="Rendered Preview" />
+                    <img
+                      src={img.fileUrl}
+                      className="max-w-full max-h-full object-contain rounded animate-fade-in"
+                      alt="Rendered Preview"
+                    />
                   ) : (
                     <div className="flex flex-col items-center justify-center p-4 text-slate-400 bg-slate-50/50 rounded-lg border border-dashed border-slate-200 w-full h-full">
                       <span className="text-[10px] font-mono font-black uppercase tracking-widest text-slate-405 mb-1">
                         UNRENDERED
                       </span>
-                      <p className="text-[9px] text-slate-400">暂无真实渲染版式图</p>
+                      <p className="text-[9px] text-slate-400">
+                        暂无真实渲染版式图
+                      </p>
                     </div>
                   )}
 
@@ -433,7 +509,9 @@ export const ReviewCenter: React.FC<ReviewCenterProps> = ({
                   </p>
 
                   <div className="flex justify-between items-center mt-2 border-t border-slate-100 pt-2 text-[9px]">
-                    <span className={`px-2 py-0.5 rounded-full font-bold border ${statusTags[img.reviewStatus].color}`}>
+                    <span
+                      className={`px-2 py-0.5 rounded-full font-bold border ${statusTags[img.reviewStatus].color}`}
+                    >
                       {statusTags[img.reviewStatus].label}
                     </span>
                     <span className="text-slate-400 font-semibold font-mono">
@@ -448,8 +526,12 @@ export const ReviewCenter: React.FC<ReviewCenterProps> = ({
           {filtered.length === 0 && (
             <div className="col-span-full flex flex-col items-center justify-center p-16 text-center text-slate-400 bg-slate-50/20 border border-dashed border-slate-200 rounded-xl">
               <CheckCircle className="w-10 h-10 text-slate-350 mb-3" />
-              <p className="text-xs font-semibold text-slate-600">在此检索范围内，没有未处理或报警的产品图。</p>
-              <p className="text-[10px] text-slate-400 mt-1">您可以尝试清空顶部筛选条件</p>
+              <p className="text-xs font-semibold text-slate-600">
+                在此检索范围内，没有未处理或报警的产品图。
+              </p>
+              <p className="text-[10px] text-slate-400 mt-1">
+                您可以尝试清空顶部筛选条件
+              </p>
             </div>
           )}
         </div>
@@ -461,8 +543,12 @@ export const ReviewCenter: React.FC<ReviewCenterProps> = ({
           <div className="space-y-4">
             <div className="border-b border-slate-100 pb-3.5 flex justify-between items-center">
               <div>
-                <h4 className="text-xs font-black text-slate-800 tracking-tight">精修矢量位精调台</h4>
-                <p className="text-[10px] text-slate-400 mt-0.5 font-medium">拖拽对准铁圈边框位置 / AI场景融合</p>
+                <h4 className="text-xs font-black text-slate-800 tracking-tight">
+                  精修矢量位精调台
+                </h4>
+                <p className="text-[10px] text-slate-400 mt-0.5 font-medium">
+                  拖拽对准铁圈边框位置 / AI场景融合
+                </p>
               </div>
               <span className="text-[10px] bg-slate-100 font-mono font-black px-2.5 py-1 rounded-lg text-slate-600">
                 {activeProduct.productCode}
@@ -486,7 +572,11 @@ export const ReviewCenter: React.FC<ReviewCenterProps> = ({
                 </span>
                 <div className="w-full flex-grow flex items-center justify-center overflow-hidden min-h-0">
                   {activeImage.aiFusionBaseUrl || renderedPreviewUrl ? (
-                    <img src={activeImage.aiFusionBaseUrl || renderedPreviewUrl} className="max-w-full max-h-full object-contain rounded shadow-xs" alt="Fusion Base Canvas" />
+                    <img
+                      src={activeImage.aiFusionBaseUrl || renderedPreviewUrl}
+                      className="max-w-full max-h-full object-contain rounded shadow-xs"
+                      alt="Fusion Base Canvas"
+                    />
                   ) : (
                     <div className="text-[9px] text-zinc-400">正在生成...</div>
                   )}
@@ -501,32 +591,48 @@ export const ReviewCenter: React.FC<ReviewCenterProps> = ({
                 <span className="absolute top-1 left-1 z-10 bg-indigo-650/85 backdrop-blur-xs text-white font-bold text-[7.5px] px-1 py-0.5 rounded shadow-xs scale-90 origin-top-left">
                   2. RH融合底图
                 </span>
-                
+
                 <div className="w-full flex-grow flex items-center justify-center overflow-hidden min-h-0">
-                  {activeImage.aiFusionStatus === "completed" && activeImage.aiFusionUrl ? (
-                    <img src={activeImage.aiFusionUrl} className="max-w-full max-h-full object-contain rounded shadow-xs cursor-zoom-in" alt="AI Fusion Completed" onClick={() => window.open(activeImage.aiFusionUrl, "_blank")} />
-                  ) : activeImage.aiFusionStatus === "running" || activeImage.aiFusionStatus === "queued" ? (
+                  {activeImage.aiFusionStatus === "completed" &&
+                  activeImage.aiFusionUrl ? (
+                    <img
+                      src={activeImage.aiFusionUrl}
+                      className="max-w-full max-h-full object-contain rounded shadow-xs cursor-zoom-in"
+                      alt="AI Fusion Completed"
+                      onClick={() =>
+                        window.open(activeImage.aiFusionUrl, "_blank")
+                      }
+                    />
+                  ) : activeImage.aiFusionStatus === "running" ||
+                    activeImage.aiFusionStatus === "queued" ? (
                     <div className="flex flex-col items-center justify-center text-center p-2 space-y-1">
                       <RefreshCw className="w-4 h-4 animate-spin text-blue-500" />
-                      <span className="text-[8px] text-slate-500 font-bold animate-pulse">融合进行中...</span>
+                      <span className="text-[8px] text-slate-500 font-bold animate-pulse">
+                        融合进行中...
+                      </span>
                     </div>
                   ) : activeImage.aiFusionStatus === "failed" ? (
                     <div className="flex flex-col items-center justify-center text-center p-2 space-y-1">
                       <XCircle className="w-4 h-4 text-rose-500" />
-                      <span className="text-[8px] text-rose-600 font-bold">融合失败</span>
+                      <span className="text-[8px] text-rose-600 font-bold">
+                        融合失败
+                      </span>
                     </div>
                   ) : (
                     <div className="flex flex-col justify-center items-center text-center p-2">
                       <HelpCircle className="w-4 h-4 text-slate-350" />
-                      <span className="text-[8px] text-zinc-400 mt-1 font-semibold">未启动</span>
+                      <span className="text-[8px] text-zinc-400 mt-1 font-semibold">
+                        未启动
+                      </span>
                     </div>
                   )}
                 </div>
-                {activeImage.aiFusionStatus === "completed" && activeImage.aiFusionUrl && (
-                  <div className="absolute bottom-1 right-1 text-[7px] text-emerald-600 font-bold scale-90 origin-bottom-right">
-                    ✓ 完成融合
-                  </div>
-                )}
+                {activeImage.aiFusionStatus === "completed" &&
+                  activeImage.aiFusionUrl && (
+                    <div className="absolute bottom-1 right-1 text-[7px] text-emerald-600 font-bold scale-90 origin-bottom-right">
+                      ✓ 完成融合
+                    </div>
+                  )}
               </div>
 
               {/* Card 3: 最终电商图 */}
@@ -536,7 +642,17 @@ export const ReviewCenter: React.FC<ReviewCenterProps> = ({
                 </span>
                 <div className="w-full flex-grow flex items-center justify-center overflow-hidden min-h-0">
                   {activeImage.finalCompositeUrl || finalCompositedUrl ? (
-                    <img src={activeImage.finalCompositeUrl || finalCompositedUrl} className="max-w-full max-h-full object-contain rounded shadow-xs cursor-zoom-in" alt="Final Overlay Composited" onClick={() => window.open(activeImage.finalCompositeUrl || finalCompositedUrl, "_blank")} />
+                    <img
+                      src={activeImage.finalCompositeUrl || finalCompositedUrl}
+                      className="max-w-full max-h-full object-contain rounded shadow-xs cursor-zoom-in"
+                      alt="Final Overlay Composited"
+                      onClick={() =>
+                        window.open(
+                          activeImage.finalCompositeUrl || finalCompositedUrl,
+                          "_blank",
+                        )
+                      }
+                    />
                   ) : (
                     <div className="text-[9px] text-zinc-400">正在渲染...</div>
                   )}
@@ -553,41 +669,56 @@ export const ReviewCenter: React.FC<ReviewCenterProps> = ({
                 <span className="font-bold text-slate-700 flex items-center gap-1">
                   ✨ RunningHub 智能场景融合 v2
                 </span>
-                <span className={`text-[8.5px] px-2 py-0.5 rounded-full font-black uppercase ${
-                  activeImage.aiFusionStatus === "completed" 
-                    ? "bg-emerald-100 text-emerald-850" 
-                    : activeImage.aiFusionStatus === "running" || activeImage.aiFusionStatus === "queued"
-                    ? "bg-blue-100 text-blue-850 animate-pulse"
-                    : activeImage.aiFusionStatus === "failed"
-                    ? "bg-rose-100 text-rose-850"
-                    : "bg-slate-200 text-slate-650"
-                }`}>
-                  状态: {
-                    activeImage.aiFusionStatus === "completed" ? "完成" : 
-                    activeImage.aiFusionStatus === "running" || activeImage.aiFusionStatus === "queued" ? "融合中" : 
-                    activeImage.aiFusionStatus === "failed" ? "失败" : "空闲"
-                  }
+                <span
+                  className={`text-[8.5px] px-2 py-0.5 rounded-full font-black uppercase ${
+                    activeImage.aiFusionStatus === "completed"
+                      ? "bg-emerald-100 text-emerald-850"
+                      : activeImage.aiFusionStatus === "running" ||
+                          activeImage.aiFusionStatus === "queued"
+                        ? "bg-blue-100 text-blue-850 animate-pulse"
+                        : activeImage.aiFusionStatus === "failed"
+                          ? "bg-rose-100 text-rose-850"
+                          : "bg-slate-200 text-slate-650"
+                  }`}
+                >
+                  状态:{" "}
+                  {activeImage.aiFusionStatus === "completed"
+                    ? "完成"
+                    : activeImage.aiFusionStatus === "running" ||
+                        activeImage.aiFusionStatus === "queued"
+                      ? "融合中"
+                      : activeImage.aiFusionStatus === "failed"
+                        ? "失败"
+                        : "空闲"}
                 </span>
               </div>
 
               {/* Workflow selection block */}
               <div className="space-y-1">
-                <span className="block text-[8.5px] text-slate-450 font-bold uppercase">选择融合工作流</span>
+                <span className="block text-[8.5px] text-slate-450 font-bold uppercase">
+                  选择融合工作流
+                </span>
                 <select
                   value={selectedWorkflowId}
                   onChange={(e) => setSelectedWorkflowId(e.target.value)}
                   className="w-full bg-white border border-slate-200 rounded-lg p-1.5 font-medium focus:ring-1 focus:ring-blue-500 cursor-pointer"
-                  disabled={activeImage.aiFusionStatus === "running" || activeImage.aiFusionStatus === "queued"}
+                  disabled={
+                    activeImage.aiFusionStatus === "running" ||
+                    activeImage.aiFusionStatus === "queued"
+                  }
                 >
                   {PRESET_RUNNINGHUB_WORKFLOWS.map((wf) => (
                     <option key={wf.id} value={wf.id}>
-                      {wf.name} ({wf.apiMode === "run_workflow_v2" ? "V2" : "Legacy V1"})
+                      {wf.name} (
+                      {wf.apiMode === "run_workflow_v2" ? "V2" : "Legacy V1"})
                     </option>
                   ))}
                 </select>
                 {!activeWorkflow?.baseImageNodeId && (
                   <div className="mt-1.5 p-2 bg-amber-50 rounded-lg text-[9.5px] text-amber-805 border border-amber-200 leading-normal font-medium">
-                    ⚠️ 当前工作流未配置 RunningHub 输入图片节点 (baseImageNodeId 字段未填写)，任务将使用工作流默认参数，无法验证真实 Canvas 图融合。
+                    ⚠️ 当前工作流未配置 RunningHub 输入图片节点 (baseImageNodeId
+                    字段未填写)，任务将使用工作流默认参数，无法验证真实 Canvas
+                    图融合。
                   </div>
                 )}
               </div>
@@ -595,20 +726,29 @@ export const ReviewCenter: React.FC<ReviewCenterProps> = ({
               {/* Advanced prompt configuration */}
               <div className="space-y-2">
                 <div className="space-y-1">
-                  <span className="block text-[8.5px] text-slate-450 font-bold uppercase">AI 创意增强提示词 (Prompt)</span>
+                  <span className="block text-[8.5px] text-slate-450 font-bold uppercase">
+                    AI 创意增强提示词 (Prompt)
+                  </span>
                   <textarea
                     rows={2}
                     value={promptInput}
                     onChange={(e) => setPromptInput(e.target.value)}
                     className="w-full bg-white border border-slate-200 font-medium rounded-lg p-1.5 leading-relaxed text-[10.5px]"
-                    disabled={activeImage.aiFusionStatus === "running" || activeImage.aiFusionStatus === "queued"}
+                    disabled={
+                      activeImage.aiFusionStatus === "running" ||
+                      activeImage.aiFusionStatus === "queued"
+                    }
                   />
                 </div>
 
                 <div className="space-y-1">
                   <div className="flex justify-between items-center">
-                    <span className="block text-[8.5px] text-slate-450 font-bold uppercase">反向提示词 (Negative Prompt)</span>
-                    <span className="text-[8px] text-amber-600 font-medium">暂不生效</span>
+                    <span className="block text-[8.5px] text-slate-450 font-bold uppercase">
+                      反向提示词 (Negative Prompt)
+                    </span>
+                    <span className="text-[8px] text-amber-600 font-medium">
+                      暂不生效
+                    </span>
                   </div>
                   <textarea
                     rows={1}
@@ -616,47 +756,75 @@ export const ReviewCenter: React.FC<ReviewCenterProps> = ({
                     onChange={(e) => setNegPromptInput(e.target.value)}
                     className="w-full bg-white border border-slate-200 font-medium rounded-lg p-1.5 leading-relaxed text-[10.5px]"
                     placeholder="例如: blurry, bad quality, deformed..."
-                    disabled={activeImage.aiFusionStatus === "running" || activeImage.aiFusionStatus === "queued"}
+                    disabled={
+                      activeImage.aiFusionStatus === "running" ||
+                      activeImage.aiFusionStatus === "queued"
+                    }
                   />
                   <p className="text-[8.5px] text-slate-400 select-none">
-                    ⚠️ 当前工作流暂未配置独立负面提示词节点，负面提示词暂不生效。
+                    ⚠️
+                    当前工作流暂未配置独立负面提示词节点，负面提示词暂不生效。
                   </p>
                 </div>
 
                 <div className="grid grid-cols-2 gap-2 text-[10.5px]">
                   <div>
                     <div className="flex justify-between items-center mb-1">
-                      <span className="block text-[8.5px] text-slate-455 font-bold uppercase">重绘强度 (Denoise)</span>
+                      <span className="block text-[8.5px] text-slate-455 font-bold uppercase">
+                        重绘强度 (Denoise)
+                      </span>
                       <span className="text-[8px] text-slate-400">
-                        {activeWorkflow.id === "rh_flux2_klein_light_fusion" ? "建议 0.7 - 1" : "建议 0.18-0.35"}
+                        {activeWorkflow.id === "rh_flux2_klein_light_fusion"
+                          ? "建议 0.7 - 1"
+                          : "建议 0.18-0.35"}
                       </span>
                     </div>
                     <input
                       type="number"
                       step="0.01"
-                      min={activeWorkflow.id === "rh_flux2_klein_light_fusion" ? 0.7 : 0.18}
-                      max={activeWorkflow.id === "rh_flux2_klein_light_fusion" ? 1.0 : 0.35}
+                      min={
+                        activeWorkflow.id === "rh_flux2_klein_light_fusion"
+                          ? 0.7
+                          : 0.18
+                      }
+                      max={
+                        activeWorkflow.id === "rh_flux2_klein_light_fusion"
+                          ? 1.0
+                          : 0.35
+                      }
                       value={denoiseInput}
-                      onChange={(e) => setDenoiseInput(parseFloat(e.target.value))}
+                      onChange={(e) =>
+                        setDenoiseInput(parseFloat(e.target.value))
+                      }
                       className="w-full bg-white border border-slate-200 rounded-lg p-1 font-mono font-bold"
-                      disabled={activeImage.aiFusionStatus === "running" || activeImage.aiFusionStatus === "queued"}
+                      disabled={
+                        activeImage.aiFusionStatus === "running" ||
+                        activeImage.aiFusionStatus === "queued"
+                      }
                     />
                   </div>
                   <div>
-                    <span className="block text-[8.5px] text-slate-455 font-bold uppercase mb-1">随机种子 (Seed)</span>
+                    <span className="block text-[8.5px] text-slate-455 font-bold uppercase mb-1">
+                      随机种子 (Seed)
+                    </span>
                     <input
                       type="number"
                       value={seedInput}
                       onChange={(e) => setSeedInput(parseInt(e.target.value))}
                       className="w-full bg-white border border-slate-200 rounded-lg p-1 font-mono font-bold"
-                      disabled={activeImage.aiFusionStatus === "running" || activeImage.aiFusionStatus === "queued"}
+                      disabled={
+                        activeImage.aiFusionStatus === "running" ||
+                        activeImage.aiFusionStatus === "queued"
+                      }
                     />
                   </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-2 text-[10.5px]">
                   <div>
-                    <span className="block text-[8.5px] text-slate-455 font-bold uppercase mb-1">迭代步数 (Steps)</span>
+                    <span className="block text-[8.5px] text-slate-455 font-bold uppercase mb-1">
+                      迭代步数 (Steps)
+                    </span>
                     <input
                       type="number"
                       min={1}
@@ -664,11 +832,16 @@ export const ReviewCenter: React.FC<ReviewCenterProps> = ({
                       value={stepsInput}
                       onChange={(e) => setStepsInput(parseInt(e.target.value))}
                       className="w-full bg-white border border-slate-200 rounded-lg p-1 font-mono font-bold"
-                      disabled={activeImage.aiFusionStatus === "running" || activeImage.aiFusionStatus === "queued"}
+                      disabled={
+                        activeImage.aiFusionStatus === "running" ||
+                        activeImage.aiFusionStatus === "queued"
+                      }
                     />
                   </div>
                   <div>
-                    <span className="block text-[8.5px] text-slate-455 font-bold uppercase mb-1">无分类指导 (CFG)</span>
+                    <span className="block text-[8.5px] text-slate-455 font-bold uppercase mb-1">
+                      无分类指导 (CFG)
+                    </span>
                     <input
                       type="number"
                       step="0.1"
@@ -677,7 +850,10 @@ export const ReviewCenter: React.FC<ReviewCenterProps> = ({
                       value={cfgInput}
                       onChange={(e) => setCfgInput(parseFloat(e.target.value))}
                       className="w-full bg-white border border-slate-200 rounded-lg p-1 font-mono font-bold"
-                      disabled={activeImage.aiFusionStatus === "running" || activeImage.aiFusionStatus === "queued"}
+                      disabled={
+                        activeImage.aiFusionStatus === "running" ||
+                        activeImage.aiFusionStatus === "queued"
+                      }
                     />
                   </div>
                 </div>
@@ -688,21 +864,25 @@ export const ReviewCenter: React.FC<ReviewCenterProps> = ({
                 <span className="font-bold text-slate-700 flex items-center gap-1 uppercase tracking-wider text-[9px]">
                   ⚙️ 生产交付与融合工具箱 (Production & Fusion Toolbox)
                 </span>
-                
+
                 <div className="grid grid-cols-2 gap-2 text-[10.5px]">
                   {/* 1. 生成基础底图 */}
                   <button
                     type="button"
                     onClick={async () => {
                       try {
-                        const baseUrl = await renderFusionBaseImage(activeProduct, activeTemplate, {
-                          hOffset: currentXOffset,
-                          vOffset: currentYOffset,
-                          scale: currentScale
-                        });
+                        const baseUrl = await renderFusionBaseImage(
+                          activeProduct,
+                          activeTemplate,
+                          {
+                            hOffset: currentXOffset,
+                            vOffset: currentYOffset,
+                            scale: currentScale,
+                          },
+                        );
                         onUpdateImage({
                           ...activeImage,
-                          aiFusionBaseUrl: baseUrl
+                          aiFusionBaseUrl: baseUrl,
                         });
                         alert("【成功】基础底图已生成并保存到资产字段！");
                       } catch (err) {
@@ -725,39 +905,44 @@ export const ReviewCenter: React.FC<ReviewCenterProps> = ({
                           alert("Canvas 尚未生成完毕，无法触发融合。");
                           return;
                         }
-                        
+
                         // Mark as running
                         const runningImg: GeneratedImage = {
                           ...activeImage,
                           aiFusionStatus: "running",
                           aiFusionError: undefined,
                           aiFusionWorkflowId: activeWorkflow.id,
-                          aiFusionBaseUrl: activeImage.aiFusionBaseUrl || renderedPreviewUrl
+                          aiFusionBaseUrl:
+                            activeImage.aiFusionBaseUrl || renderedPreviewUrl,
                         };
                         onUpdateImage(runningImg);
-                        
+
                         // Trigger scene-fusion api (defaults to v2 upload and run_workflow_v2)
                         const fusionResult = await runSceneFusion({
-                          baseImageDataUrl: activeImage.aiFusionBaseUrl || renderedPreviewUrl,
+                          baseImageDataUrl:
+                            activeImage.aiFusionBaseUrl || renderedPreviewUrl,
                           workflowConfig: {
                             ...activeWorkflow,
                             defaultPrompt: promptInput,
                             defaultNegativePrompt: negPromptInput,
                             defaultDenoise: denoiseInput,
                             defaultSteps: stepsInput,
-                            defaultCfg: cfgInput
+                            defaultCfg: cfgInput,
                           },
                           prompt: promptInput,
                           negativePrompt: negPromptInput,
                           denoise: denoiseInput,
                           seed: seedInput,
                           steps: stepsInput,
-                          cfg: cfgInput
+                          cfg: cfgInput,
                         });
-                        
+
                         if (fusionResult && fusionResult.taskId) {
                           if (fusionResult.warning) {
-                            console.warn("[RunningHub Warning]:", fusionResult.warning);
+                            console.warn(
+                              "[RunningHub Warning]:",
+                              fusionResult.warning,
+                            );
                           }
                           // Save taskId to state
                           const updatedImg: GeneratedImage = {
@@ -765,7 +950,8 @@ export const ReviewCenter: React.FC<ReviewCenterProps> = ({
                             aiFusionTaskId: fusionResult.taskId,
                             aiFusionStatus: "running",
                             aiFusionWorkflowId: activeWorkflow.id,
-                            aiFusionBaseUrl: activeImage.aiFusionBaseUrl || renderedPreviewUrl
+                            aiFusionBaseUrl:
+                              activeImage.aiFusionBaseUrl || renderedPreviewUrl,
                           };
                           onUpdateImage(updatedImg);
                         } else {
@@ -776,15 +962,20 @@ export const ReviewCenter: React.FC<ReviewCenterProps> = ({
                         const failedImg: GeneratedImage = {
                           ...activeImage,
                           aiFusionStatus: "failed",
-                          aiFusionError: err.message || "请求启动场景融合失败"
+                          aiFusionError: err.message || "请求启动场景融合失败",
                         };
                         onUpdateImage(failedImg);
                       }
                     }}
-                    disabled={activeImage.aiFusionStatus === "running" || activeImage.aiFusionStatus === "queued"}
+                    disabled={
+                      activeImage.aiFusionStatus === "running" ||
+                      activeImage.aiFusionStatus === "queued"
+                    }
                     className="py-1.5 px-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold rounded-lg border border-indigo-205 transition-all disabled:bg-slate-100 disabled:text-slate-400 disabled:border-slate-200 flex items-center justify-center gap-0.5 cursor-pointer text-center"
                   >
-                    <RefreshCw className={`w-3.5 h-3.5 shrink-0 ${activeImage.aiFusionStatus === "running" ? "animate-spin text-indigo-500" : "text-indigo-600"}`} />
+                    <RefreshCw
+                      className={`w-3.5 h-3.5 shrink-0 ${activeImage.aiFusionStatus === "running" ? "animate-spin text-indigo-500" : "text-indigo-600"}`}
+                    />
                     <span>提交 RH 融合</span>
                   </button>
 
@@ -800,17 +991,21 @@ export const ReviewCenter: React.FC<ReviewCenterProps> = ({
                           {
                             hOffset: currentXOffset,
                             vOffset: currentYOffset,
-                            scale: currentScale
-                          }
+                            scale: currentScale,
+                          },
                         );
                         onUpdateImage({
                           ...activeImage,
-                          finalCompositeUrl: finalUrl
+                          finalCompositeUrl: finalUrl,
                         });
-                        alert("【成功】重新合成最终图完成！已更新并覆盖 finalCompositeUrl 字段。");
+                        alert(
+                          "【成功】重新合成最终图完成！已更新并覆盖 finalCompositeUrl 字段。",
+                        );
                       } catch (err) {
                         console.error("生成最终电商合图失败:", err);
-                        alert("生成最终电商合图失败，请先获取 RH 融合图或 Canvas 默认排版！");
+                        alert(
+                          "生成最终电商合图失败，请先获取 RH 融合图或 Canvas 默认排版！",
+                        );
                       }
                     }}
                     className="py-1.5 px-2 bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 font-bold rounded-lg transition-all flex items-center justify-center gap-0.5 cursor-pointer text-center"
@@ -824,16 +1019,20 @@ export const ReviewCenter: React.FC<ReviewCenterProps> = ({
                     type="button"
                     onClick={async () => {
                       try {
-                        const cleanCanvasUrl = await renderFullPreviewImage(activeProduct, activeTemplate, {
-                          hOffset: currentXOffset,
-                          vOffset: currentYOffset,
-                          scale: currentScale
-                        });
+                        const cleanCanvasUrl = await renderFullPreviewImage(
+                          activeProduct,
+                          activeTemplate,
+                          {
+                            hOffset: currentXOffset,
+                            vOffset: currentYOffset,
+                            scale: currentScale,
+                          },
+                        );
                         onUpdateImage({
                           ...activeImage,
                           finalCompositeUrl: cleanCanvasUrl,
                           aiFusionStatus: "none",
-                          aiFusionUrl: undefined
+                          aiFusionUrl: undefined,
                         });
                         alert("【重置】已切换为纯 Canvas 精细排版渲染主图！");
                       } catch (err) {
@@ -854,9 +1053,11 @@ export const ReviewCenter: React.FC<ReviewCenterProps> = ({
                         ...activeImage,
                         aiFusionStatus: "none",
                         aiFusionUrl: undefined,
-                        finalCompositeUrl: undefined
+                        finalCompositeUrl: undefined,
                       });
-                      alert("已为您重置融合状态。现在可以再次发起提交融合及合图。");
+                      alert(
+                        "已为您重置融合状态。现在可以再次发起提交融合及合图。",
+                      );
                     }}
                     className="py-1.5 px-2 bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 font-bold rounded-lg transition-all flex items-center justify-center gap-0.5 cursor-pointer text-center"
                   >
@@ -907,14 +1108,21 @@ export const ReviewCenter: React.FC<ReviewCenterProps> = ({
                 <div className="space-y-0.5">
                   <div className="flex justify-between text-[10px] text-slate-600">
                     <span>水平 X 轴修正</span>
-                    <span className="font-mono font-bold text-blue-600">{currentXOffset > 0 ? `+${currentXOffset}` : currentXOffset}%</span>
+                    <span className="font-mono font-bold text-blue-600">
+                      {currentXOffset > 0
+                        ? `+${currentXOffset}`
+                        : currentXOffset}
+                      %
+                    </span>
                   </div>
                   <input
                     type="range"
                     min="-15"
                     max="15"
                     value={currentXOffset}
-                    onChange={(e) => setCurrentXOffset(parseInt(e.target.value))}
+                    onChange={(e) =>
+                      setCurrentXOffset(parseInt(e.target.value))
+                    }
                     className="w-full h-1 bg-slate-150 rounded appearance-none cursor-pointer accent-blue-600"
                   />
                 </div>
@@ -922,14 +1130,21 @@ export const ReviewCenter: React.FC<ReviewCenterProps> = ({
                 <div className="space-y-0.5">
                   <div className="flex justify-between text-[10px] text-slate-600">
                     <span>垂直 Y 轴修正</span>
-                    <span className="font-mono font-bold text-blue-600">{currentYOffset > 0 ? `+${currentYOffset}` : currentYOffset}%</span>
+                    <span className="font-mono font-bold text-blue-600">
+                      {currentYOffset > 0
+                        ? `+${currentYOffset}`
+                        : currentYOffset}
+                      %
+                    </span>
                   </div>
                   <input
                     type="range"
                     min="-15"
                     max="15"
                     value={currentYOffset}
-                    onChange={(e) => setCurrentYOffset(parseInt(e.target.value))}
+                    onChange={(e) =>
+                      setCurrentYOffset(parseInt(e.target.value))
+                    }
                     className="w-full h-1 bg-slate-150 rounded appearance-none cursor-pointer accent-blue-600"
                   />
                 </div>
@@ -938,7 +1153,9 @@ export const ReviewCenter: React.FC<ReviewCenterProps> = ({
               <div className="space-y-0.5">
                 <div className="flex justify-between text-[10px] text-slate-600">
                   <span>产品图层缩放比例</span>
-                  <span className="font-mono font-bold text-indigo-650">{Math.round(currentScale * 100)}%</span>
+                  <span className="font-mono font-bold text-indigo-650">
+                    {Math.round(currentScale * 100)}%
+                  </span>
                 </div>
                 <input
                   type="range"
@@ -946,7 +1163,9 @@ export const ReviewCenter: React.FC<ReviewCenterProps> = ({
                   max="155"
                   step="5"
                   value={currentScale * 100}
-                  onChange={(e) => setCurrentScale(parseInt(e.target.value) / 100)}
+                  onChange={(e) =>
+                    setCurrentScale(parseInt(e.target.value) / 100)
+                  }
                   className="w-full h-1 bg-slate-150 rounded appearance-none cursor-pointer accent-indigo-600"
                 />
               </div>
@@ -965,26 +1184,39 @@ export const ReviewCenter: React.FC<ReviewCenterProps> = ({
                     return comps.map((comp) => {
                       const isSendRH = comp.sendToRunningHub; // scene_base, product_slot
                       return (
-                        <div key={comp.id} className="flex justify-between items-center py-1 border-b border-dashed border-slate-150 last:border-0">
+                        <div
+                          key={comp.id}
+                          className="flex justify-between items-center py-1 border-b border-dashed border-slate-150 last:border-0"
+                        >
                           <span className="font-semibold text-slate-700 truncate max-w-[210px] flex items-center gap-1">
-                            <span className={`w-1.5 h-1.5 rounded-full ${isSendRH ? "bg-indigo-500" : "bg-amber-500"}`} />
+                            <span
+                              className={`w-1.5 h-1.5 rounded-full ${isSendRH ? "bg-indigo-500" : "bg-amber-500"}`}
+                            />
                             {comp.name}
                           </span>
                           <div className="flex items-center gap-1 font-mono text-[8.5px]">
-                            <span className={`px-1 py-0.2 rounded font-bold uppercase ${
-                              isSendRH 
-                                ? "bg-indigo-100 text-indigo-700 border border-indigo-200" 
-                                : "bg-amber-100 text-amber-700 border border-amber-200"
-                            }`}>
+                            <span
+                              className={`px-1 py-0.2 rounded font-bold uppercase ${
+                                isSendRH
+                                  ? "bg-indigo-100 text-indigo-700 border border-indigo-200"
+                                  : "bg-amber-100 text-amber-700 border border-amber-200"
+                              }`}
+                            >
                               {isSendRH ? "→ 场景融合" : "叠加(免AI)"}
                             </span>
-                            <span className="text-slate-400">z:{comp.zIndex}</span>
+                            <span className="text-slate-400">
+                              z:{comp.zIndex}
+                            </span>
                           </div>
                         </div>
                       );
                     });
                   } catch (err) {
-                    return <div className="text-slate-400 text-[9px]">加载组件失败</div>;
+                    return (
+                      <div className="text-slate-400 text-[9px]">
+                        加载组件失败
+                      </div>
+                    );
                   }
                 })()}
               </div>
@@ -992,7 +1224,9 @@ export const ReviewCenter: React.FC<ReviewCenterProps> = ({
 
             {/* Quality Standard list (checklist in specs) */}
             <div className="border-t border-slate-100 pt-3 text-[9px] text-slate-500 space-y-1 bg-slate-50/50 p-2 rounded-lg border border-slate-100">
-              <span className="font-bold text-slate-700 block mb-0.5">人工复排 checklist：</span>
+              <span className="font-bold text-slate-700 block mb-0.5">
+                人工复排 checklist：
+              </span>
               <div className="grid grid-cols-2 gap-1 text-slate-550 font-medium">
                 <div>🎨 场景自然：AI增强</div>
                 <div>🚫 反白溢出：不穿模</div>

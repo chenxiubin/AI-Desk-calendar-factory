@@ -1,4 +1,9 @@
-import { ProductArchetype, BusinessRatioType, PageRole, ExportFolderKey } from "./domain/calendarTaxonomy";
+import {
+  ProductArchetype,
+  BusinessRatioType,
+  PageRole,
+  ExportFolderKey,
+} from "./domain/calendarTaxonomy";
 export { ProductArchetype, BusinessRatioType, PageRole, ExportFolderKey };
 
 export type ProductAssetRole =
@@ -26,6 +31,8 @@ export interface ProductAsset {
   id: string;
   productId: string;
   assetType:
+    | "raw"
+    | "photo"
     | "front_cover"
     | "inner_page"
     | "side"
@@ -42,7 +49,14 @@ export interface ProductAsset {
   height: number;
   status: "pending" | "ready" | "failed";
   assetRole?: ProductAssetRole;
-  viewType?: "front" | "left_3_4" | "right_3_4" | "top" | "side" | "back" | "detail";
+  viewType?:
+    | "front"
+    | "left_3_4"
+    | "right_3_4"
+    | "top"
+    | "side"
+    | "back"
+    | "detail";
   perspectiveType?: "front" | "left_3_4" | "right_3_4" | "top_45" | "detail";
   isPrimary?: boolean;
   qualityStatus?: "ready" | "need_adjustment" | "failed";
@@ -69,7 +83,12 @@ export interface Product {
   status: "raw" | "white_bg_done" | "png_done" | "completed" | "missing_assets";
   // Beautiful brand colors for mock renders
   themeColor: string;
-  illustrationType: "dragon" | "landscape" | "minimalist" | "cartoon" | "calligraphy";
+  illustrationType:
+    | "dragon"
+    | "landscape"
+    | "minimalist"
+    | "cartoon"
+    | "calligraphy";
 }
 
 export interface TemplateSlot {
@@ -109,7 +128,12 @@ export interface TemplateBackground {
   type: "color" | "scene" | "gradient";
   color?: string;
   gradient?: string;
-  sceneStyle?: "warm_light" | "beige_paper" | "studio_white" | "luxury_gold" | "festive_red";
+  sceneStyle?:
+    | "warm_light"
+    | "beige_paper"
+    | "studio_white"
+    | "luxury_gold"
+    | "festive_red";
 }
 
 export interface ExportSettings {
@@ -148,7 +172,13 @@ export interface TemplateComponent {
 export interface Template {
   id: string;
   templateName: string;
-  templateType: "main" | "sku" | "detail" | "white_bg" | "ad_custom" | "parameter";
+  templateType:
+    | "main"
+    | "sku"
+    | "detail"
+    | "white_bg"
+    | "ad_custom"
+    | "parameter";
   productType: "calendar" | "wall_calendar" | "gift_box";
   aspectRatio: "1:1" | "3:4" | "16:9" | "custom";
   outputWidth: number;
@@ -278,7 +308,14 @@ export interface TemplateSuite {
   id: string;
   suiteName: string;
   styleName: string;
-  category: "new_chinese" | "business" | "festive_red" | "minimal" | "gift" | "children" | "custom";
+  category:
+    | "new_chinese"
+    | "business"
+    | "festive_red"
+    | "minimal"
+    | "gift"
+    | "children"
+    | "custom";
   productType: "calendar" | "wall_calendar" | "gift_box";
   coverImage?: string;
   pages: TemplatePage[];

@@ -3,7 +3,17 @@ import { Product } from "../types";
 
 interface VisualCalendarProps {
   product: Product;
-  type: "front_cover" | "inner_page" | "side" | "detail_ring" | "detail_cover" | "detail_page" | "detail_base" | "ad_area" | "white_bg" | "transparent_png";
+  type:
+    | "front_cover"
+    | "inner_page"
+    | "side"
+    | "detail_ring"
+    | "detail_cover"
+    | "detail_page"
+    | "detail_base"
+    | "ad_area"
+    | "white_bg"
+    | "transparent_png";
   className?: string;
   isNakedPNG?: boolean; // If true, rendering with transparent background and no ambient shadow
 }
@@ -12,15 +22,24 @@ export const VisualCalendar: React.FC<VisualCalendarProps> = ({
   product,
   type,
   className = "",
-  isNakedPNG = false
+  isNakedPNG = false,
 }) => {
   const brandRed = product.themeColor || "#DC2626";
 
   const realPngAsset = product.assets?.find(
-    (a) => a.assetType === "transparent_png" && a.status === "ready" && a.fileUrl && a.fileUrl.startsWith("data:")
+    (a) =>
+      a.assetType === "transparent_png" &&
+      a.status === "ready" &&
+      a.fileUrl &&
+      a.fileUrl.startsWith("data:"),
   );
 
-  if (realPngAsset && (type === "transparent_png" || type === "white_bg" || type === "front_cover")) {
+  if (
+    realPngAsset &&
+    (type === "transparent_png" ||
+      type === "white_bg" ||
+      type === "front_cover")
+  ) {
     return (
       <div className={`relative flex items-center justify-center ${className}`}>
         <img
@@ -43,14 +62,20 @@ export const VisualCalendar: React.FC<VisualCalendarProps> = ({
             <div className="w-24 h-24 border-4 border-dashed rounded-full flex items-center justify-center text-4xl font-serif">
               龍
             </div>
-            <div className="text-xs tracking-widest mt-2">D R A G O N   2 0 2 6</div>
+            <div className="text-xs tracking-widest mt-2">
+              D R A G O N 2 0 2 6
+            </div>
           </div>
         );
       case "landscape":
         return (
           <div className="absolute bottom-0 inset-x-0 h-1/2 opacity-30 pointer-events-none overflow-hidden select-none">
             {/* Water mountains overlay */}
-            <svg viewBox="0 0 100 50" preserveAspectRatio="none" className="w-full h-full fill-current text-teal-800">
+            <svg
+              viewBox="0 0 100 50"
+              preserveAspectRatio="none"
+              className="w-full h-full fill-current text-teal-800"
+            >
               <path d="M0,50 Q20,10 40,35 T80,20 T100,50 Z" />
               <path d="M0,50 Q15,30 30,40 T70,30 T100,50 Z" opacity="0.5" />
             </svg>
@@ -79,7 +104,10 @@ export const VisualCalendar: React.FC<VisualCalendarProps> = ({
         {/* Wire Binding Header */}
         <div className="h-6 w-full bg-neutral-200 border-b border-neutral-300 flex justify-around items-center px-4 relative z-10 shrink-0">
           {Array.from({ length: 16 }).map((_, i) => (
-            <div key={i} className="w-2.5 h-3.5 bg-neutral-400 rounded-b border border-neutral-500 shadow-sm" />
+            <div
+              key={i}
+              className="w-2.5 h-3.5 bg-neutral-400 rounded-b border border-neutral-500 shadow-sm"
+            />
           ))}
         </div>
 
@@ -136,7 +164,10 @@ export const VisualCalendar: React.FC<VisualCalendarProps> = ({
         {/* Wire Binding Header */}
         <div className="h-6 w-full bg-neutral-200 border-b border-neutral-300 flex justify-around items-center px-4 relative z-10 shrink-0">
           {Array.from({ length: 16 }).map((_, i) => (
-            <div key={i} className="w-2.5 h-3.5 bg-neutral-400 rounded-b border border-neutral-500 shadow-sm" />
+            <div
+              key={i}
+              className="w-2.5 h-3.5 bg-neutral-400 rounded-b border border-neutral-500 shadow-sm"
+            />
           ))}
         </div>
 
@@ -147,11 +178,18 @@ export const VisualCalendar: React.FC<VisualCalendarProps> = ({
           {/* Month Indicator */}
           <div className="flex justify-between items-baseline border-b pb-1.5 z-10">
             <div>
-              <span className="text-2xl font-serif font-black text-neutral-800">一 月</span>
-              <span className="text-sm font-mono font-medium text-neutral-400 ml-1">JANUARY</span>
+              <span className="text-2xl font-serif font-black text-neutral-800">
+                一 月
+              </span>
+              <span className="text-sm font-mono font-medium text-neutral-400 ml-1">
+                JANUARY
+              </span>
             </div>
             <div className="text-right">
-              <span className="text-sm font-semibold tracking-wider px-2 py-0.5 rounded text-white text-[11px]" style={{ backgroundColor: brandRed }}>
+              <span
+                className="text-sm font-semibold tracking-wider px-2 py-0.5 rounded text-white text-[11px]"
+                style={{ backgroundColor: brandRed }}
+              >
                 {product.productName}
               </span>
             </div>
@@ -161,7 +199,10 @@ export const VisualCalendar: React.FC<VisualCalendarProps> = ({
           <div className="grid grid-cols-7 gap-1 mt-2 text-center text-[10px] z-10 flex-1">
             {/* Days names */}
             {["日", "一", "二", "三", "四", "五", "六"].map((day, idx) => (
-              <span key={day} className={`font-semibold pb-1 border-b text-neutral-400 ${idx === 0 || idx === 6 ? "text-red-500" : ""}`}>
+              <span
+                key={day}
+                className={`font-semibold pb-1 border-b text-neutral-400 ${idx === 0 || idx === 6 ? "text-red-500" : ""}`}
+              >
                 {day}
               </span>
             ))}
@@ -171,14 +212,24 @@ export const VisualCalendar: React.FC<VisualCalendarProps> = ({
             ))}
             {Array.from({ length: 31 }).map((_, i) => {
               const dayNum = i + 1;
-              const isWeekend = (dayNum + 4) % 7 === 0 || (dayNum + 4) % 7 === 1;
+              const isWeekend =
+                (dayNum + 4) % 7 === 0 || (dayNum + 4) % 7 === 1;
               const isSpecial = dayNum === 1 || dayNum === 23; // Chinese New Year
               return (
-                <div key={dayNum} className="flex flex-col items-center justify-center p-0.5 rounded relative hover:bg-neutral-50">
-                  <span className={`font-mono font-bold ${isWeekend ? "text-red-500" : "text-neutral-700"} ${isSpecial ? "text-white bg-red-600 rounded-full w-4 h-4 flex items-center justify-center text-[9px]" : ""}`}>
+                <div
+                  key={dayNum}
+                  className="flex flex-col items-center justify-center p-0.5 rounded relative hover:bg-neutral-50"
+                >
+                  <span
+                    className={`font-mono font-bold ${isWeekend ? "text-red-500" : "text-neutral-700"} ${isSpecial ? "text-white bg-red-600 rounded-full w-4 h-4 flex items-center justify-center text-[9px]" : ""}`}
+                  >
                     {dayNum}
                   </span>
-                  {isSpecial && <span className="text-[7px] text-red-600 scale-75 mt-0.5">元旦</span>}
+                  {isSpecial && (
+                    <span className="text-[7px] text-red-600 scale-75 mt-0.5">
+                      元旦
+                    </span>
+                  )}
                 </div>
               );
             })}
@@ -187,7 +238,9 @@ export const VisualCalendar: React.FC<VisualCalendarProps> = ({
           {/* Bottom Custom Ad block */}
           <div className="h-6 w-full border-t border-dashed mt-2 pt-1 flex items-center justify-between text-[9px] text-neutral-400 z-10 shrink-0">
             <span>设计编号: {product.productCode}</span>
-            <span className="mr-1 text-center font-serif text-neutral-500 uppercase tracking-widest">{product.seriesName}</span>
+            <span className="mr-1 text-center font-serif text-neutral-500 uppercase tracking-widest">
+              {product.seriesName}
+            </span>
           </div>
         </div>
 
@@ -217,7 +270,9 @@ export const VisualCalendar: React.FC<VisualCalendarProps> = ({
 
           {/* Left profile stand triangle */}
           <div className="absolute bottom-6 w-24 h-36 border-l-4 border-b-4 border-t-2 border-neutral-300 transform skew-y-12 rotate-6 z-0 flex items-center justify-center bg-neutral-100 shadow-inner">
-            <span className="text-[10px] font-mono text-neutral-500 rotate-90 scale-75">1000g灰板</span>
+            <span className="text-[10px] font-mono text-neutral-500 rotate-90 scale-75">
+              1000g灰板
+            </span>
           </div>
 
           {/* Front page slanted */}
@@ -227,8 +282,12 @@ export const VisualCalendar: React.FC<VisualCalendarProps> = ({
           >
             <div className="border border-white/20 flex-1 flex flex-col items-center justify-around rounded p-1">
               <span className="text-[9px] tracking-widest">2026 YEAR</span>
-              <span className="text-sm font-bold truncate max-w-full">{product.productName}</span>
-              <span className="text-[8px] bg-amber-400 text-amber-950 px-1 py-0.2 rounded font-sans">{product.seriesName}</span>
+              <span className="text-sm font-bold truncate max-w-full">
+                {product.productName}
+              </span>
+              <span className="text-[8px] bg-amber-400 text-amber-950 px-1 py-0.2 rounded font-sans">
+                {product.seriesName}
+              </span>
             </div>
           </div>
 
@@ -238,7 +297,9 @@ export const VisualCalendar: React.FC<VisualCalendarProps> = ({
 
         {/* Visual labels overlay */}
         <div className="absolute right-2 top-10 flex flex-col items-start gap-1 p-1 bg-white/90 rounded text-[9px] shadow-sm border border-neutral-100 max-w-[130px]">
-          <span className="font-bold text-amber-805 text-[10px]">侧面三角黄金学</span>
+          <span className="font-bold text-amber-805 text-[10px]">
+            侧面三角黄金学
+          </span>
           <p className="text-neutral-500">60%大迎角配重</p>
           <p className="text-neutral-600">三角重心结构，大风吹不倒</p>
         </div>
@@ -277,9 +338,14 @@ export const VisualCalendar: React.FC<VisualCalendarProps> = ({
         title = "特种压浮雕工艺";
         colorStyle = "from-red-600 to-rose-800";
         contentEl = (
-          <div className="flex flex-col items-center justify-center flex-1 py-3 text-white" style={{ backgroundColor: brandRed }}>
+          <div
+            className="flex flex-col items-center justify-center flex-1 py-3 text-white"
+            style={{ backgroundColor: brandRed }}
+          >
             <div className="relative border border-white/30 rounded p-3 text-center w-5/6">
-              <div className="absolute top-1 left-1 text-[8px] opacity-75">GOLD EMBOSSED</div>
+              <div className="absolute top-1 left-1 text-[8px] opacity-75">
+                GOLD EMBOSSED
+              </div>
               <span className="text-2xl font-serif tracking-widest bg-gradient-to-r from-amber-200 to-yellow-100 bg-clip-text text-transparent font-extrabold p-2 border-2 border-amber-300/40 rounded inline-block">
                 囍 / 福
               </span>
@@ -300,7 +366,9 @@ export const VisualCalendar: React.FC<VisualCalendarProps> = ({
               <div className="w-2 h-14 bg-stone-200 rotate-6 transform translate-x-2 shadow-xs" />
               <div className="w-2 h-14 bg-stone-200 rotate-6 transform translate-x-1 shadow-xs" />
               <div className="w-2 h-14 bg-white border border-stone-300 rotate-6 transform shadow-sm" />
-              <div className="absolute right-1 top-2 bg-emerald-100 text-emerald-800 text-[8px] font-mono px-1 rounded">250g重型纸</div>
+              <div className="absolute right-1 top-2 bg-emerald-100 text-emerald-800 text-[8px] font-mono px-1 rounded">
+                250g重型纸
+              </div>
             </div>
             <p className="text-neutral-600 text-[10px] text-center mt-2 px-2">
               日本进口重型新感超感纸，吸墨圆润，字迹不渗透、不易显黄。
@@ -316,8 +384,12 @@ export const VisualCalendar: React.FC<VisualCalendarProps> = ({
         contentEl = (
           <div className="flex flex-col items-center justify-center flex-1 p-3 bg-neutral-900 text-neutral-300">
             <div className="w-full flex justify-between items-center bg-neutral-800 border border-neutral-700 p-2 rounded">
-              <span className="text-[10px] font-mono text-neutral-400">底托厚度: 3.5mm</span>
-              <span className="text-[9px] bg-red-650 text-white px-1.5 py-0.2 rounded">精压双灰板</span>
+              <span className="text-[10px] font-mono text-neutral-400">
+                底托厚度: 3.5mm
+              </span>
+              <span className="text-[9px] bg-red-650 text-white px-1.5 py-0.2 rounded">
+                精压双灰板
+              </span>
             </div>
             <p className="text-[10px] text-neutral-400 mt-2 text-center line-clamp-2">
               饰哑光漆布，防水耐脏不滑移，承载10斤重力持久稳固。
@@ -328,9 +400,13 @@ export const VisualCalendar: React.FC<VisualCalendarProps> = ({
     }
 
     return (
-      <div className={`w-full h-full flex flex-col bg-white border border-neutral-200 rounded shadow-sm overflow-hidden`}>
+      <div
+        className={`w-full h-full flex flex-col bg-white border border-neutral-200 rounded shadow-sm overflow-hidden`}
+      >
         {/* Segment Title */}
-        <div className={`py-1.5 px-3 bg-gradient-to-r ${colorStyle} font-sans font-bold text-xs text-white flex justify-between items-center shrink-0`}>
+        <div
+          className={`py-1.5 px-3 bg-gradient-to-r ${colorStyle} font-sans font-bold text-xs text-white flex justify-between items-center shrink-0`}
+        >
           <span>{title}</span>
           <span className="text-[9px] font-mono opacity-80">ZOOM 400%</span>
         </div>
@@ -356,7 +432,10 @@ export const VisualCalendar: React.FC<VisualCalendarProps> = ({
         </p>
         <div className="flex gap-2 mt-2">
           {["烫金", "烫银", "烫蓝", "烫黑"].map((color) => (
-            <span key={color} className="text-[8px] bg-amber-400/20 text-amber-300 border border-amber-300/30 px-1 rounded">
+            <span
+              key={color}
+              className="text-[8px] bg-amber-400/20 text-amber-300 border border-amber-300/30 px-1 rounded"
+            >
               {color}
             </span>
           ))}
@@ -389,7 +468,9 @@ export const VisualCalendar: React.FC<VisualCalendarProps> = ({
 
   // Outer Wrapper with Ambient Frame / Shadows
   return (
-    <div className={`w-full h-full relative group transition-all duration-300 ${!isNakedPNG ? "drop-shadow-sm hover:drop-shadow-md" : ""} ${className}`}>
+    <div
+      className={`w-full h-full relative group transition-all duration-300 ${!isNakedPNG ? "drop-shadow-sm hover:drop-shadow-md" : ""} ${className}`}
+    >
       {renderContent()}
     </div>
   );

@@ -3,19 +3,21 @@ import {
   EXPORT_FOLDER_NAMES,
   ProductArchetype,
   PageRole,
-  BusinessRatioType
+  BusinessRatioType,
 } from "../domain/calendarTaxonomy";
 import {
   TemplateSuite,
   TemplatePage,
   GeneratedPage,
-  ProductAssetPack
+  ProductAssetPack,
 } from "../types";
 
 /**
  * 获取导出文件夹的中文名称
  */
-export function getExportFolderName(folderKey: string | ExportFolderKey): string {
+export function getExportFolderName(
+  folderKey: string | ExportFolderKey,
+): string {
   if (folderKey === "unclassified" || folderKey === "未分类") {
     return "未分类";
   }
@@ -30,7 +32,7 @@ export function getExportFolderName(folderKey: string | ExportFolderKey): string
  */
 export function getPageExportFolder(
   page: GeneratedPage | TemplatePage,
-  suite?: TemplateSuite | null
+  suite?: TemplateSuite | null,
 ): ExportFolderKey | "unclassified" {
   let outputFolder: ExportFolderKey | undefined = undefined;
   let pageRole: PageRole | undefined = undefined;
@@ -57,10 +59,16 @@ export function getPageExportFolder(
 
   // 根据 PageRole 后备映射
   if (pageRole) {
-    if (pageRole === PageRole.primary_main_square || pageRole === PageRole.main_marketing_square) {
+    if (
+      pageRole === PageRole.primary_main_square ||
+      pageRole === PageRole.main_marketing_square
+    ) {
       return ExportFolderKey.main_square;
     }
-    if (pageRole === PageRole.primary_main_vertical || pageRole === PageRole.main_marketing_vertical) {
+    if (
+      pageRole === PageRole.primary_main_vertical ||
+      pageRole === PageRole.main_marketing_vertical
+    ) {
       return ExportFolderKey.main_vertical;
     }
     if (
@@ -110,10 +118,10 @@ export function getPageExportFolder(
  * 将页面按导出文件夹顺序进行分组
  */
 export function groupPagesByExportFolder<
-  T extends GeneratedPage | TemplatePage
+  T extends GeneratedPage | TemplatePage,
 >(
   pages: T[],
-  suite?: TemplateSuite | null
+  suite?: TemplateSuite | null,
 ): Array<{
   folderKey: ExportFolderKey | "unclassified";
   folderName: string;
@@ -129,7 +137,7 @@ export function groupPagesByExportFolder<
     ExportFolderKey.ad_custom_effect,
     ExportFolderKey.white_bg,
     ExportFolderKey.transparent_png,
-    "unclassified" as any
+    "unclassified" as any,
   ];
 
   const groups: Record<string, T[]> = {};
@@ -153,7 +161,7 @@ export function groupPagesByExportFolder<
     .map((key) => ({
       folderKey: key,
       folderName: getExportFolderName(key),
-      pagesList: groups[key] || []
+      pagesList: groups[key] || [],
     }))
     .filter((g) => g.pagesList.length > 0);
 }
@@ -164,7 +172,7 @@ export function groupPagesByExportFolder<
 export function getSuiteDeliveryCompleteness(
   suite: TemplateSuite,
   pages: GeneratedPage[],
-  productAssetPack?: ProductAssetPack | null
+  productAssetPack?: ProductAssetPack | null,
 ) {
   const expected = suite.expectedSliceCounts || {};
   const mainSquareRequired = expected.mainSquareMinCount || 0;
@@ -180,13 +188,16 @@ export function getSuiteDeliveryCompleteness(
     return {
       outputFolder: pageAny.outputFolder || matchingTp?.outputFolder || "",
       pageRole: pageAny.pageRole || matchingTp?.pageRole || "",
-      businessRatioType: pageAny.businessRatioType || matchingTp?.businessRatioType || ""
+      businessRatioType:
+        pageAny.businessRatioType || matchingTp?.businessRatioType || "",
     };
   };
 
   const isMainSquarePage = (page: GeneratedPage): boolean => {
     const info = getPageInfo(page);
-    const isMainGroup = info.outputFolder === "main_square" || info.outputFolder === "main_vertical";
+    const isMainGroup =
+      info.outputFolder === "main_square" ||
+      info.outputFolder === "main_vertical";
     return (
       info.outputFolder === "main_square" ||
       info.pageRole === "primary_main_square" ||
@@ -197,7 +208,9 @@ export function getSuiteDeliveryCompleteness(
 
   const isMainVerticalPage = (page: GeneratedPage): boolean => {
     const info = getPageInfo(page);
-    const isMainGroup = info.outputFolder === "main_square" || info.outputFolder === "main_vertical";
+    const isMainGroup =
+      info.outputFolder === "main_square" ||
+      info.outputFolder === "main_vertical";
     return (
       info.outputFolder === "main_vertical" ||
       info.pageRole === "primary_main_vertical" ||
@@ -247,15 +260,24 @@ export function getSuiteDeliveryCompleteness(
     }
 
     // 透明底规划统计
-    if (info.outputFolder === "transparent_png" || info.pageRole === "transparent_png") {
+    if (
+      info.outputFolder === "transparent_png" ||
+      info.pageRole === "transparent_png"
+    ) {
       hasTransparentPngPlan = true;
     }
   });
 
   const mainMarketingTotalCurrent = mainSquareCurrent + mainVerticalCurrent;
   const mainSquareMissing = Math.max(0, mainSquareRequired - mainSquareCurrent);
-  const mainVerticalMissing = Math.max(0, mainVerticalRequired - mainVerticalCurrent);
-  const mainMarketingTotalMissing = Math.max(0, mainMarketingTotalRequired - mainMarketingTotalCurrent);
+  const mainVerticalMissing = Math.max(
+    0,
+    mainVerticalRequired - mainVerticalCurrent,
+  );
+  const mainMarketingTotalMissing = Math.max(
+    0,
+    mainMarketingTotalRequired - mainMarketingTotalCurrent,
+  );
 
   const isPlanningComplete =
     mainSquareMissing === 0 &&
@@ -266,13 +288,19 @@ export function getSuiteDeliveryCompleteness(
 
   const planningWarnings: string[] = [];
   if (mainSquareMissing > 0) {
-    planningWarnings.push(`页面规划缺少 1:1 主图卖点图 ${mainSquareMissing} 张`);
+    planningWarnings.push(
+      `页面规划缺少 1:1 主图卖点图 ${mainSquareMissing} 张`,
+    );
   }
   if (mainVerticalMissing > 0) {
-    planningWarnings.push(`页面规划缺少 3:4 主图卖点图 ${mainVerticalMissing} 张`);
+    planningWarnings.push(
+      `页面规划缺少 3:4 主图卖点图 ${mainVerticalMissing} 张`,
+    );
   }
   if (mainMarketingTotalMissing > 0) {
-    planningWarnings.push(`页面规划主图卖点图合计不足，还差 ${mainMarketingTotalMissing} 张`);
+    planningWarnings.push(
+      `页面规划主图卖点图合计不足，还差 ${mainMarketingTotalMissing} 张`,
+    );
   }
   if (whiteBgRequired && !hasWhiteBgPlan) {
     planningWarnings.push(`页面规划缺少白底精修交付项`);
@@ -280,7 +308,6 @@ export function getSuiteDeliveryCompleteness(
   if (transparentPngRequired && !hasTransparentPngPlan) {
     planningWarnings.push(`页面规划缺少透明PNG交付项`);
   }
-
 
   // --- 2. 成品输出层面的统计 ---
   let mainSquareOutputCurrent = 0;
@@ -306,7 +333,10 @@ export function getSuiteDeliveryCompleteness(
       hasWhiteBgOutput = true;
     }
 
-    if (info.outputFolder === "transparent_png" || info.pageRole === "transparent_png") {
+    if (
+      info.outputFolder === "transparent_png" ||
+      info.pageRole === "transparent_png"
+    ) {
       hasTransparentPngOutput = true;
     }
   });
@@ -321,17 +351,30 @@ export function getSuiteDeliveryCompleteness(
         if (assetRole === "white_bg" || assetType === "white_bg") {
           hasWhiteBgOutput = true;
         }
-        if (assetRole === "transparent_png" || assetType === "transparent_png") {
+        if (
+          assetRole === "transparent_png" ||
+          assetType === "transparent_png"
+        ) {
           hasTransparentPngOutput = true;
         }
       }
     });
   }
 
-  const mainMarketingOutputCurrent = mainSquareOutputCurrent + mainVerticalOutputCurrent;
-  const mainSquareOutputMissing = Math.max(0, mainSquareRequired - mainSquareOutputCurrent);
-  const mainVerticalOutputMissing = Math.max(0, mainVerticalRequired - mainVerticalOutputCurrent);
-  const mainMarketingOutputMissing = Math.max(0, mainMarketingTotalRequired - mainMarketingOutputCurrent);
+  const mainMarketingOutputCurrent =
+    mainSquareOutputCurrent + mainVerticalOutputCurrent;
+  const mainSquareOutputMissing = Math.max(
+    0,
+    mainSquareRequired - mainSquareOutputCurrent,
+  );
+  const mainVerticalOutputMissing = Math.max(
+    0,
+    mainVerticalRequired - mainVerticalOutputCurrent,
+  );
+  const mainMarketingOutputMissing = Math.max(
+    0,
+    mainMarketingTotalRequired - mainMarketingOutputCurrent,
+  );
 
   const isOutputComplete =
     mainSquareOutputMissing === 0 &&
@@ -342,13 +385,19 @@ export function getSuiteDeliveryCompleteness(
 
   const outputWarnings: string[] = [];
   if (mainSquareOutputMissing > 0) {
-    outputWarnings.push(`成品缺少 1:1 主图卖点图 ${mainSquareOutputMissing} 张`);
+    outputWarnings.push(
+      `成品缺少 1:1 主图卖点图 ${mainSquareOutputMissing} 张`,
+    );
   }
   if (mainVerticalOutputMissing > 0) {
-    outputWarnings.push(`成品缺少 3:4 主图卖点图 ${mainVerticalOutputMissing} 张`);
+    outputWarnings.push(
+      `成品缺少 3:4 主图卖点图 ${mainVerticalOutputMissing} 张`,
+    );
   }
   if (mainMarketingOutputMissing > 0) {
-    outputWarnings.push(`成品主图卖点图合计不足，还差 ${mainMarketingOutputMissing} 张`);
+    outputWarnings.push(
+      `成品主图卖点图合计不足，还差 ${mainMarketingOutputMissing} 张`,
+    );
   }
   if (whiteBgRequired && !hasWhiteBgOutput) {
     outputWarnings.push(`成品缺少白底精修图`);
@@ -378,7 +427,7 @@ export function getSuiteDeliveryCompleteness(
       hasTransparentPngPlan,
 
       isPlanningComplete,
-      warnings: planningWarnings
+      warnings: planningWarnings,
     },
     output: {
       mainSquareRequired,
@@ -400,7 +449,7 @@ export function getSuiteDeliveryCompleteness(
       hasTransparentPngOutput,
 
       isOutputComplete,
-      warnings: outputWarnings
-    }
+      warnings: outputWarnings,
+    },
   };
 }

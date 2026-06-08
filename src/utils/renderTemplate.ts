@@ -1,5 +1,13 @@
 /// <reference types="vite/client" />
-import { Product, ProductAsset, Template, TemplateSlot, TextField, TemplateComponent, PageLayerInstance } from "../types";
+import {
+  Product,
+  ProductAsset,
+  Template,
+  TemplateSlot,
+  TextField,
+  TemplateComponent,
+  PageLayerInstance,
+} from "../types";
 
 export let DEMO_MODE = import.meta.env.VITE_DEMO_MODE === "true";
 
@@ -10,7 +18,7 @@ export function setDemoMode(value: boolean) {
 export interface RenderOffsets {
   hOffset?: number; // slider percent offset -50 to 50
   vOffset?: number; // slider percent offset -50 to 50
-  scale?: number;   // scale factor multiplier 0.5 to 1.5
+  scale?: number; // scale factor multiplier 0.5 to 1.5
 }
 
 /**
@@ -31,7 +39,7 @@ export async function renderTemplateToCanvas(
     scale?: number;
   },
   renderMode: "all" | "base_only" | "overlays_only" = "all",
-  fusedBaseUrl?: string
+  fusedBaseUrl?: string,
 ): Promise<string> {
   const canvas = document.createElement("canvas");
   canvas.width = template.outputWidth || 800;
@@ -52,17 +60,33 @@ export async function renderTemplateToCanvas(
         const i = new Image();
         i.crossOrigin = "anonymous";
         i.onload = () => resolve(i);
-        i.onerror = (e) => reject(new Error("Failed to load fused runninghub image: " + fusedBaseUrl));
+        i.onerror = (e) =>
+          reject(
+            new Error("Failed to load fused runninghub image: " + fusedBaseUrl),
+          );
         i.src = fusedBaseUrl;
       });
       ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
     } catch (err) {
-      console.error("Failed to load RunningHub base background image, fallback to standard bg:", err);
+      console.error(
+        "Failed to load RunningHub base background image, fallback to standard bg:",
+        err,
+      );
       // Fallback base drawer in case URL is temporarily blocked
       drawBackground(ctx, template, canvas.width, canvas.height);
-      const sortedSlots = [...template.slots].sort((a, b) => (a.layer || 0) - (b.layer || 0));
+      const sortedSlots = [...template.slots].sort(
+        (a, b) => (a.layer || 0) - (b.layer || 0),
+      );
       for (const slot of sortedSlots) {
-        await drawSlot(ctx, product, slot, canvas.width, canvas.height, offsets, "base_only");
+        await drawSlot(
+          ctx,
+          product,
+          slot,
+          canvas.width,
+          canvas.height,
+          offsets,
+          "base_only",
+        );
       }
     }
 
@@ -70,8 +94,13 @@ export async function renderTemplateToCanvas(
     drawTextFields(ctx, product, template, canvas.width, canvas.height);
 
     // 3. Overlay branding decorations and custom logo plates (never sent to RH)
-    drawDecorAndLogoOverlays(ctx, template, product, canvas.width, canvas.height);
-
+    drawDecorAndLogoOverlays(
+      ctx,
+      template,
+      product,
+      canvas.width,
+      canvas.height,
+    );
   } else {
     // Standard rendering path (supports all / base_only / overlays_only)
     if (renderMode === "all" || renderMode === "base_only") {
@@ -79,11 +108,21 @@ export async function renderTemplateToCanvas(
       drawBackground(ctx, template, canvas.width, canvas.height);
 
       // 2. Sort slots by layer index to enforce correct overlay order
-      const sortedSlots = [...template.slots].sort((a, b) => (a.layer || 0) - (b.layer || 0));
+      const sortedSlots = [...template.slots].sort(
+        (a, b) => (a.layer || 0) - (b.layer || 0),
+      );
 
       // 3. Draw product slots (shadow is disabled inside DrawSlot when renderMode is "base_only")
       for (const slot of sortedSlots) {
-        await drawSlot(ctx, product, slot, canvas.width, canvas.height, offsets, renderMode);
+        await drawSlot(
+          ctx,
+          product,
+          slot,
+          canvas.width,
+          canvas.height,
+          offsets,
+          renderMode,
+        );
       }
     }
 
@@ -92,21 +131,33 @@ export async function renderTemplateToCanvas(
       drawTextFields(ctx, product, template, canvas.width, canvas.height);
 
       // 5. Draw decorative layers and logo overlays
-      drawDecorAndLogoOverlays(ctx, template, product, canvas.width, canvas.height);
+      drawDecorAndLogoOverlays(
+        ctx,
+        template,
+        product,
+        canvas.width,
+        canvas.height,
+      );
     }
   }
 
   // Final quality output
-  const format = template.exportSettings?.format === "PNG" ? "image/png" : "image/jpeg";
+  const format =
+    template.exportSettings?.format === "PNG" ? "image/png" : "image/jpeg";
   const quality = (template.exportSettings?.quality || 90) / 100;
-  
+
   return canvas.toDataURL(format, quality);
 }
 
 /**
  * Renders backdrop gradients, studio tabletop floors and shadow partitions
  */
-function drawBackground(ctx: CanvasRenderingContext2D, template: Template, w: number, h: number) {
+function drawBackground(
+  ctx: CanvasRenderingContext2D,
+  template: Template,
+  w: number,
+  h: number,
+) {
   const bg = template.background;
 
   if (bg.type === "color") {
@@ -131,7 +182,14 @@ function drawBackground(ctx: CanvasRenderingContext2D, template: Template, w: nu
 
     if (style === "warm_light") {
       // Warm studio: rich beige/amber warm spotlight
-      const grad = ctx.createRadialGradient(w / 2, h * 0.4, w * 0.1, w / 2, h * 0.4, w * 0.9);
+      const grad = ctx.createRadialGradient(
+        w / 2,
+        h * 0.4,
+        w * 0.1,
+        w / 2,
+        h * 0.4,
+        w * 0.9,
+      );
       grad.addColorStop(0, "#FEFDF8");
       grad.addColorStop(0.5, "#FAF3E3");
       grad.addColorStop(1, "#E8DCBE");
@@ -152,10 +210,16 @@ function drawBackground(ctx: CanvasRenderingContext2D, template: Template, w: nu
       floorGrad.addColorStop(1, "rgba(205, 192, 172, 0.6)");
       ctx.fillStyle = floorGrad;
       ctx.fillRect(0, h * 0.72, w, h - h * 0.72);
-
     } else if (style === "beige_paper") {
       // Light linen textured paper
-      const grad = ctx.createRadialGradient(w / 2, h * 0.35, 30, w / 2, h * 0.35, w * 0.75);
+      const grad = ctx.createRadialGradient(
+        w / 2,
+        h * 0.35,
+        30,
+        w / 2,
+        h * 0.35,
+        w * 0.75,
+      );
       grad.addColorStop(0, "#FAF6F0");
       grad.addColorStop(1, "#EADCB9");
       ctx.fillStyle = grad;
@@ -175,10 +239,16 @@ function drawBackground(ctx: CanvasRenderingContext2D, template: Template, w: nu
       floorGrad.addColorStop(1, "#CCBA93");
       ctx.fillStyle = floorGrad;
       ctx.fillRect(0, h * 0.68, w, h - h * 0.68);
-
     } else if (style === "studio_white") {
       // Professional slate catalog
-      const grad = ctx.createRadialGradient(w / 2, h * 0.4, w * 0.1, w / 2, h * 0.4, w * 0.85);
+      const grad = ctx.createRadialGradient(
+        w / 2,
+        h * 0.4,
+        w * 0.1,
+        w / 2,
+        h * 0.4,
+        w * 0.85,
+      );
       grad.addColorStop(0, "#FFFFFF");
       grad.addColorStop(0.6, "#F1F5F9");
       grad.addColorStop(1, "#E2E8F0");
@@ -189,16 +259,15 @@ function drawBackground(ctx: CanvasRenderingContext2D, template: Template, w: nu
       ctx.strokeStyle = "rgba(200, 210, 220, 0.6)";
       ctx.lineWidth = 1.5;
       ctx.beginPath();
-      ctx.moveTo(0, h * 0.70);
-      ctx.lineTo(w, h * 0.70);
+      ctx.moveTo(0, h * 0.7);
+      ctx.lineTo(w, h * 0.7);
       ctx.stroke();
 
-      const floorGrad = ctx.createLinearGradient(0, h * 0.70, 0, h);
+      const floorGrad = ctx.createLinearGradient(0, h * 0.7, 0, h);
       floorGrad.addColorStop(0, "rgba(226, 232, 240, 0.4)");
       floorGrad.addColorStop(1, "rgba(203, 213, 225, 0.5)");
       ctx.fillStyle = floorGrad;
-      ctx.fillRect(0, h * 0.70, w, h - h * 0.70);
-
+      ctx.fillRect(0, h * 0.7, w, h - h * 0.7);
     } else if (style === "luxury_gold") {
       // Dark gold / elegant boutique setup
       const grad = ctx.createLinearGradient(0, 0, 0, h);
@@ -220,10 +289,16 @@ function drawBackground(ctx: CanvasRenderingContext2D, template: Template, w: nu
       floorGrad.addColorStop(1, "#0B0F19");
       ctx.fillStyle = floorGrad;
       ctx.fillRect(0, h * 0.75, w, h - h * 0.75);
-
     } else if (style === "festive_red") {
       // Chinese Imperial New Year Gold Stamp style
-      const grad = ctx.createRadialGradient(w / 2, h * 0.35, 10, w / 2, h * 0.35, w * 0.8);
+      const grad = ctx.createRadialGradient(
+        w / 2,
+        h * 0.35,
+        10,
+        w / 2,
+        h * 0.35,
+        w * 0.8,
+      );
       grad.addColorStop(0, "#EF4444");
       grad.addColorStop(0.7, "#DC2626");
       grad.addColorStop(1, "#7F1D1D");
@@ -234,15 +309,15 @@ function drawBackground(ctx: CanvasRenderingContext2D, template: Template, w: nu
       ctx.strokeStyle = "#F59E0B";
       ctx.lineWidth = 2.5;
       ctx.beginPath();
-      ctx.moveTo(0, h * 0.70);
-      ctx.lineTo(w, h * 0.70);
+      ctx.moveTo(0, h * 0.7);
+      ctx.lineTo(w, h * 0.7);
       ctx.stroke();
 
-      const floorGrad = ctx.createLinearGradient(0, h * 0.70, 0, h);
+      const floorGrad = ctx.createLinearGradient(0, h * 0.7, 0, h);
       floorGrad.addColorStop(0, "rgba(153, 27, 27, 0.4)");
       floorGrad.addColorStop(1, "rgba(99, 12, 12, 0.6)");
       ctx.fillStyle = floorGrad;
-      ctx.fillRect(0, h * 0.70, w, h - h * 0.70);
+      ctx.fillRect(0, h * 0.7, w, h - h * 0.7);
     }
   }
 }
@@ -250,17 +325,24 @@ function drawBackground(ctx: CanvasRenderingContext2D, template: Template, w: nu
 /**
  * Finds the correct asset from product based on the slot's requirements and fallbacks.
  */
-export function findMatchingAsset(product: Product, slotAssetType: string): ProductAsset | undefined {
+export function findMatchingAsset(
+  product: Product,
+  slotAssetType: string,
+): ProductAsset | undefined {
   if (!product.assets || product.assets.length === 0) return undefined;
 
   // 1. 如果 slot.assetType 有明确值，优先匹配对应 assetType
-  let exactMatch = product.assets.find((a) => a.status === "ready" && a.assetType === slotAssetType);
+  let exactMatch = product.assets.find(
+    (a) => a.status === "ready" && a.assetType === slotAssetType,
+  );
   if (exactMatch) return exactMatch;
 
   // 2. 只有 front_cover / white_bg / 主产品槽(transparent_png) 找不到对应资产时，才 fallback 到 transparent_png
   const fallbackAllowedTypes = ["front_cover", "white_bg", "transparent_png"];
   if (fallbackAllowedTypes.includes(slotAssetType)) {
-    let fallbackPng = product.assets.find((a) => a.status === "ready" && a.assetType === "transparent_png");
+    let fallbackPng = product.assets.find(
+      (a) => a.status === "ready" && a.assetType === "transparent_png",
+    );
     if (fallbackPng) return fallbackPng;
   }
 
@@ -269,13 +351,16 @@ export function findMatchingAsset(product: Product, slotAssetType: string): Prod
 }
 
 /**
- * Dynamically renders product vector graphics onto a separate offscreen canvas 
- * and returns a PNG dataURL. This preserves high-fidelity drawing while ensuring 
+ * Dynamically renders product vector graphics onto a separate offscreen canvas
+ * and returns a PNG dataURL. This preserves high-fidelity drawing while ensuring
  * the image load pipeline runs smoothly with exact dimensions.
  */
-export function generateDynamicAssetDataUrl(product: Product, assetType: string): string {
+export function generateDynamicAssetDataUrl(
+  product: Product,
+  assetType: string,
+): string {
   const canvas = document.createElement("canvas");
-  
+
   // Choose standard natural dimensions
   let w = 800;
   let h = 600;
@@ -286,7 +371,7 @@ export function generateDynamicAssetDataUrl(product: Product, assetType: string)
     w = 800;
     h = 300;
   }
-  
+
   canvas.width = w;
   canvas.height = h;
   const ctx = canvas.getContext("2d");
@@ -296,7 +381,11 @@ export function generateDynamicAssetDataUrl(product: Product, assetType: string)
   ctx.imageSmoothingQuality = "high";
 
   // Draw the respective premium vector artwork
-  if (assetType === "front_cover" || assetType === "transparent_png" || assetType === "white_bg") {
+  if (
+    assetType === "front_cover" ||
+    assetType === "transparent_png" ||
+    assetType === "white_bg"
+  ) {
     drawVectorCover(ctx, product, 0, 0, w, h);
   } else if (assetType === "inner_page") {
     drawVectorInnerPage(ctx, product, 0, 0, w, h);
@@ -323,7 +412,7 @@ async function drawSlot(
   cw: number,
   ch: number,
   offsets?: RenderOffsets,
-  renderMode: "all" | "base_only" | "overlays_only" = "all"
+  renderMode: "all" | "base_only" | "overlays_only" = "all",
 ) {
   // 1. Calculate bounding box from percentages
   const boxW = cw * (slot.maxWidth / 100);
@@ -344,14 +433,31 @@ async function drawSlot(
   const finalY = slotCenterY + vOffset;
 
   // 4. Resolve the product asset to load
-  const matchingAsset = findMatchingAsset(product, slot.assetType || "front_cover");
+  const matchingAsset = findMatchingAsset(
+    product,
+    slot.assetType || "front_cover",
+  );
   let assetUrl = "";
 
   if (matchingAsset && matchingAsset.fileUrl) {
-    const isPlaceholder = ["front", "inner", "side", "pdf", "png", "ring", "det_cov", "det_pg", "det_base", "ad", "white_bg"].includes(matchingAsset.fileUrl);
+    const isPlaceholder = [
+      "front",
+      "inner",
+      "side",
+      "pdf",
+      "png",
+      "ring",
+      "det_cov",
+      "det_pg",
+      "det_base",
+      "ad",
+      "white_bg",
+    ].includes(matchingAsset.fileUrl);
     if (isPlaceholder) {
       if (!DEMO_MODE) {
-        console.warn("[RenderWarning] 生产模式使用占位产品图，建议上传真实产品PNG");
+        console.warn(
+          "[RenderWarning] 生产模式使用占位产品图，建议上传真实产品PNG",
+        );
       }
       assetUrl = generateDynamicAssetDataUrl(product, matchingAsset.assetType);
     } else {
@@ -394,7 +500,11 @@ async function drawSlot(
   }
 
   // 6. Draw Drop Shadow underneath the product (bypassed if renderMode === "base_only")
-  if (renderMode !== "base_only" && slot.shadowRule && slot.shadowRule !== "very_light_shadow_or_none") {
+  if (
+    renderMode !== "base_only" &&
+    slot.shadowRule &&
+    slot.shadowRule !== "very_light_shadow_or_none"
+  ) {
     ctx.save();
     const shadowY = drawY + drawH + 1;
     const shadowX = drawX + drawW / 2;
@@ -405,7 +515,8 @@ async function drawSlot(
     ctx.translate(shadowX, shadowY);
     ctx.scale(1, shadowRadiusY / shadowRadiusX);
     const grad = ctx.createRadialGradient(0, 0, 0, 0, 0, shadowRadiusX);
-    const opacity = slot.shadowRule === "strong_desk_contact_shadow" ? 0.35 : 0.22;
+    const opacity =
+      slot.shadowRule === "strong_desk_contact_shadow" ? 0.35 : 0.22;
     grad.addColorStop(0, `rgba(0, 0, 0, ${opacity})`);
     grad.addColorStop(0.4, `rgba(0, 0, 0, ${opacity * 0.5})`);
     grad.addColorStop(1, "rgba(0, 0, 0, 0)");
@@ -423,12 +534,19 @@ async function drawSlot(
 /**
  * Programmatic front-cover calendar board vector
  */
-function drawVectorCover(ctx: CanvasRenderingContext2D, p: Product, dx: number, dy: number, dw: number, dh: number) {
+function drawVectorCover(
+  ctx: CanvasRenderingContext2D,
+  p: Product,
+  dx: number,
+  dy: number,
+  dw: number,
+  dh: number,
+) {
   const brandRed = p.themeColor || "#DC2626";
 
   // 1. Double grey rigid backboard stand footer
   ctx.fillStyle = "#1E293B"; // slate stand
-  roundRect(ctx, dx, dy + dh * 0.90, dw, dh * 0.10, Math.max(2, dw * 0.015));
+  roundRect(ctx, dx, dy + dh * 0.9, dw, dh * 0.1, Math.max(2, dw * 0.015));
   ctx.fill();
 
   // 2. Main paper panel background
@@ -444,7 +562,14 @@ function drawVectorCover(ctx: CanvasRenderingContext2D, p: Product, dx: number, 
   // Color Banner core
   const inset = dw * 0.04;
   ctx.fillStyle = brandRed;
-  roundRect(ctx, dx + inset, dy + dh * 0.10, dw - inset * 2, dh * 0.68, Math.max(2, dw * 0.015));
+  roundRect(
+    ctx,
+    dx + inset,
+    dy + dh * 0.1,
+    dw - inset * 2,
+    dh * 0.68,
+    Math.max(2, dw * 0.015),
+  );
   ctx.fill();
 
   // White inner borders on cover banner
@@ -465,7 +590,7 @@ function drawVectorCover(ctx: CanvasRenderingContext2D, p: Product, dx: number, 
   ctx.fillStyle = "#FFFFFF";
   ctx.font = `black ${Math.round(dw * 0.18)}px "JetBrains Mono", monospace`;
   ctx.textAlign = "center";
-  ctx.fillText(p.year || "2026", dx + dw / 2, dy + dh * 0.40);
+  ctx.fillText(p.year || "2026", dx + dw / 2, dy + dh * 0.4);
 
   // Chinese calligraphy background mockup representation
   ctx.save();
@@ -487,7 +612,7 @@ function drawVectorCover(ctx: CanvasRenderingContext2D, p: Product, dx: number, 
 
   // 6. Base Advertisement brass strip
   ctx.fillStyle = "#FEF3C7"; // Gold paper base
-  roundRect(ctx, dx + inset * 1.5, dy + dh * 0.70, dw - inset * 3, dh * 0.07, 3);
+  roundRect(ctx, dx + inset * 1.5, dy + dh * 0.7, dw - inset * 3, dh * 0.07, 3);
   ctx.fill();
 
   ctx.fillStyle = "#78350F"; // dark brown
@@ -498,12 +623,19 @@ function drawVectorCover(ctx: CanvasRenderingContext2D, p: Product, dx: number, 
 /**
  * Programmatic white inner grid calendar page
  */
-function drawVectorInnerPage(ctx: CanvasRenderingContext2D, p: Product, dx: number, dy: number, dw: number, dh: number) {
+function drawVectorInnerPage(
+  ctx: CanvasRenderingContext2D,
+  p: Product,
+  dx: number,
+  dy: number,
+  dw: number,
+  dh: number,
+) {
   const brandRed = p.themeColor || "#DC2626";
 
   // Base stand footer
   ctx.fillStyle = "#334155";
-  roundRect(ctx, dx, dy + dh * 0.90, dw, dh * 0.10, Math.max(2, dw * 0.012));
+  roundRect(ctx, dx, dy + dh * 0.9, dw, dh * 0.1, Math.max(2, dw * 0.012));
   ctx.fill();
 
   // Base paper panel backdrop
@@ -593,18 +725,29 @@ function drawVectorInnerPage(ctx: CanvasRenderingContext2D, p: Product, dx: numb
   ctx.fillText(`CODE: ${p.productCode}`, dx + dw * 0.06, dy + dh * 0.85);
 
   ctx.textAlign = "right";
-  ctx.fillText(`SIZE: ${p.innerPageSize.split(" * ")[0]}`, dx + dw * 0.94, dy + dh * 0.85);
+  ctx.fillText(
+    `SIZE: ${p.innerPageSize.split(" * ")[0]}`,
+    dx + dw * 0.94,
+    dy + dh * 0.85,
+  );
 }
 
 /**
  * Programmatic side angled perspective wire calendar stand mesh
  */
-function drawVectorSide(ctx: CanvasRenderingContext2D, p: Product, dx: number, dy: number, dw: number, dh: number) {
+function drawVectorSide(
+  ctx: CanvasRenderingContext2D,
+  p: Product,
+  dx: number,
+  dy: number,
+  dw: number,
+  dh: number,
+) {
   const brandRed = p.themeColor || "#DC2626";
 
   // Light horizontal shadow
   ctx.fillStyle = "rgba(0,0,0,0.06)";
-  ctx.fillRect(dx, dy + dh * 0.90, dw, dh * 0.05);
+  ctx.fillRect(dx, dy + dh * 0.9, dw, dh * 0.05);
 
   // Isometric stand projection geometry
   const midX = dx + dw * 0.45;
@@ -613,9 +756,9 @@ function drawVectorSide(ctx: CanvasRenderingContext2D, p: Product, dx: number, d
   // Left slanted paper boards representation
   ctx.fillStyle = "#E2E8F0";
   ctx.beginPath();
-  ctx.moveTo(midX - dw * 0.30, topY);
+  ctx.moveTo(midX - dw * 0.3, topY);
   ctx.lineTo(midX + dw * 0.35, topY - dh * 0.04);
-  ctx.lineTo(midX + dw * 0.32, dy + dh * 0.80);
+  ctx.lineTo(midX + dw * 0.32, dy + dh * 0.8);
   ctx.lineTo(midX - dw * 0.33, dy + dh * 0.84);
   ctx.closePath();
   ctx.fill();
@@ -624,9 +767,9 @@ function drawVectorSide(ctx: CanvasRenderingContext2D, p: Product, dx: number, d
   ctx.fillStyle = "#1E293B";
   ctx.beginPath();
   ctx.moveTo(midX - dw * 0.36, dy + dh * 0.84);
-  ctx.lineTo(midX + dw * 0.32, dy + dh * 0.80);
+  ctx.lineTo(midX + dw * 0.32, dy + dh * 0.8);
   ctx.lineTo(midX + dw * 0.28, dy + dh * 0.92);
-  ctx.lineTo(midX - dw * 0.40, dy + dh * 0.96);
+  ctx.lineTo(midX - dw * 0.4, dy + dh * 0.96);
   ctx.closePath();
   ctx.fill();
 
@@ -648,7 +791,7 @@ function drawVectorSide(ctx: CanvasRenderingContext2D, p: Product, dx: number, d
   ctx.strokeStyle = "#A1A1AA";
   ctx.lineWidth = 4;
   ctx.beginPath();
-  ctx.arc(midX + dw * 0.10, topY + dh * 0.02, dw * 0.05, Math.PI, 2 * Math.PI);
+  ctx.arc(midX + dw * 0.1, topY + dh * 0.02, dw * 0.05, Math.PI, 2 * Math.PI);
   ctx.stroke();
 
   // Standard label font overlays
@@ -665,7 +808,14 @@ function drawVectorSide(ctx: CanvasRenderingContext2D, p: Product, dx: number, d
 /**
  * Simple bottom banner customization block
  */
-function drawVectorAdArea(ctx: CanvasRenderingContext2D, p: Product, dx: number, dy: number, dw: number, dh: number) {
+function drawVectorAdArea(
+  ctx: CanvasRenderingContext2D,
+  p: Product,
+  dx: number,
+  dy: number,
+  dw: number,
+  dh: number,
+) {
   ctx.fillStyle = "#111827";
   roundRect(ctx, dx, dy, dw, dh, 6);
   ctx.fill();
@@ -675,23 +825,39 @@ function drawVectorAdArea(ctx: CanvasRenderingContext2D, p: Product, dx: number,
   ctx.stroke();
 
   ctx.fillStyle = "#D97706";
-  ctx.font = 'bold 11px monospace';
+  ctx.font = "bold 11px monospace";
   ctx.textAlign = "center";
   ctx.fillText("CALENDAR BASE ADVERTISING BLOCK", dx + dw / 2, dy + dh * 0.25);
 
   ctx.fillStyle = "#FFFFFF";
-  ctx.font = 'bold 18px serif';
-  ctx.fillText(`★ 企业专属广告区: ${p.adAreaSize} ★`, dx + dw / 2, dy + dh * 0.58);
+  ctx.font = "bold 18px serif";
+  ctx.fillText(
+    `★ 企业专属广告区: ${p.adAreaSize} ★`,
+    dx + dw / 2,
+    dy + dh * 0.58,
+  );
 
   ctx.fillStyle = "#9CA3AF";
-  ctx.font = '11px sans-serif';
-  ctx.fillText("推荐采用精修烫印工艺（金箔/银箔/红金/激光全息）", dx + dw / 2, dy + dh * 0.82);
+  ctx.font = "11px sans-serif";
+  ctx.fillText(
+    "推荐采用精修烫印工艺（金箔/银箔/红金/激光全息）",
+    dx + dw / 2,
+    dy + dh * 0.82,
+  );
 }
 
 /**
  * Draws extreme close up quality detail segments
  */
-function drawVectorDetail(ctx: CanvasRenderingContext2D, p: Product, assetType: string, dx: number, dy: number, dw: number, dh: number) {
+function drawVectorDetail(
+  ctx: CanvasRenderingContext2D,
+  p: Product,
+  assetType: string,
+  dx: number,
+  dy: number,
+  dw: number,
+  dh: number,
+) {
   const brandRed = p.themeColor || "#DC2626";
 
   // Detail frame header block
@@ -732,8 +898,7 @@ function drawVectorDetail(ctx: CanvasRenderingContext2D, p: Product, assetType: 
     ctx.fillStyle = "#4B5563";
     ctx.font = `bold ${Math.round(dw * 0.038)}px sans-serif`;
     ctx.textAlign = "center";
-    ctx.fillText("双线哑金加粗五金线圈", dx + dw / 2, dy + dh * 0.90);
-
+    ctx.fillText("双线哑金加粗五金线圈", dx + dw / 2, dy + dh * 0.9);
   } else if (assetType === "detail_cover") {
     // Zoomed Cover embossed relief glyph with heavy shadows
     ctx.fillStyle = brandRed;
@@ -757,10 +922,9 @@ function drawVectorDetail(ctx: CanvasRenderingContext2D, p: Product, assetType: 
     ctx.restore();
 
     ctx.fillStyle = "#FDE68A";
-    ctx.font = `semibold ${Math.round(dw * 0.040)}px sans-serif`;
+    ctx.font = `semibold ${Math.round(dw * 0.04)}px sans-serif`;
     ctx.textAlign = "center";
     ctx.fillText("局部立体浮金/激光磨砂工艺", dx + dw / 2, dy + dh * 0.82);
-
   } else if (assetType === "detail_page") {
     // Zoomed overlapping heavy 250g premium paper profiles
     ctx.fillStyle = "#FCFAF7";
@@ -776,10 +940,10 @@ function drawVectorDetail(ctx: CanvasRenderingContext2D, p: Product, assetType: 
       ctx.shadowBlur = i * 4 + 2;
 
       ctx.beginPath();
-      ctx.moveTo(dx + dw * (0.12 + i * 0.05), dy + dh * 0.10);
+      ctx.moveTo(dx + dw * (0.12 + i * 0.05), dy + dh * 0.1);
       ctx.lineTo(dx + dw * (0.8 + i * 0.05), dy + dh * 0.15);
       ctx.lineTo(dx + dw * (0.7 + i * 0.05), dy + dh * 0.85);
-      ctx.lineTo(dx + dw * (0.05 + i * 0.05), dy + dh * 0.80);
+      ctx.lineTo(dx + dw * (0.05 + i * 0.05), dy + dh * 0.8);
       ctx.closePath();
       ctx.fill();
       ctx.stroke();
@@ -790,7 +954,6 @@ function drawVectorDetail(ctx: CanvasRenderingContext2D, p: Product, assetType: 
     ctx.font = `bold ${Math.round(dw * 0.045)}px sans-serif`;
     ctx.textAlign = "center";
     ctx.fillText("250g超感哑光特种艺术纸", dx + dw / 2, dy + dh * 0.92);
-
   } else if (assetType === "detail_base") {
     // Zoomed in protective thick lacquer backboard stand base corner
     ctx.fillStyle = "#1E293B"; // deep navy charcoal
@@ -798,11 +961,11 @@ function drawVectorDetail(ctx: CanvasRenderingContext2D, p: Product, assetType: 
 
     // Draw multi-layered grey core board cut
     ctx.fillStyle = "#475569";
-    ctx.fillRect(dx + dw * 0.20, dy + dh * 0.15, dw * 0.60, dh * 0.60);
+    ctx.fillRect(dx + dw * 0.2, dy + dh * 0.15, dw * 0.6, dh * 0.6);
 
     ctx.strokeStyle = "#FFFFFF";
     ctx.lineWidth = 1.5;
-    ctx.strokeRect(dx + dw * 0.20, dy + dh * 0.15, dw * 0.60, dh * 0.60);
+    ctx.strokeRect(dx + dw * 0.2, dy + dh * 0.15, dw * 0.6, dh * 0.6);
 
     ctx.fillStyle = "#64748B";
     ctx.fillRect(dx + dw * 0.22, dy + dh * 0.17, dw * 0.56, dh * 0.56);
@@ -820,14 +983,20 @@ function drawVectorDetail(ctx: CanvasRenderingContext2D, p: Product, assetType: 
 /**
  * Draws persistent top ring coils to make calendars look beautifully authentic!
  */
-function drawWireBinders(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number) {
+function drawWireBinders(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+) {
   // Grey background binder bar
   ctx.fillStyle = "#E2E8F0";
-  ctx.fillRect(x + w * 0.05, y, w * 0.90, h * 0.35);
+  ctx.fillRect(x + w * 0.05, y, w * 0.9, h * 0.35);
 
   ctx.strokeStyle = "#94A3B8";
   ctx.lineWidth = 1;
-  ctx.strokeRect(x + w * 0.05, y, w * 0.90, h * 0.35);
+  ctx.strokeRect(x + w * 0.05, y, w * 0.9, h * 0.35);
 
   // Draw 14 tiny wire binder rings
   const ringCount = 14;
@@ -839,7 +1008,7 @@ function drawWireBinders(ctx: CanvasRenderingContext2D, x: number, y: number, w:
   for (let i = 0; i < ringCount; i++) {
     const rx = startX + i * step - rWidth / 2;
     // Tiny rounded metallic coil loop
-    roundRect(ctx, rx, y + h * 0.10, rWidth, h * 0.70, rWidth / 2);
+    roundRect(ctx, rx, y + h * 0.1, rWidth, h * 0.7, rWidth / 2);
     ctx.fill();
     ctx.strokeStyle = "#CBD5E1";
     ctx.lineWidth = 0.5;
@@ -850,7 +1019,13 @@ function drawWireBinders(ctx: CanvasRenderingContext2D, x: number, y: number, w:
 /**
  * Implements clean dynamic vector text alignment, mapping tag replacement correctly
  */
-function drawTextFields(ctx: CanvasRenderingContext2D, p: Product, t: Template, cw: number, ch: number) {
+function drawTextFields(
+  ctx: CanvasRenderingContext2D,
+  p: Product,
+  t: Template,
+  cw: number,
+  ch: number,
+) {
   const fields = t.textFields || [];
 
   for (const field of fields) {
@@ -884,16 +1059,24 @@ function drawTextFields(ctx: CanvasRenderingContext2D, p: Product, t: Template, 
     const ty = ch * (field.y / 100);
 
     ctx.save();
-    
+
     // Choose appropriate web font weights
     let fontStyle = "";
-    if (field.fontWeight && field.fontWeight.includes("bold")) fontStyle = "bold ";
-    if (field.fontWeight && field.fontWeight.includes("extrabold")) fontStyle = "900 ";
+    if (field.fontWeight && field.fontWeight.includes("bold"))
+      fontStyle = "bold ";
+    if (field.fontWeight && field.fontWeight.includes("extrabold"))
+      fontStyle = "900 ";
 
     let finalFontStr = `${fontStyle}${field.fontSize}px sans-serif`;
-    if (field.fontFamily === "font-mono" || field.fontFamily?.includes("mono")) {
+    if (
+      field.fontFamily === "font-mono" ||
+      field.fontFamily?.includes("mono")
+    ) {
       finalFontStr = `${fontStyle}${field.fontSize}px "JetBrains Mono", monospace`;
-    } else if (field.fontFamily === "font-serif" || field.fontFamily?.includes("serif")) {
+    } else if (
+      field.fontFamily === "font-serif" ||
+      field.fontFamily?.includes("serif")
+    ) {
       finalFontStr = `${fontStyle}${field.fontSize}px "Playfair Display", serif`;
     }
 
@@ -903,7 +1086,11 @@ function drawTextFields(ctx: CanvasRenderingContext2D, p: Product, t: Template, 
     ctx.textBaseline = "middle";
 
     // Draw text with a very subtle overlay stroke for high contrast
-    if (field.color === "#FFFFFF" || field.color === "rgba(255,255,255,1)" || field.color === "#fff") {
+    if (
+      field.color === "#FFFFFF" ||
+      field.color === "rgba(255,255,255,1)" ||
+      field.color === "#fff"
+    ) {
       ctx.shadowColor = "rgba(0, 0, 0, 0.4)";
       ctx.shadowBlur = 4;
       ctx.shadowOffsetY = 1;
@@ -923,7 +1110,7 @@ function roundRect(
   y: number,
   width: number,
   height: number,
-  radius: number
+  radius: number,
 ) {
   ctx.beginPath();
   ctx.moveTo(x + radius, y);
@@ -941,7 +1128,13 @@ function roundRect(
 /**
  * Draws extra PS decorative ornaments and LOGO overlays (that never go to runninghub)
  */
-export function drawDecorAndLogoOverlays(ctx: CanvasRenderingContext2D, t: Template, p: Product, cw: number, ch: number) {
+export function drawDecorAndLogoOverlays(
+  ctx: CanvasRenderingContext2D,
+  t: Template,
+  p: Product,
+  cw: number,
+  ch: number,
+) {
   ctx.save();
 
   // 1. Draw Decor Overlay (氛围装饰)
@@ -987,7 +1180,7 @@ export function drawDecorAndLogoOverlays(ctx: CanvasRenderingContext2D, t: Templ
   // Promo Stamp sticker at bottom right corner
   const badgeX = cw - 70;
   const badgeY = ch - 70;
-  
+
   ctx.fillStyle = "#DC2626"; // red badge circle
   ctx.beginPath();
   ctx.arc(badgeX, badgeY, 24, 0, 2 * Math.PI);
@@ -1013,7 +1206,7 @@ export function drawDecorAndLogoOverlays(ctx: CanvasRenderingContext2D, t: Templ
   // Draw an elegant ribbon shield badge at top center
   const logoX = cw / 2;
   const logoY = 32;
-  
+
   ctx.fillStyle = "#D97706"; // gold ribbon body
   ctx.beginPath();
   ctx.moveTo(logoX - 35, logoY - 12);
@@ -1050,7 +1243,7 @@ export function getTemplateComponents(template: Template): TemplateComponent[] {
     height: template.outputHeight || 800,
     zIndex: 1,
     visible: true,
-    sendToRunningHub: true
+    sendToRunningHub: true,
   });
 
   // 2. product_slot
@@ -1065,7 +1258,7 @@ export function getTemplateComponents(template: Template): TemplateComponent[] {
       height: slot.maxHeight,
       zIndex: slot.layer || 3,
       visible: true,
-      sendToRunningHub: true
+      sendToRunningHub: true,
     });
   });
 
@@ -1081,7 +1274,7 @@ export function getTemplateComponents(template: Template): TemplateComponent[] {
       height: 8,
       zIndex: 10 + idx,
       visible: true,
-      sendToRunningHub: false
+      sendToRunningHub: false,
     });
   });
 
@@ -1096,7 +1289,7 @@ export function getTemplateComponents(template: Template): TemplateComponent[] {
     height: 12,
     zIndex: 8,
     visible: true,
-    sendToRunningHub: false
+    sendToRunningHub: false,
   });
 
   // 5. logo components
@@ -1110,7 +1303,7 @@ export function getTemplateComponents(template: Template): TemplateComponent[] {
     height: 4,
     zIndex: 9,
     visible: true,
-    sendToRunningHub: false
+    sendToRunningHub: false,
   });
 
   return components;
@@ -1134,7 +1327,7 @@ async function drawComponent(
   cw: number,
   ch: number,
   offsets?: { hOffset?: number; vOffset?: number; scale?: number },
-  drawShadow: boolean = true
+  drawShadow: boolean = true,
 ) {
   const x = cw * (comp.x / 100);
   const y = ch * (comp.y / 100);
@@ -1145,7 +1338,19 @@ async function drawComponent(
     const matchingAsset = findMatchingAsset(product, "transparent_png");
     let assetUrl = "";
     if (matchingAsset && matchingAsset.fileUrl) {
-      const isPlaceholder = ["front", "inner", "side", "pdf", "png", "ring", "det_cov", "det_pg", "det_base", "ad", "white_bg"].includes(matchingAsset.fileUrl);
+      const isPlaceholder = [
+        "front",
+        "inner",
+        "side",
+        "pdf",
+        "png",
+        "ring",
+        "det_cov",
+        "det_pg",
+        "det_base",
+        "ad",
+        "white_bg",
+      ].includes(matchingAsset.fileUrl);
       if (isPlaceholder) {
         assetUrl = generateDynamicAssetDataUrl(product, "transparent_png");
       } else {
@@ -1171,8 +1376,10 @@ async function drawComponent(
       const drawH = img.height * scale;
 
       const rot = comp.defaultRotation || 0;
-      
-      const anchorNode = comp.anchor || (comp.scaleMode === "cover" ? "center" : "bottom_center");
+
+      const anchorNode =
+        comp.anchor ||
+        (comp.scaleMode === "cover" ? "center" : "bottom_center");
       let drawX = finalX - drawW / 2;
       let drawY = anchorNode === "center" ? finalY - drawH / 2 : finalY - drawH;
 
@@ -1201,7 +1408,13 @@ async function drawComponent(
       if (rot !== 0 && comp.allowRotation) {
         ctx.translate(finalX, finalY);
         ctx.rotate((rot * Math.PI) / 180);
-        ctx.drawImage(img, -drawW / 2, anchorNode === "center" ? -drawH / 2 : -drawH, drawW, drawH);
+        ctx.drawImage(
+          img,
+          -drawW / 2,
+          anchorNode === "center" ? -drawH / 2 : -drawH,
+          drawW,
+          drawH,
+        );
       } else {
         ctx.drawImage(img, drawX, drawY, drawW, drawH);
       }
@@ -1215,7 +1428,10 @@ async function drawComponent(
         const img = await loadImage(comp.imageUrl);
         ctx.drawImage(img, x, y, w, h);
       } catch (err) {
-        console.error("Failed to load scene_base image, falling back to background:", err);
+        console.error(
+          "Failed to load scene_base image, falling back to background:",
+          err,
+        );
         drawBackground(ctx, template, cw, ch);
       }
     } else {
@@ -1241,7 +1457,7 @@ async function drawComponent(
 export async function renderFusionBaseImage(
   product: Product,
   template: Template,
-  offsets?: { hOffset?: number; vOffset?: number; scale?: number }
+  offsets?: { hOffset?: number; vOffset?: number; scale?: number },
 ): Promise<string> {
   const canvas = document.createElement("canvas");
   canvas.width = template.outputWidth || 800;
@@ -1255,23 +1471,46 @@ export async function renderFusionBaseImage(
   if (template.components && template.components.length > 0) {
     // Filter and render components: scene_base and product_slots only.
     const eligibleComps = template.components
-      .filter((c) => c.visible && (c.type === "scene_base" || c.type === "product_slot"))
+      .filter(
+        (c) =>
+          c.visible && (c.type === "scene_base" || c.type === "product_slot"),
+      )
       .sort((a, b) => a.zIndex - b.zIndex);
 
     for (const comp of eligibleComps) {
       // Bypassing shadows for base_fusion
-      await drawComponent(ctx, comp, product, template, canvas.width, canvas.height, offsets, false);
+      await drawComponent(
+        ctx,
+        comp,
+        product,
+        template,
+        canvas.width,
+        canvas.height,
+        offsets,
+        false,
+      );
     }
   } else {
     // Classic fallback
     drawBackground(ctx, template, canvas.width, canvas.height);
-    const sortedSlots = [...template.slots].sort((a, b) => (a.layer || 0) - (b.layer || 0));
+    const sortedSlots = [...template.slots].sort(
+      (a, b) => (a.layer || 0) - (b.layer || 0),
+    );
     for (const slot of sortedSlots) {
-      await drawSlot(ctx, product, slot, canvas.width, canvas.height, offsets, "base_only");
+      await drawSlot(
+        ctx,
+        product,
+        slot,
+        canvas.width,
+        canvas.height,
+        offsets,
+        "base_only",
+      );
     }
   }
 
-  const format = template.exportSettings?.format === "PNG" ? "image/png" : "image/jpeg";
+  const format =
+    template.exportSettings?.format === "PNG" ? "image/png" : "image/jpeg";
   return canvas.toDataURL(format, 0.95);
 }
 
@@ -1282,7 +1521,7 @@ export async function renderFinalCompositeImage(
   aiFusionUrl: string,
   template: Template,
   product?: Product,
-  offsets?: { hOffset?: number; vOffset?: number; scale?: number }
+  offsets?: { hOffset?: number; vOffset?: number; scale?: number },
 ): Promise<string> {
   const canvas = document.createElement("canvas");
   canvas.width = template.outputWidth || 800;
@@ -1294,28 +1533,30 @@ export async function renderFinalCompositeImage(
   ctx.imageSmoothingQuality = "high";
 
   // Use dummy product if none supplied
-  const dummyProduct = product || ({
-    id: "temp",
-    productCode: "TEMP-001",
-    productName: "台历/挂历",
-    productType: "calendar",
-    seriesName: "新中式",
-    year: "2026",
-    size: "240x170mm",
-    innerPageSize: "240x135mm",
-    adAreaSize: "240x35mm",
-    materialCover: "铜版纸",
-    materialInner: "超感纸",
-    thickness: "12mm",
-    pageCount: 13,
-    packageType: "彩盒",
-    weight: "0.45kg",
-    boxQuantity: 40,
-    assets: [],
-    status: "completed",
-    themeColor: "#854D0E",
-    illustrationType: "landscape"
-  } as Product);
+  const dummyProduct =
+    product ||
+    ({
+      id: "temp",
+      productCode: "TEMP-001",
+      productName: "台历/挂历",
+      productType: "calendar",
+      seriesName: "新中式",
+      year: "2026",
+      size: "240x170mm",
+      innerPageSize: "240x135mm",
+      adAreaSize: "240x35mm",
+      materialCover: "铜版纸",
+      materialInner: "超感纸",
+      thickness: "12mm",
+      pageCount: 13,
+      packageType: "彩盒",
+      weight: "0.45kg",
+      boxQuantity: 40,
+      assets: [],
+      status: "completed",
+      themeColor: "#854D0E",
+      illustrationType: "landscape",
+    } as Product);
 
   // Draw RunningHub fused backdrop first if provided
   if (aiFusionUrl) {
@@ -1323,23 +1564,48 @@ export async function renderFinalCompositeImage(
       const img = await loadImage(aiFusionUrl);
       ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
     } catch (err) {
-      console.error("Failed to draw RunningHub base image, falling back to background:", err);
+      console.error(
+        "Failed to draw RunningHub base image, falling back to background:",
+        err,
+      );
       drawBackground(ctx, template, canvas.width, canvas.height);
     }
   } else {
     // If runninghub output is not completed, we draw standard base preview background
     if (template.components && template.components.length > 0) {
       const baseComps = template.components
-        .filter((c) => c.visible && (c.type === "scene_base" || c.type === "product_slot"))
+        .filter(
+          (c) =>
+            c.visible && (c.type === "scene_base" || c.type === "product_slot"),
+        )
         .sort((a, b) => a.zIndex - b.zIndex);
       for (const comp of baseComps) {
-        await drawComponent(ctx, comp, dummyProduct, template, canvas.width, canvas.height, offsets, true);
+        await drawComponent(
+          ctx,
+          comp,
+          dummyProduct,
+          template,
+          canvas.width,
+          canvas.height,
+          offsets,
+          true,
+        );
       }
     } else {
       drawBackground(ctx, template, canvas.width, canvas.height);
-      const sortedSlots = [...template.slots].sort((a, b) => (a.layer || 0) - (b.layer || 0));
+      const sortedSlots = [...template.slots].sort(
+        (a, b) => (a.layer || 0) - (b.layer || 0),
+      );
       for (const slot of sortedSlots) {
-        await drawSlot(ctx, dummyProduct, slot, canvas.width, canvas.height, offsets, "all");
+        await drawSlot(
+          ctx,
+          dummyProduct,
+          slot,
+          canvas.width,
+          canvas.height,
+          offsets,
+          "all",
+        );
       }
     }
   }
@@ -1347,24 +1613,48 @@ export async function renderFinalCompositeImage(
   // Draw overlay types: text_overlay, decor_overlay, logo_overlay
   if (template.components && template.components.length > 0) {
     const overlays = template.components
-      .filter((c) => c.visible && (c.type === "text_overlay" || c.type === "decor_overlay" || c.type === "logo_overlay"))
+      .filter(
+        (c) =>
+          c.visible &&
+          (c.type === "text_overlay" ||
+            c.type === "decor_overlay" ||
+            c.type === "logo_overlay"),
+      )
       .sort((a, b) => a.zIndex - b.zIndex);
 
     for (const comp of overlays) {
-      await drawComponent(ctx, comp, dummyProduct, template, canvas.width, canvas.height, offsets, false);
+      await drawComponent(
+        ctx,
+        comp,
+        dummyProduct,
+        template,
+        canvas.width,
+        canvas.height,
+        offsets,
+        false,
+      );
     }
   }
 
   // Draw any traditional typography / placeholders to protect layout compatibility
-  const hasTextOverlay = template.components && template.components.some(c => c.visible && c.type === "text_overlay");
+  const hasTextOverlay =
+    template.components &&
+    template.components.some((c) => c.visible && c.type === "text_overlay");
   if (!hasTextOverlay) {
     drawTextFields(ctx, dummyProduct, template, canvas.width, canvas.height);
   }
   if (!template.components || template.components.length === 0) {
-    drawDecorAndLogoOverlays(ctx, template, dummyProduct, canvas.width, canvas.height);
+    drawDecorAndLogoOverlays(
+      ctx,
+      template,
+      dummyProduct,
+      canvas.width,
+      canvas.height,
+    );
   }
 
-  const format = template.exportSettings?.format === "PNG" ? "image/png" : "image/jpeg";
+  const format =
+    template.exportSettings?.format === "PNG" ? "image/png" : "image/jpeg";
   return canvas.toDataURL(format, 0.95);
 }
 
@@ -1374,7 +1664,7 @@ export async function renderFinalCompositeImage(
 export async function renderFullPreviewImage(
   product: Product,
   template: Template,
-  offsets?: { hOffset?: number; vOffset?: number; scale?: number }
+  offsets?: { hOffset?: number; vOffset?: number; scale?: number },
 ): Promise<string> {
   const canvas = document.createElement("canvas");
   canvas.width = template.outputWidth || 800;
@@ -1392,26 +1682,54 @@ export async function renderFullPreviewImage(
       .sort((a, b) => a.zIndex - b.zIndex);
 
     for (const comp of sortedComps) {
-      await drawComponent(ctx, comp, product, template, canvas.width, canvas.height, offsets, true);
+      await drawComponent(
+        ctx,
+        comp,
+        product,
+        template,
+        canvas.width,
+        canvas.height,
+        offsets,
+        true,
+      );
     }
 
     // Draw typography only if there is no text_overlay in components
-    const hasTextOverlay = template.components.some((c) => c.visible && c.type === "text_overlay");
+    const hasTextOverlay = template.components.some(
+      (c) => c.visible && c.type === "text_overlay",
+    );
     if (!hasTextOverlay) {
       drawTextFields(ctx, product, template, canvas.width, canvas.height);
     }
   } else {
     // Fallback standard render
     drawBackground(ctx, template, canvas.width, canvas.height);
-    const sortedSlots = [...template.slots].sort((a, b) => (a.layer || 0) - (b.layer || 0));
+    const sortedSlots = [...template.slots].sort(
+      (a, b) => (a.layer || 0) - (b.layer || 0),
+    );
     for (const slot of sortedSlots) {
-      await drawSlot(ctx, product, slot, canvas.width, canvas.height, offsets, "all");
+      await drawSlot(
+        ctx,
+        product,
+        slot,
+        canvas.width,
+        canvas.height,
+        offsets,
+        "all",
+      );
     }
     drawTextFields(ctx, product, template, canvas.width, canvas.height);
-    drawDecorAndLogoOverlays(ctx, template, product, canvas.width, canvas.height);
+    drawDecorAndLogoOverlays(
+      ctx,
+      template,
+      product,
+      canvas.width,
+      canvas.height,
+    );
   }
 
-  const format = template.exportSettings?.format === "PNG" ? "image/png" : "image/jpeg";
+  const format =
+    template.exportSettings?.format === "PNG" ? "image/png" : "image/jpeg";
   return canvas.toDataURL(format, 0.95);
 }
 
@@ -1425,7 +1743,7 @@ async function drawSingleLayer(
   product: Product,
   cw: number,
   ch: number,
-  drawShadow: boolean = true
+  drawShadow: boolean = true,
 ) {
   if (!layer.visible) return;
 
@@ -1441,7 +1759,19 @@ async function drawSingleLayer(
     if (layer.assetId) {
       const asset = product.assets.find((as) => as.id === layer.assetId);
       if (asset && asset.fileUrl) {
-        const isPlaceholder = ["front", "inner", "side", "pdf", "png", "ring", "det_cov", "det_pg", "det_base", "ad", "white_bg"].includes(asset.fileUrl);
+        const isPlaceholder = [
+          "front",
+          "inner",
+          "side",
+          "pdf",
+          "png",
+          "ring",
+          "det_cov",
+          "det_pg",
+          "det_base",
+          "ad",
+          "white_bg",
+        ].includes(asset.fileUrl);
         if (isPlaceholder) {
           imgUrl = generateDynamicAssetDataUrl(product, "transparent_png");
         } else {
@@ -1498,7 +1828,13 @@ async function drawSingleLayer(
     if (layer.rotation && layer.rotation !== 0) {
       ctx.translate(x, y);
       ctx.rotate((layer.rotation * Math.PI) / 180);
-      ctx.drawImage(img, -drawW / 2, anchorNode === "center" ? -drawH / 2 : -drawH, drawW, drawH);
+      ctx.drawImage(
+        img,
+        -drawW / 2,
+        anchorNode === "center" ? -drawH / 2 : -drawH,
+        drawW,
+        drawH,
+      );
     } else {
       ctx.drawImage(img, drawX, drawY, drawW, drawH);
     }
@@ -1515,7 +1851,7 @@ async function drawSingleLayer(
 export async function renderFusionBaseFromLayers(
   layers: PageLayerInstance[],
   product: Product,
-  template: Template
+  template: Template,
 ): Promise<string> {
   const canvas = document.createElement("canvas");
   canvas.width = template.outputWidth || 800;
@@ -1527,7 +1863,9 @@ export async function renderFusionBaseFromLayers(
   ctx.imageSmoothingQuality = "high";
 
   // Renders standard background canvas color/fallback if no scene_base is drawn
-  const hasSceneBase = layers.some(l => l.visible && l.layerType === "scene_base" && l.sendToRunningHub);
+  const hasSceneBase = layers.some(
+    (l) => l.visible && l.layerType === "scene_base" && l.sendToRunningHub,
+  );
   if (!hasSceneBase) {
     drawBackground(ctx, template, canvas.width, canvas.height);
   }
@@ -1538,10 +1876,18 @@ export async function renderFusionBaseFromLayers(
     .sort((a, b) => a.zIndex - b.zIndex);
 
   for (const layer of eligibleLayers) {
-    await drawSingleLayer(ctx, layer, product, canvas.width, canvas.height, false);
+    await drawSingleLayer(
+      ctx,
+      layer,
+      product,
+      canvas.width,
+      canvas.height,
+      false,
+    );
   }
 
-  const format = template.exportSettings?.format === "PNG" ? "image/png" : "image/jpeg";
+  const format =
+    template.exportSettings?.format === "PNG" ? "image/png" : "image/jpeg";
   return canvas.toDataURL(format, 0.95);
 }
 
@@ -1552,7 +1898,7 @@ export async function renderFinalCompositeFromLayers(
   aiFusionUrl: string | undefined,
   layers: PageLayerInstance[],
   product: Product,
-  template: Template
+  template: Template,
 ): Promise<string> {
   const canvas = document.createElement("canvas");
   canvas.width = template.outputWidth || 800;
@@ -1569,18 +1915,30 @@ export async function renderFinalCompositeFromLayers(
       const img = await loadImage(aiFusionUrl);
       ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
     } catch (err) {
-      console.error("Failed to load aiFusionUrl backdrop, rendering manual bases:", err);
+      console.error(
+        "Failed to load aiFusionUrl backdrop, rendering manual bases:",
+        err,
+      );
       // Fallback base render from layers
       const baseLayers = [...layers]
         .filter((l) => l.visible && l.sendToRunningHub)
         .sort((a, b) => a.zIndex - b.zIndex);
-      
-      const hasSceneBase = layers.some(l => l.visible && l.layerType === "scene_base" && l.sendToRunningHub);
+
+      const hasSceneBase = layers.some(
+        (l) => l.visible && l.layerType === "scene_base" && l.sendToRunningHub,
+      );
       if (!hasSceneBase) {
         drawBackground(ctx, template, canvas.width, canvas.height);
       }
       for (const bL of baseLayers) {
-        await drawSingleLayer(ctx, bL, product, canvas.width, canvas.height, true);
+        await drawSingleLayer(
+          ctx,
+          bL,
+          product,
+          canvas.width,
+          canvas.height,
+          true,
+        );
       }
     }
   } else {
@@ -1588,13 +1946,22 @@ export async function renderFinalCompositeFromLayers(
     const baseLayers = [...layers]
       .filter((l) => l.visible && l.sendToRunningHub)
       .sort((a, b) => a.zIndex - b.zIndex);
-    
-    const hasSceneBase = layers.some(l => l.visible && l.layerType === "scene_base" && l.sendToRunningHub);
+
+    const hasSceneBase = layers.some(
+      (l) => l.visible && l.layerType === "scene_base" && l.sendToRunningHub,
+    );
     if (!hasSceneBase) {
       drawBackground(ctx, template, canvas.width, canvas.height);
     }
     for (const bL of baseLayers) {
-      await drawSingleLayer(ctx, bL, product, canvas.width, canvas.height, true);
+      await drawSingleLayer(
+        ctx,
+        bL,
+        product,
+        canvas.width,
+        canvas.height,
+        true,
+      );
     }
   }
 
@@ -1608,12 +1975,14 @@ export async function renderFinalCompositeFromLayers(
   }
 
   // 3. Optional classic dynamic text labels draw fallback if no text overlay exists in layers
-  const hasTextOverlay = layers.some(l => l.visible && l.layerType === "text_overlay");
+  const hasTextOverlay = layers.some(
+    (l) => l.visible && l.layerType === "text_overlay",
+  );
   if (!hasTextOverlay) {
     drawTextFields(ctx, product, template, canvas.width, canvas.height);
   }
 
-  const format = template.exportSettings?.format === "PNG" ? "image/png" : "image/jpeg";
+  const format =
+    template.exportSettings?.format === "PNG" ? "image/png" : "image/jpeg";
   return canvas.toDataURL(format, 0.95);
 }
-

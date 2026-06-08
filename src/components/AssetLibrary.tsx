@@ -13,39 +13,50 @@ import {
   Eye,
   Info,
   Layers,
-  ArrowRight
+  ArrowRight,
 } from "lucide-react";
 
 interface AssetLibraryProps {
   products: Product[];
   onAddProduct: (product: Product) => void;
   onNavigateToRefine: (product: Product) => void;
-  onUpdateProductStatus: (productId: string, newStatus: Product["status"], newAssets: ProductAsset[]) => void;
+  onUpdateProductStatus: (
+    productId: string,
+    newStatus: Product["status"],
+    newAssets: ProductAsset[],
+  ) => void;
 }
 
 export const AssetLibrary: React.FC<AssetLibraryProps> = ({
   products,
   onAddProduct,
   onNavigateToRefine,
-  onUpdateProductStatus
+  onUpdateProductStatus,
 }) => {
   // Navigation states
   const [searchQuery, setSearchQuery] = useState("");
   const [filterType, setFilterType] = useState<string>("all");
   const [filterSeries, setFilterSeries] = useState<string>("all");
   const [filterStatus, setFilterStatus] = useState<string>("all");
-  const [selectedProductId, setSelectedProductId] = useState<string>(products[0]?.id || "");
+  const [selectedProductId, setSelectedProductId] = useState<string>(
+    products[0]?.id || "",
+  );
   const [isAdding, setIsAdding] = useState(false);
 
   // New product inputs form state
   const [newCode, setNewCode] = useState("068");
   const [newName, setNewName] = useState("吉星高照");
-  const [newType, setNewType] = useState<"calendar" | "wall_calendar" | "gift_box">("calendar");
-  const [newSeries, setNewSeries] = useState<"喜庆精雕" | "新中式" | "商务定制" | "儿童插画" | "国潮年货">("国潮年货");
+  const [newType, setNewType] = useState<
+    "calendar" | "wall_calendar" | "gift_box"
+  >("calendar");
+  const [newSeries, setNewSeries] = useState<
+    "喜庆精雕" | "新中式" | "商务定制" | "儿童插画" | "国潮年货"
+  >("国潮年货");
   const [newThemeColor, setNewThemeColor] = useState("#DC2626");
 
   // Lookup selected product
-  const selectedProduct = products.find((p) => p.id === selectedProductId) || products[0];
+  const selectedProduct =
+    products.find((p) => p.id === selectedProductId) || products[0];
 
   // Map Filter Options
   const filteredProducts = products.filter((p) => {
@@ -55,7 +66,8 @@ export const AssetLibrary: React.FC<AssetLibraryProps> = ({
       p.seriesName.includes(searchQuery);
 
     const matchesType = filterType === "all" || p.productType === filterType;
-    const matchesSeries = filterSeries === "all" || p.seriesName === filterSeries;
+    const matchesSeries =
+      filterSeries === "all" || p.seriesName === filterSeries;
     const matchesStatus = filterStatus === "all" || p.status === filterStatus;
 
     return matchesSearch && matchesType && matchesSeries && matchesStatus;
@@ -74,33 +86,89 @@ export const AssetLibrary: React.FC<AssetLibraryProps> = ({
     const keys = product.assets.map((a) => a.assetType);
 
     if (keys.includes("transparent_png")) {
-      outputs.push({ name: "电商主图", eligible: true, desc: "可用正视角/透视角图" });
-      outputs.push({ name: "单款SKU配图", eligible: true, desc: "标准1:1底面场景图" });
-      outputs.push({ name: "白底规范图", eligible: true, desc: "100%纯白背景图" });
+      outputs.push({
+        name: "电商主图",
+        eligible: true,
+        desc: "可用正视角/透视角图",
+      });
+      outputs.push({
+        name: "单款SKU配图",
+        eligible: true,
+        desc: "标准1:1底面场景图",
+      });
+      outputs.push({
+        name: "白底规范图",
+        eligible: true,
+        desc: "100%纯白背景图",
+      });
     } else {
-      outputs.push({ name: "电商主图", eligible: false, desc: "缺 封面正面.png " });
-      outputs.push({ name: "单款SKU配图", eligible: false, desc: "缺 封面正面.png" });
+      outputs.push({
+        name: "电商主图",
+        eligible: false,
+        desc: "缺 封面正面.png ",
+      });
+      outputs.push({
+        name: "单款SKU配图",
+        eligible: false,
+        desc: "缺 封面正面.png",
+      });
       outputs.push({ name: "白底规范图", eligible: false, desc: "缺 白底图" });
     }
 
     if (keys.includes("inner_page")) {
-      outputs.push({ name: "内页纸张展示图", eligible: true, desc: "12个月历详情轮播" });
-      outputs.push({ name: "使用场景烘焙图", eligible: true, desc: "桌面/书架氛围摆件" });
+      outputs.push({
+        name: "内页纸张展示图",
+        eligible: true,
+        desc: "12个月历详情轮播",
+      });
+      outputs.push({
+        name: "使用场景烘焙图",
+        eligible: true,
+        desc: "桌面/书架氛围摆件",
+      });
     } else {
-      outputs.push({ name: "内页纸张展示图", eligible: false, desc: "缺 纸张内页原件" });
-      outputs.push({ name: "使用场景烘焙图", eligible: false, desc: "缺 纸张内页原件" });
+      outputs.push({
+        name: "内页纸张展示图",
+        eligible: false,
+        desc: "缺 纸张内页原件",
+      });
+      outputs.push({
+        name: "使用场景烘焙图",
+        eligible: false,
+        desc: "缺 纸张内页原件",
+      });
     }
 
-    if (keys.includes("detail_ring") || keys.includes("detail_cover") || keys.includes("detail_base")) {
-      outputs.push({ name: "工艺纸张细节放大图", eligible: true, desc: "四宫格对比" });
+    if (
+      keys.includes("detail_ring") ||
+      keys.includes("detail_cover") ||
+      keys.includes("detail_base")
+    ) {
+      outputs.push({
+        name: "工艺纸张细节放大图",
+        eligible: true,
+        desc: "四宫格对比",
+      });
     } else {
-      outputs.push({ name: "工艺纸张细节放大图", eligible: false, desc: "缺 局部微距特写" });
+      outputs.push({
+        name: "工艺纸张细节放大图",
+        eligible: false,
+        desc: "缺 局部微距特写",
+      });
     }
 
     if (keys.includes("ad_area")) {
-      outputs.push({ name: "企业礼品广告定制图", eligible: true, desc: "含LOGO烫画演示" });
+      outputs.push({
+        name: "企业礼品广告定制图",
+        eligible: true,
+        desc: "含LOGO烫画演示",
+      });
     } else {
-      outputs.push({ name: "企业礼品广告定制图", eligible: false, desc: "缺 局部广告位模布" });
+      outputs.push({
+        name: "企业礼品广告定制图",
+        eligible: false,
+        desc: "缺 局部广告位模布",
+      });
     }
 
     return outputs;
@@ -117,7 +185,7 @@ export const AssetLibrary: React.FC<AssetLibraryProps> = ({
       fileUrl: "front",
       width: 800,
       height: 600,
-      status: "ready"
+      status: "ready",
     });
 
     const newProd: Product = {
@@ -140,7 +208,7 @@ export const AssetLibrary: React.FC<AssetLibraryProps> = ({
       status: "raw", // newly created needs transparent PNG refinement
       themeColor: newThemeColor,
       illustrationType: "dragon",
-      assets: mockAssets
+      assets: mockAssets,
     };
 
     onAddProduct(newProd);
@@ -154,15 +222,30 @@ export const AssetLibrary: React.FC<AssetLibraryProps> = ({
   const productTypesMap: Record<string, string> = {
     calendar: "台历",
     wall_calendar: "挂历",
-    gift_box: "礼盒/套装"
+    gift_box: "礼盒/套装",
   };
 
   const statusMap: Record<string, { label: string; color: string }> = {
-    raw: { label: "原实拍图/未精修", color: "bg-neutral-100 text-neutral-800 border-neutral-300" },
-    white_bg_done: { label: "已做白底", color: "bg-sky-50 text-sky-700 border-sky-200" },
-    png_done: { label: "已透PNG(无影)", color: "bg-blue-50 text-blue-700 border-blue-200" },
-    completed: { label: "完整可套版", color: "bg-emerald-50 text-emerald-700 border-emerald-200" },
-    missing_assets: { label: "缺少基础细节", color: "bg-red-50 text-red-600 border-red-200" }
+    raw: {
+      label: "原实拍图/未精修",
+      color: "bg-neutral-100 text-neutral-800 border-neutral-300",
+    },
+    white_bg_done: {
+      label: "已做白底",
+      color: "bg-sky-50 text-sky-700 border-sky-200",
+    },
+    png_done: {
+      label: "已透PNG(无影)",
+      color: "bg-blue-50 text-blue-700 border-blue-200",
+    },
+    completed: {
+      label: "完整可套版",
+      color: "bg-emerald-50 text-emerald-700 border-emerald-200",
+    },
+    missing_assets: {
+      label: "缺少基础细节",
+      color: "bg-red-50 text-red-600 border-red-200",
+    },
   };
 
   return (
@@ -171,13 +254,17 @@ export const AssetLibrary: React.FC<AssetLibraryProps> = ({
       <div className="w-56 bg-white border-r p-4 flex flex-col justify-between shrink-0">
         <div className="space-y-5">
           <div className="flex justify-between items-center pb-2 border-b">
-            <h4 className="text-xs font-bold text-neutral-800 uppercase tracking-wider">资产过滤筛选</h4>
+            <h4 className="text-xs font-bold text-neutral-800 uppercase tracking-wider">
+              资产过滤筛选
+            </h4>
             <FolderOpen className="w-4 h-4 text-neutral-500" />
           </div>
 
           {/* Type picker */}
           <div className="space-y-1.5">
-            <label className="text-[10px] uppercase font-bold text-slate-400">产品类型</label>
+            <label className="text-[10px] uppercase font-bold text-slate-400">
+              产品类型
+            </label>
             <select
               value={filterType}
               onChange={(e) => setFilterType(e.target.value)}
@@ -192,7 +279,9 @@ export const AssetLibrary: React.FC<AssetLibraryProps> = ({
 
           {/* Series Picker */}
           <div className="space-y-1.5">
-            <label className="text-[10px] uppercase font-bold text-slate-400">产品系列</label>
+            <label className="text-[10px] uppercase font-bold text-slate-400">
+              产品系列
+            </label>
             <select
               value={filterSeries}
               onChange={(e) => setFilterSeries(e.target.value)}
@@ -209,7 +298,9 @@ export const AssetLibrary: React.FC<AssetLibraryProps> = ({
 
           {/* Real Status Picker */}
           <div className="space-y-1.5">
-            <label className="text-[10px] uppercase font-bold text-slate-400">资产质检状态</label>
+            <label className="text-[10px] uppercase font-bold text-slate-400">
+              资产质检状态
+            </label>
             <select
               value={filterStatus}
               onChange={(e) => setFilterStatus(e.target.value)}
@@ -268,12 +359,18 @@ export const AssetLibrary: React.FC<AssetLibraryProps> = ({
                 key={p.id}
                 onClick={() => setSelectedProductId(p.id)}
                 className={`bg-white rounded-xl border cursor-pointer select-none overflow-hidden flex flex-col justify-between transition-all duration-350 p-3 h-52 relative ${
-                  isSel ? "ring-2 ring-blue-600 shadow-md shadow-blue-500/10 border-transparent scale-98" : "hover:border-slate-350 border-slate-150"
+                  isSel
+                    ? "ring-2 ring-blue-600 shadow-md shadow-blue-500/10 border-transparent scale-98"
+                    : "hover:border-slate-350 border-slate-150"
                 }`}
               >
                 {/* Image placeholder container */}
                 <div className="relative h-28 w-full bg-neutral-100 rounded overflow-hidden p-1 flex items-center justify-center">
-                  <VisualCalendar product={p} type="front_cover" className="transform scale-90" />
+                  <VisualCalendar
+                    product={p}
+                    type="front_cover"
+                    className="transform scale-90"
+                  />
                   <span className="absolute top-1 left-1 font-mono text-[9px] bg-neutral-900/85 text-white px-1.5 py-0.2 rounded">
                     代码: {p.productCode}
                   </span>
@@ -285,15 +382,22 @@ export const AssetLibrary: React.FC<AssetLibraryProps> = ({
                 {/* Details text block */}
                 <div className="mt-2 text-left">
                   <div className="flex justify-between items-baseline">
-                    <h3 className="text-xs font-bold text-neutral-800 truncate">{p.productName}</h3>
-                    <span className="text-[10px] text-neutral-400">{p.seriesName}</span>
+                    <h3 className="text-xs font-bold text-neutral-800 truncate">
+                      {p.productName}
+                    </h3>
+                    <span className="text-[10px] text-neutral-400">
+                      {p.seriesName}
+                    </span>
                   </div>
 
                   <div className="flex justify-between items-center mt-1 text-[10px]">
                     <span className="text-neutral-500 truncate max-w-[130px]">
-                      {productTypesMap[p.productType]} • {p.size.split(" * ")[0]}
+                      {productTypesMap[p.productType]} •{" "}
+                      {p.size.split(" * ")[0]}
                     </span>
-                    <span className={`px-1.5 py-0.2 rounded text-[8px] font-bold border ${statusMap[p.status]?.color}`}>
+                    <span
+                      className={`px-1.5 py-0.2 rounded text-[8px] font-bold border ${statusMap[p.status]?.color}`}
+                    >
                       {statusMap[p.status]?.label}
                     </span>
                   </div>
@@ -302,7 +406,9 @@ export const AssetLibrary: React.FC<AssetLibraryProps> = ({
                 {/* Loading indicator overlay if empty */}
                 {p.status === "raw" && (
                   <div className="absolute inset-0 bg-slate-500/5 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity rounded-xl">
-                    <span className="bg-blue-600 text-white text-[9px] font-bold py-1 px-2.5 rounded shadow">原图急需白底精修</span>
+                    <span className="bg-blue-600 text-white text-[9px] font-bold py-1 px-2.5 rounded shadow">
+                      原图急需白底精修
+                    </span>
                   </div>
                 )}
               </div>
@@ -312,7 +418,9 @@ export const AssetLibrary: React.FC<AssetLibraryProps> = ({
           {filteredProducts.length === 0 && (
             <div className="col-span-full flex flex-col items-center justify-center p-12 text-center text-neutral-400 bg-white border border-dashed rounded">
               <AlertTriangle className="w-8 h-8 text-neutral-300 mb-2" />
-              <p className="text-xs font-medium">无匹配台历产品，请放宽过滤限制或登记添加。</p>
+              <p className="text-xs font-medium">
+                无匹配台历产品，请放宽过滤限制或登记添加。
+              </p>
             </div>
           )}
         </div>
@@ -323,7 +431,9 @@ export const AssetLibrary: React.FC<AssetLibraryProps> = ({
         <div className="w-80 bg-white border-l p-4 flex flex-col justify-between overflow-y-auto shrink-0">
           <div className="space-y-4">
             <div className="flex justify-between items-center pb-2 border-b">
-              <h4 className="text-xs font-bold text-neutral-800 tracking-tight">产品细部资产树包</h4>
+              <h4 className="text-xs font-bold text-neutral-800 tracking-tight">
+                产品细部资产树包
+              </h4>
               <span className="text-[10px] bg-neutral-100 px-2 py-0.5 rounded font-mono font-bold text-neutral-600">
                 {selectedProduct.productCode}
               </span>
@@ -331,22 +441,51 @@ export const AssetLibrary: React.FC<AssetLibraryProps> = ({
 
             {/* Micro Specs */}
             <div className="p-3 bg-neutral-50 rounded text-[11px] text-neutral-700 space-y-1.5 text-left">
-              <div><span className="text-neutral-400">大部名字:</span> <span className="font-bold text-neutral-900">{selectedProduct.productName}</span></div>
-              <div><span className="text-neutral-400">款式大类:</span> <span className="font-semibold text-neutral-800">{productTypesMap[selectedProduct.productType]}</span></div>
-              <div><span className="text-neutral-400">纸外规格:</span> <span className="font-mono text-neutral-800">{selectedProduct.size}</span></div>
-              <div><span className="text-neutral-400">广告面板:</span> <span className="font-mono text-neutral-800">{selectedProduct.adAreaSize}</span></div>
-              <div><span className="text-neutral-400">封面材质:</span> <span className="text-neutral-700 line-clamp-1">{selectedProduct.materialCover}</span></div>
+              <div>
+                <span className="text-neutral-400">大部名字:</span>{" "}
+                <span className="font-bold text-neutral-900">
+                  {selectedProduct.productName}
+                </span>
+              </div>
+              <div>
+                <span className="text-neutral-400">款式大类:</span>{" "}
+                <span className="font-semibold text-neutral-800">
+                  {productTypesMap[selectedProduct.productType]}
+                </span>
+              </div>
+              <div>
+                <span className="text-neutral-400">纸外规格:</span>{" "}
+                <span className="font-mono text-neutral-800">
+                  {selectedProduct.size}
+                </span>
+              </div>
+              <div>
+                <span className="text-neutral-400">广告面板:</span>{" "}
+                <span className="font-mono text-neutral-800">
+                  {selectedProduct.adAreaSize}
+                </span>
+              </div>
+              <div>
+                <span className="text-neutral-400">封面材质:</span>{" "}
+                <span className="text-neutral-700 line-clamp-1">
+                  {selectedProduct.materialCover}
+                </span>
+              </div>
             </div>
 
             {/* Asset nodes lists */}
             <div className="space-y-2">
               <div className="flex justify-between items-center">
-                <h5 className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">关联实体文件</h5>
+                <h5 className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">
+                  关联实体文件
+                </h5>
                 {/* Micro upload for transparent_png */}
                 <button
                   type="button"
                   onClick={() => {
-                    document.getElementById("direct-transparent-png-upload")?.click();
+                    document
+                      .getElementById("direct-transparent-png-upload")
+                      ?.click();
                   }}
                   className="text-[10px] font-semibold text-blue-650 hover:text-blue-700 flex items-center"
                 >
@@ -373,12 +512,17 @@ export const AssetLibrary: React.FC<AssetLibraryProps> = ({
                           fileUrl: dataUrl,
                           width: tempImg.width,
                           height: tempImg.height,
-                          status: "ready"
+                          status: "ready",
                         };
                         (newAsset as any).fileName = file.name;
 
-                        const otherAssets = selectedProduct.assets.filter((a) => a.assetType !== "transparent_png");
-                        onUpdateProductStatus(selectedProduct.id, "completed", [...otherAssets, newAsset]);
+                        const otherAssets = selectedProduct.assets.filter(
+                          (a) => a.assetType !== "transparent_png",
+                        );
+                        onUpdateProductStatus(selectedProduct.id, "completed", [
+                          ...otherAssets,
+                          newAsset,
+                        ]);
                       };
                       tempImg.src = dataUrl;
                     };
@@ -388,28 +532,76 @@ export const AssetLibrary: React.FC<AssetLibraryProps> = ({
               </div>
               <div className="space-y-1.5 text-xs max-h-56 overflow-y-auto pr-1">
                 {[
-                  { file: "product_front_cover.png", label: "正面透明PNG", role: "transparent_png" },
-                  { file: "product_inner_page.png", label: "内页展示正面", role: "inner_page" },
-                  { file: "product_side.png", label: "侧面三角架", role: "side" },
-                  { file: "product_detail_ring.png", label: "五金双线圈", role: "detail_ring" },
-                  { file: "product_detail_cover.png", label: "封面凹凸细节", role: "detail_cover" },
-                  { file: "product_detail_page.png", label: "纸面纤维微显", role: "detail_page" },
-                  { file: "product_detail_base.png", label: "底座包角防滑", role: "detail_base" },
-                  { file: "product_ad_area.png", label: "广告局部槽", role: "ad_area" }
+                  {
+                    file: "product_front_cover.png",
+                    label: "正面透明PNG",
+                    role: "transparent_png",
+                  },
+                  {
+                    file: "product_inner_page.png",
+                    label: "内页展示正面",
+                    role: "inner_page",
+                  },
+                  {
+                    file: "product_side.png",
+                    label: "侧面三角架",
+                    role: "side",
+                  },
+                  {
+                    file: "product_detail_ring.png",
+                    label: "五金双线圈",
+                    role: "detail_ring",
+                  },
+                  {
+                    file: "product_detail_cover.png",
+                    label: "封面凹凸细节",
+                    role: "detail_cover",
+                  },
+                  {
+                    file: "product_detail_page.png",
+                    label: "纸面纤维微显",
+                    role: "detail_page",
+                  },
+                  {
+                    file: "product_detail_base.png",
+                    label: "底座包角防滑",
+                    role: "detail_base",
+                  },
+                  {
+                    file: "product_ad_area.png",
+                    label: "广告局部槽",
+                    role: "ad_area",
+                  },
                 ].map((item) => {
-                  const asset = selectedProduct.assets.find((a) => a.assetType === item.role && a.status === "ready");
+                  const asset = selectedProduct.assets.find(
+                    (a) => a.assetType === item.role && a.status === "ready",
+                  );
                   const hasAsset = !!asset;
-                  const isUploadedPng = item.role === "transparent_png" && asset && asset.fileUrl && asset.fileUrl.startsWith("data:");
+                  const isUploadedPng =
+                    item.role === "transparent_png" &&
+                    asset &&
+                    asset.fileUrl &&
+                    asset.fileUrl.startsWith("data:");
 
                   return (
-                    <div key={item.role} className="space-y-1 bg-slate-50/40 rounded-lg border border-slate-100 p-1.5 hover:bg-slate-50/80 transition-colors">
+                    <div
+                      key={item.role}
+                      className="space-y-1 bg-slate-50/40 rounded-lg border border-slate-100 p-1.5 hover:bg-slate-50/80 transition-colors"
+                    >
                       <div className="flex items-center justify-between text-[11px]">
                         <div className="min-w-0 flex-1 text-left">
                           <p className="font-mono font-bold truncate text-slate-800">
-                            {isUploadedPng ? ((asset as any).fileName || item.file) : item.file}
+                            {isUploadedPng
+                              ? (asset as any).fileName || item.file
+                              : item.file}
                           </p>
                           <span className="text-[9px] text-neutral-400">
-                            {item.label} {isUploadedPng && <span className="text-emerald-600 font-bold ml-1">(已绑定)</span>}
+                            {item.label}{" "}
+                            {isUploadedPng && (
+                              <span className="text-emerald-600 font-bold ml-1">
+                                (已绑定)
+                              </span>
+                            )}
                           </span>
                         </div>
                         <div className="flex items-center space-x-1.5 shrink-0 ml-1">
@@ -421,7 +613,9 @@ export const AssetLibrary: React.FC<AssetLibraryProps> = ({
                           {hasAsset ? (
                             <CheckCircle2 className="w-4 h-4 text-emerald-500" />
                           ) : (
-                            <span className="text-[9px] font-semibold text-neutral-400 bg-neutral-200/50 px-1.5 py-0.5 rounded">未传</span>
+                            <span className="text-[9px] font-semibold text-neutral-400 bg-neutral-200/50 px-1.5 py-0.5 rounded">
+                              未传
+                            </span>
                           )}
                         </div>
                       </div>
@@ -437,7 +631,8 @@ export const AssetLibrary: React.FC<AssetLibraryProps> = ({
                           />
                           <div className="min-w-0 flex-1 text-[10px] text-slate-500 leading-normal text-left">
                             <p className="truncate font-semibold text-slate-700">
-                              {(asset as any).fileName || "custom_transparent.png"}
+                              {(asset as any).fileName ||
+                                "custom_transparent.png"}
                             </p>
                             <p className="font-mono text-[9px]">
                               {asset.width} x {asset.height} px
@@ -453,18 +648,31 @@ export const AssetLibrary: React.FC<AssetLibraryProps> = ({
 
             {/* Possible generated options breakdown */}
             <div className="space-y-2">
-              <h5 className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">套版可行性分析</h5>
+              <h5 className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">
+                套版可行性分析
+              </h5>
               <div className="space-y-1 bg-stone-50 p-2.5 rounded border text-[11px]">
                 {getPossibleOutputs(selectedProduct).map((item, idx) => (
-                  <div key={idx} className="flex items-start space-x-1.5 py-1 justify-between">
+                  <div
+                    key={idx}
+                    className="flex items-start space-x-1.5 py-1 justify-between"
+                  >
                     <div>
-                      <span className={`font-bold ${item.eligible ? "text-neutral-800" : "text-neutral-400 line-through"}`}>{item.name}</span>
+                      <span
+                        className={`font-bold ${item.eligible ? "text-neutral-800" : "text-neutral-400 line-through"}`}
+                      >
+                        {item.name}
+                      </span>
                       <p className="text-[9px] text-neutral-400">{item.desc}</p>
                     </div>
                     {item.eligible ? (
-                      <span className="text-[8px] bg-emerald-100 text-emerald-800 px-1 rounded font-bold">支持</span>
+                      <span className="text-[8px] bg-emerald-100 text-emerald-800 px-1 rounded font-bold">
+                        支持
+                      </span>
                     ) : (
-                      <span className="text-[8px] bg-red-100 text-red-800 px-1 rounded font-bold">不可用</span>
+                      <span className="text-[8px] bg-red-100 text-red-800 px-1 rounded font-bold">
+                        不可用
+                      </span>
                     )}
                   </div>
                 ))}
@@ -508,7 +716,9 @@ export const AssetLibrary: React.FC<AssetLibraryProps> = ({
 
             <div className="grid grid-cols-2 gap-3 text-xs">
               <div>
-                <label className="block text-neutral-500 font-bold mb-1">产品编号 / 编码</label>
+                <label className="block text-neutral-500 font-bold mb-1">
+                  产品编号 / 编码
+                </label>
                 <input
                   type="text"
                   required
@@ -518,7 +728,9 @@ export const AssetLibrary: React.FC<AssetLibraryProps> = ({
                 />
               </div>
               <div>
-                <label className="block text-neutral-500 font-bold mb-1">名录款式名称</label>
+                <label className="block text-neutral-500 font-bold mb-1">
+                  名录款式名称
+                </label>
                 <input
                   type="text"
                   required
@@ -531,7 +743,9 @@ export const AssetLibrary: React.FC<AssetLibraryProps> = ({
 
             <div className="grid grid-cols-2 gap-3 text-xs">
               <div>
-                <label className="block text-neutral-500 font-bold mb-1">产品类型</label>
+                <label className="block text-neutral-500 font-bold mb-1">
+                  产品类型
+                </label>
                 <select
                   value={newType}
                   onChange={(e) => setNewType(e.target.value as any)}
@@ -543,7 +757,9 @@ export const AssetLibrary: React.FC<AssetLibraryProps> = ({
                 </select>
               </div>
               <div>
-                <label className="block text-neutral-500 font-bold mb-1">系列分类</label>
+                <label className="block text-neutral-500 font-bold mb-1">
+                  系列分类
+                </label>
                 <select
                   value={newSeries}
                   onChange={(e) => setNewSeries(e.target.value as any)}
@@ -559,7 +775,9 @@ export const AssetLibrary: React.FC<AssetLibraryProps> = ({
             </div>
 
             <div className="text-xs">
-              <label className="block text-neutral-500 font-bold mb-1">视觉主题色彩 (封面配色)</label>
+              <label className="block text-neutral-500 font-bold mb-1">
+                视觉主题色彩 (封面配色)
+              </label>
               <div className="flex items-center space-x-2">
                 <input
                   type="color"
@@ -577,7 +795,8 @@ export const AssetLibrary: React.FC<AssetLibraryProps> = ({
             </div>
 
             <div className="p-3 bg-neutral-50 border rounded text-[10px] text-neutral-500">
-              提示: 创建的新产品状态默认为「未处理实拍图（待白底精修）」，您随后可以在白底抠图面板中对其上传并一键跑出透明蒙版及自然阴影层。
+              提示:
+              创建的新产品状态默认为「未处理实拍图（待白底精修）」，您随后可以在白底抠图面板中对其上传并一键跑出透明蒙版及自然阴影层。
             </div>
 
             <div className="flex justify-end space-x-2 pt-2">

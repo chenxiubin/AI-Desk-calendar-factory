@@ -1,5 +1,14 @@
 import React, { useState } from "react";
-import { BarChart3, Settings, ShieldCheck, Database, Key, HelpCircle, Save, CheckCircle } from "lucide-react";
+import {
+  BarChart3,
+  Settings,
+  ShieldCheck,
+  Database,
+  Key,
+  HelpCircle,
+  Save,
+  CheckCircle,
+} from "lucide-react";
 
 // TABS 9 & 10: Unified under system views for robust modularity
 export const DataStatistics: React.FC = () => {
@@ -8,7 +17,9 @@ export const DataStatistics: React.FC = () => {
       {/* Intro */}
       <div className="bg-white p-6 rounded border border-neutral-100 shadow-xs flex justify-between items-center">
         <div>
-          <h2 className="text-xl font-bold text-neutral-900">台历图纸批量套版排产分析</h2>
+          <h2 className="text-xl font-bold text-neutral-900">
+            台历图纸批量套版排产分析
+          </h2>
           <p className="text-xs text-neutral-500 mt-1">
             实时查看电商主图产量、白底抠像通过率及各分销平台套版分发数据情况。
           </p>
@@ -20,21 +31,48 @@ export const DataStatistics: React.FC = () => {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {/* Metric 1 */}
         <div className="p-4 bg-white border rounded shadow-xs text-xs space-y-3">
-          <span className="text-neutral-400 font-bold block">1. 畅销款式分类排布占比</span>
+          <span className="text-neutral-400 font-bold block">
+            1. 畅销款式分类排布占比
+          </span>
           <div className="space-y-2 pt-1 font-semibold text-neutral-700">
             {[
-              { name: "国潮年货系列", count: 124, pct: 38, color: "bg-red-600" },
-              { name: "喜庆精雕系列", count: 96, pct: 29, color: "bg-rose-500" },
-              { name: "商务温润高级定制", count: 64, pct: 20, color: "bg-blue-600" },
-              { name: "儿童简笔插画", count: 42, pct: 13, color: "bg-amber-500" }
+              {
+                name: "国潮年货系列",
+                count: 124,
+                pct: 38,
+                color: "bg-red-600",
+              },
+              {
+                name: "喜庆精雕系列",
+                count: 96,
+                pct: 29,
+                color: "bg-rose-500",
+              },
+              {
+                name: "商务温润高级定制",
+                count: 64,
+                pct: 20,
+                color: "bg-blue-600",
+              },
+              {
+                name: "儿童简笔插画",
+                count: 42,
+                pct: 13,
+                color: "bg-amber-500",
+              },
             ].map((item, idx) => (
               <div key={idx} className="space-y-1">
                 <div className="flex justify-between items-center text-[11px]">
                   <span>{item.name}</span>
-                  <span className="font-mono text-neutral-510">{item.count}款 ({item.pct}%)</span>
+                  <span className="font-mono text-neutral-510">
+                    {item.count}款 ({item.pct}%)
+                  </span>
                 </div>
                 <div className="w-full bg-neutral-100 rounded-full h-2 overflow-hidden">
-                  <div className={`h-full rounded-full ${item.color}`} style={{ width: `${item.pct}%` }} />
+                  <div
+                    className={`h-full rounded-full ${item.color}`}
+                    style={{ width: `${item.pct}%` }}
+                  />
                 </div>
               </div>
             ))}
@@ -44,26 +82,35 @@ export const DataStatistics: React.FC = () => {
         {/* Metric 2 */}
         <div className="p-4 bg-white border rounded shadow-xs text-xs space-y-3 flex flex-col justify-between">
           <div>
-            <span className="text-neutral-400 font-bold block">2. 质量检验合格阻断率</span>
+            <span className="text-neutral-400 font-bold block">
+              2. 质量检验合格阻断率
+            </span>
             <div className="flex items-center space-x-4 my-3 text-left">
               <div className="w-16 h-16 rounded-full border-8 border-emerald-500 border-t-amber-400 flex items-center justify-center font-black text-xs text-neutral-800">
                 98.1%
               </div>
               <div className="space-y-1 text-[11px]">
                 <p className="text-neutral-800 font-bold">批次质检平均合格率</p>
-                <p className="text-neutral-400 font-medium">穿模阻断发生率: 1.4%</p>
-                <p className="text-neutral-400 font-medium">文案越界溢出发生率: 0.5%</p>
+                <p className="text-neutral-400 font-medium">
+                  穿模阻断发生率: 1.4%
+                </p>
+                <p className="text-neutral-400 font-medium">
+                  文案越界溢出发生率: 0.5%
+                </p>
               </div>
             </div>
           </div>
           <div className="p-2 bg-emerald-50 text-emerald-800 rounded border text-[10.5px] border-emerald-100">
-            <strong>建议：</strong>针对单本台历层叠主图，调节副台历槽比例因子至80%以下能让线圈零重叠。
+            <strong>建议：</strong>
+            针对单本台历层叠主图，调节副台历槽比例因子至80%以下能让线圈零重叠。
           </div>
         </div>
 
         {/* Metric 3 */}
         <div className="p-4 bg-white border rounded shadow-xs text-xs space-y-3">
-          <span className="text-neutral-400 font-bold block">3. 周产量趋势指标</span>
+          <span className="text-neutral-400 font-bold block">
+            3. 周产量趋势指标
+          </span>
           {/* Custom micro SVG representation chart */}
           <div className="h-32 flex items-end space-x-3.5 pt-2 select-none justify-around">
             {[
@@ -73,15 +120,25 @@ export const DataStatistics: React.FC = () => {
               { day: "周四", count: 480, active: true },
               { day: "周五", count: 410, active: false },
               { day: "周六", count: 150, active: false },
-              { day: "周日", count: 90, active: false }
+              { day: "周日", count: 90, active: false },
             ].map((item, idx) => (
-              <div key={idx} className="flex flex-col items-center flex-1 h-full justify-end">
-                <span className="text-[9px] font-mono font-bold text-neutral-550 mb-1">{item.count}</span>
+              <div
+                key={idx}
+                className="flex flex-col items-center flex-1 h-full justify-end"
+              >
+                <span className="text-[9px] font-mono font-bold text-neutral-550 mb-1">
+                  {item.count}
+                </span>
                 <div
                   className={`w-full rounded-t transition-all ${item.active ? "bg-red-650" : "bg-neutral-350"}`}
-                  style={{ height: `${(item.count / 500) * 100}%`, minHeight: "10px" }}
+                  style={{
+                    height: `${(item.count / 500) * 100}%`,
+                    minHeight: "10px",
+                  }}
                 />
-                <span className="text-[10px] text-neutral-400 mt-1.5 font-medium shrink-0">{item.day}</span>
+                <span className="text-[10px] text-neutral-400 mt-1.5 font-medium shrink-0">
+                  {item.day}
+                </span>
               </div>
             ))}
           </div>
@@ -92,7 +149,9 @@ export const DataStatistics: React.FC = () => {
 };
 
 export const SystemSettings: React.FC = () => {
-  const [localDir, setLocalDir] = useState("D:/ECommerceData/CalendarRenderOutputs");
+  const [localDir, setLocalDir] = useState(
+    "D:/ECommerceData/CalendarRenderOutputs",
+  );
   const [useAIAutoRefine, setUseAIAutoRefine] = useState(true);
   const [hasGeminiKey, setHasGeminiKey] = useState(true);
 
@@ -121,7 +180,9 @@ export const SystemSettings: React.FC = () => {
             onChange={(e) => setLocalDir(e.target.value)}
             className="w-full bg-neutral-50 border rounded p-2 font-mono text-neutral-800"
           />
-          <p className="text-[10px] text-neutral-400 mt-1">批量导出压缩包除了直接下载，也将同时存储成标准快照在该磁盘路径下。</p>
+          <p className="text-[10px] text-neutral-400 mt-1">
+            批量导出压缩包除了直接下载，也将同时存储成标准快照在该磁盘路径下。
+          </p>
         </div>
 
         {/* AI Key indicators */}
@@ -145,7 +206,9 @@ export const SystemSettings: React.FC = () => {
 
         {/* Toggles settings */}
         <div className="space-y-3.5 border-t pt-4">
-          <span className="text-[10px] uppercase font-bold text-neutral-400 tracking-wider block">运行参数开关</span>
+          <span className="text-[10px] uppercase font-bold text-neutral-400 tracking-wider block">
+            运行参数开关
+          </span>
 
           <label className="flex items-center space-x-2 cursor-pointer font-bold text-neutral-800">
             <input
@@ -172,7 +235,9 @@ export const SystemSettings: React.FC = () => {
               defaultChecked
               className="rounded text-red-650 focus:ring-red-500 border-neutral-300"
             />
-            <span>开启安全区强制自动标记阻断 (凡超出5%画框则不容批量直接放行)</span>
+            <span>
+              开启安全区强制自动标记阻断 (凡超出5%画框则不容批量直接放行)
+            </span>
           </label>
         </div>
 

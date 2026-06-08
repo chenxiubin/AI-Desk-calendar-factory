@@ -6,7 +6,7 @@ import {
   Template,
   TemplatePageType,
   ProductAsset,
-  ProductAssetRole
+  ProductAssetRole,
 } from "../types";
 
 interface CreateGeneratedPagesFromSuiteParams {
@@ -20,24 +20,34 @@ interface CreateGeneratedPagesFromSuiteParams {
 function matchAssetsForRoleOrFolder(
   outputFolder: string,
   pageType: string,
-  assets: ProductAsset[]
+  assets: ProductAsset[],
 ): string[] {
   if (!assets || assets.length === 0) return [];
 
   let preferredRoles: ProductAssetRole[] = [];
-  if (outputFolder === "main_square" || outputFolder === "main_vertical" || pageType === "main") {
+  if (
+    outputFolder === "main_square" ||
+    outputFolder === "main_vertical" ||
+    pageType === "main"
+  ) {
     preferredRoles = [
       "main_product",
       "transparent_png",
       "primary_main_square",
       "primary_main_vertical",
       "front",
-      "sku_product"
+      "sku_product",
     ];
   } else if (outputFolder === "sku" || pageType === "sku") {
     preferredRoles = ["sku_product", "transparent_png", "front"];
   } else if (outputFolder === "detail" || pageType === "detail") {
-    preferredRoles = ["detail_part", "package", "combo", "white_bg", "transparent_png"];
+    preferredRoles = [
+      "detail_part",
+      "package",
+      "combo",
+      "white_bg",
+      "transparent_png",
+    ];
   } else {
     preferredRoles = ["front", "sku_product", "main_product"];
   }
@@ -62,17 +72,21 @@ function findTemplateId(
   outputFolder: string,
   ratioType: "square" | "vertical",
   suitePages: TemplatePage[],
-  templates: Template[]
+  templates: Template[],
 ): string {
   // 1. 优先使用 suite.pages 中同 outputFolder 的 templateId
-  const matchingSuitePage = suitePages.find((p) => p.outputFolder === outputFolder && p.templateId);
+  const matchingSuitePage = suitePages.find(
+    (p) => p.outputFolder === outputFolder && p.templateId,
+  );
   if (matchingSuitePage && matchingSuitePage.templateId) {
     return matchingSuitePage.templateId;
   }
 
   // 2. 其次从 templates 中找比例匹配的模板
   const expectedRatio = ratioType === "square" ? "1:1" : "3:4";
-  const matchedTemplate = templates.find((t) => t.aspectRatio === expectedRatio);
+  const matchedTemplate = templates.find(
+    (t) => t.aspectRatio === expectedRatio,
+  );
   if (matchedTemplate) {
     return matchedTemplate.id;
   }
@@ -90,8 +104,10 @@ const isMainSquarePage = (page: any, suitePages: TemplatePage[]) => {
   const matchingTp = suitePages.find((tp) => tp.id === page.templatePageId);
   const outputFolder = page.outputFolder || matchingTp?.outputFolder || "";
   const pageRole = page.pageRole || matchingTp?.pageRole || "";
-  const businessRatioType = page.businessRatioType || matchingTp?.businessRatioType || "";
-  const isMainGroup = outputFolder === "main_square" || outputFolder === "main_vertical";
+  const businessRatioType =
+    page.businessRatioType || matchingTp?.businessRatioType || "";
+  const isMainGroup =
+    outputFolder === "main_square" || outputFolder === "main_vertical";
   return (
     outputFolder === "main_square" ||
     pageRole === "primary_main_square" ||
@@ -104,8 +120,10 @@ const isMainVerticalPage = (page: any, suitePages: TemplatePage[]) => {
   const matchingTp = suitePages.find((tp) => tp.id === page.templatePageId);
   const outputFolder = page.outputFolder || matchingTp?.outputFolder || "";
   const pageRole = page.pageRole || matchingTp?.pageRole || "";
-  const businessRatioType = page.businessRatioType || matchingTp?.businessRatioType || "";
-  const isMainGroup = outputFolder === "main_square" || outputFolder === "main_vertical";
+  const businessRatioType =
+    page.businessRatioType || matchingTp?.businessRatioType || "";
+  const isMainGroup =
+    outputFolder === "main_square" || outputFolder === "main_vertical";
   return (
     outputFolder === "main_vertical" ||
     pageRole === "primary_main_vertical" ||
@@ -115,14 +133,18 @@ const isMainVerticalPage = (page: any, suitePages: TemplatePage[]) => {
 };
 
 export function createGeneratedPagesFromSuite(
-  params: CreateGeneratedPagesFromSuiteParams
+  params: CreateGeneratedPagesFromSuiteParams,
 ): GeneratedPage[] {
   const { projectId, suite, productPack, templates } = params;
   const generatedPages: GeneratedPage[] = [];
 
   // --- 1. 把 suite.pages 中已有 TemplatePage 转为 GeneratedPage ---
   suite.pages.forEach((page, index) => {
-    const assignedIds = matchAssetsForRoleOrFolder(page.outputFolder || "", page.pageType, productPack.assets);
+    const assignedIds = matchAssetsForRoleOrFolder(
+      page.outputFolder || "",
+      page.pageType,
+      productPack.assets,
+    );
     generatedPages.push({
       id: `gp_${Date.now()}_original_${index}`,
       projectId,
@@ -141,13 +163,15 @@ export function createGeneratedPagesFromSuite(
       isDeliverable: page.isDeliverable,
       isRunningHubRecommended: page.isRunningHubRecommended,
       isCanvasOnly: page.isCanvasOnly,
-      outputFolder: page.outputFolder
+      outputFolder: page.outputFolder,
     });
   });
 
   // --- 2. 补齐方形主图 (1:1 主图卖点图) ---
   const expectedSquare = suite.expectedSliceCounts?.mainSquareMinCount || 0;
-  const existingSquareCount = generatedPages.filter((p) => isMainSquarePage(p, suite.pages)).length;
+  const existingSquareCount = generatedPages.filter((p) =>
+    isMainSquarePage(p, suite.pages),
+  ).length;
 
   if (existingSquareCount < expectedSquare) {
     const targetToPad = expectedSquare - existingSquareCount;
@@ -159,8 +183,17 @@ export function createGeneratedPagesFromSuite(
       // Check if a page has that exact targetName to avoid name collision
       const nameExists = generatedPages.some((p) => p.pageName === targetName);
       if (!nameExists) {
-        const assignedIds = matchAssetsForRoleOrFolder("main_square", "main", productPack.assets);
-        const templId = findTemplateId("main_square", "square", suite.pages, templates);
+        const assignedIds = matchAssetsForRoleOrFolder(
+          "main_square",
+          "main",
+          productPack.assets,
+        );
+        const templId = findTemplateId(
+          "main_square",
+          "square",
+          suite.pages,
+          templates,
+        );
 
         generatedPages.push({
           id: `gp_pad_square_${Date.now()}_${i}`,
@@ -171,7 +204,11 @@ export function createGeneratedPagesFromSuite(
           pageType: "main",
           productId: productPack.productId,
           assignedAssetIds: assignedIds,
-          status: templId ? (assignedIds.length > 0 ? "base_ready" : "needs_adjustment") : "needs_adjustment",
+          status: templId
+            ? assignedIds.length > 0
+              ? "base_ready"
+              : "needs_adjustment"
+            : "needs_adjustment",
           order: 100 + i,
           pageName: targetName,
           pageRole: "main_marketing_square",
@@ -181,9 +218,9 @@ export function createGeneratedPagesFromSuite(
           isDeliverable: true,
           isRunningHubRecommended: true,
           isCanvasOnly: false,
-          reviewNote: templId 
+          reviewNote: templId
             ? "Auto-constructed based on suite minimum delivery rule" // 根据套系最低交付规则自动补齐
-            : "Missing matching template" // 缺少匹配模板
+            : "Missing matching template", // 缺少匹配模板
         });
         added++;
       }
@@ -192,7 +229,9 @@ export function createGeneratedPagesFromSuite(
 
   // --- 3. 补齐竖版主图 (3:4 主图卖点图) ---
   const expectedVertical = suite.expectedSliceCounts?.mainVerticalMinCount || 0;
-  const existingVerticalCount = generatedPages.filter((p) => isMainVerticalPage(p, suite.pages)).length;
+  const existingVerticalCount = generatedPages.filter((p) =>
+    isMainVerticalPage(p, suite.pages),
+  ).length;
 
   if (existingVerticalCount < expectedVertical) {
     const targetToPad = expectedVertical - existingVerticalCount;
@@ -203,8 +242,17 @@ export function createGeneratedPagesFromSuite(
 
       const nameExists = generatedPages.some((p) => p.pageName === targetName);
       if (!nameExists) {
-        const assignedIds = matchAssetsForRoleOrFolder("main_vertical", "main", productPack.assets);
-        const templId = findTemplateId("main_vertical", "vertical", suite.pages, templates);
+        const assignedIds = matchAssetsForRoleOrFolder(
+          "main_vertical",
+          "main",
+          productPack.assets,
+        );
+        const templId = findTemplateId(
+          "main_vertical",
+          "vertical",
+          suite.pages,
+          templates,
+        );
 
         generatedPages.push({
           id: `gp_pad_vertical_${Date.now()}_${i}`,
@@ -215,7 +263,11 @@ export function createGeneratedPagesFromSuite(
           pageType: "main",
           productId: productPack.productId,
           assignedAssetIds: assignedIds,
-          status: templId ? (assignedIds.length > 0 ? "base_ready" : "needs_adjustment") : "needs_adjustment",
+          status: templId
+            ? assignedIds.length > 0
+              ? "base_ready"
+              : "needs_adjustment"
+            : "needs_adjustment",
           order: 200 + i,
           pageName: targetName,
           pageRole: "main_marketing_vertical",
@@ -225,9 +277,9 @@ export function createGeneratedPagesFromSuite(
           isDeliverable: true,
           isRunningHubRecommended: true,
           isCanvasOnly: false,
-          reviewNote: templId 
+          reviewNote: templId
             ? "Auto-constructed based on suite minimum delivery rule" // 根据套系最低交付规则自动补齐
-            : "Missing matching template" // 缺少匹配模板
+            : "Missing matching template", // 缺少匹配模板
         });
         added++;
       }
@@ -236,11 +288,11 @@ export function createGeneratedPagesFromSuite(
 
   // --- 4. white_bg 正式交付页 ---
   const hasWhiteBg = generatedPages.some(
-    (p) => p.pageRole === "white_bg" || p.outputFolder === "white_bg"
+    (p) => p.pageRole === "white_bg" || p.outputFolder === "white_bg",
   );
   if (suite.expectedSliceCounts?.whiteBgRequired && !hasWhiteBg) {
     const matchingAsset = productPack.assets.find(
-      (as) => as.assetRole === "white_bg" || as.assetType === "white_bg"
+      (as) => as.assetRole === "white_bg" || as.assetType === "white_bg",
     );
 
     generatedPages.push({
@@ -263,19 +315,22 @@ export function createGeneratedPagesFromSuite(
       isDeliverable: true,
       isRunningHubRecommended: false,
       isCanvasOnly: true,
-      reviewNote: matchingAsset 
+      reviewNote: matchingAsset
         ? "Auto-constructed based on suite minimum delivery rule" // 根据套系最低交付规则自动补齐
-        : "Missing white background refined asset" // 缺少白底精修交付资产
+        : "Missing white background refined asset", // 缺少白底精修交付资产
     });
   }
 
   // --- 5. transparent_png 正式交付页 ---
   const hasTransparentPng = generatedPages.some(
-    (p) => p.pageRole === "transparent_png" || p.outputFolder === "transparent_png"
+    (p) =>
+      p.pageRole === "transparent_png" || p.outputFolder === "transparent_png",
   );
   if (suite.expectedSliceCounts?.transparentPngRequired && !hasTransparentPng) {
     const matchingAsset = productPack.assets.find(
-      (as) => as.assetRole === "transparent_png" || as.assetType === "transparent_png"
+      (as) =>
+        as.assetRole === "transparent_png" ||
+        as.assetType === "transparent_png",
     );
 
     generatedPages.push({
@@ -298,9 +353,9 @@ export function createGeneratedPagesFromSuite(
       isDeliverable: true,
       isRunningHubRecommended: false,
       isCanvasOnly: true,
-      reviewNote: matchingAsset 
+      reviewNote: matchingAsset
         ? "Auto-constructed based on suite minimum delivery rule" // 根据套系最低交付规则自动补齐
-        : "Missing transparent PNG asset" // 缺少透明PNG交付资产
+        : "Missing transparent PNG asset", // 缺少透明PNG交付资产
     });
   }
 

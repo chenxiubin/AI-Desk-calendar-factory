@@ -1,4 +1,18 @@
-import { Product, Template, TemplateSlot, TextField, RunningHubWorkflowConfig, TemplateSuite, ProductAssetPack, ProductAsset, ProductAssetRole, ProductArchetype, BusinessRatioType, PageRole, ExportFolderKey } from "./types";
+import {
+  Product,
+  Template,
+  TemplateSlot,
+  TextField,
+  RunningHubWorkflowConfig,
+  TemplateSuite,
+  ProductAssetPack,
+  ProductAsset,
+  ProductAssetRole,
+  ProductArchetype,
+  BusinessRatioType,
+  PageRole,
+  ExportFolderKey,
+} from "./types";
 
 // Seed 8 realistic, beautifully distinct products representing our 300+ portfolio
 export const INITIAL_PRODUCTS: Product[] = [
@@ -23,17 +37,97 @@ export const INITIAL_PRODUCTS: Product[] = [
     themeColor: "#DC2626", // rich red
     illustrationType: "calligraphy",
     assets: [
-      { id: "ast_060_cover", productId: "prod_060", assetType: "front_cover", fileUrl: "front", width: 800, height: 600, status: "ready" },
-      { id: "ast_060_inner", productId: "prod_060", assetType: "inner_page", fileUrl: "inner", width: 800, height: 600, status: "ready" },
-      { id: "ast_060_side", productId: "prod_060", assetType: "side", fileUrl: "side", width: 800, height: 600, status: "ready" },
-      { id: "ast_060_detail_ring", productId: "prod_060", assetType: "detail_ring", fileUrl: "ring", width: 800, height: 600, status: "ready" },
-      { id: "ast_060_detail_cover", productId: "prod_060", assetType: "detail_cover", fileUrl: "det_cov", width: 800, height: 600, status: "ready" },
-      { id: "ast_060_detail_page", productId: "prod_060", assetType: "detail_page", fileUrl: "det_pg", width: 800, height: 600, status: "ready" },
-      { id: "ast_060_detail_base", productId: "prod_060", assetType: "detail_base", fileUrl: "det_base", width: 800, height: 600, status: "ready" },
-      { id: "ast_060_ad", productId: "prod_060", assetType: "ad_area", fileUrl: "ad", width: 800, height: 300, status: "ready" },
-      { id: "ast_060_png", productId: "prod_060", assetType: "transparent_png", fileUrl: "png", width: 1000, height: 1000, status: "ready" },
-      { id: "ast_060_mask", productId: "prod_060", assetType: "mask", fileUrl: "mask", width: 1000, height: 1000, status: "ready" }
-    ]
+      {
+        id: "ast_060_cover",
+        productId: "prod_060",
+        assetType: "front_cover",
+        fileUrl: "front",
+        width: 800,
+        height: 600,
+        status: "ready",
+      },
+      {
+        id: "ast_060_inner",
+        productId: "prod_060",
+        assetType: "inner_page",
+        fileUrl: "inner",
+        width: 800,
+        height: 600,
+        status: "ready",
+      },
+      {
+        id: "ast_060_side",
+        productId: "prod_060",
+        assetType: "side",
+        fileUrl: "side",
+        width: 800,
+        height: 600,
+        status: "ready",
+      },
+      {
+        id: "ast_060_detail_ring",
+        productId: "prod_060",
+        assetType: "detail_ring",
+        fileUrl: "ring",
+        width: 800,
+        height: 600,
+        status: "ready",
+      },
+      {
+        id: "ast_060_detail_cover",
+        productId: "prod_060",
+        assetType: "detail_cover",
+        fileUrl: "det_cov",
+        width: 800,
+        height: 600,
+        status: "ready",
+      },
+      {
+        id: "ast_060_detail_page",
+        productId: "prod_060",
+        assetType: "detail_page",
+        fileUrl: "det_pg",
+        width: 800,
+        height: 600,
+        status: "ready",
+      },
+      {
+        id: "ast_060_detail_base",
+        productId: "prod_060",
+        assetType: "detail_base",
+        fileUrl: "det_base",
+        width: 800,
+        height: 600,
+        status: "ready",
+      },
+      {
+        id: "ast_060_ad",
+        productId: "prod_060",
+        assetType: "ad_area",
+        fileUrl: "ad",
+        width: 800,
+        height: 300,
+        status: "ready",
+      },
+      {
+        id: "ast_060_png",
+        productId: "prod_060",
+        assetType: "transparent_png",
+        fileUrl: "png",
+        width: 1000,
+        height: 1000,
+        status: "ready",
+      },
+      {
+        id: "ast_060_mask",
+        productId: "prod_060",
+        assetType: "mask",
+        fileUrl: "mask",
+        width: 1000,
+        height: 1000,
+        status: "ready",
+      },
+    ],
   },
   {
     id: "prod_061",
@@ -56,13 +150,61 @@ export const INITIAL_PRODUCTS: Product[] = [
     themeColor: "#1E3A8A", // dark blue
     illustrationType: "landscape",
     assets: [
-      { id: "ast_061_cover", productId: "prod_061", assetType: "front_cover", fileUrl: "front", width: 800, height: 600, status: "ready" },
-      { id: "ast_061_inner", productId: "prod_061", assetType: "inner_page", fileUrl: "inner", width: 800, height: 600, status: "ready" },
-      { id: "ast_061_side", productId: "prod_061", assetType: "side", fileUrl: "side", width: 800, height: 600, status: "ready" },
-      { id: "ast_061_detail_ring", productId: "prod_061", assetType: "detail_ring", fileUrl: "ring", width: 800, height: 600, status: "ready" },
-      { id: "ast_061_ad", productId: "prod_061", assetType: "ad_area", fileUrl: "ad", width: 800, height: 300, status: "ready" },
-      { id: "ast_061_png", productId: "prod_061", assetType: "transparent_png", fileUrl: "png", width: 1000, height: 1000, status: "ready" }
-    ]
+      {
+        id: "ast_061_cover",
+        productId: "prod_061",
+        assetType: "front_cover",
+        fileUrl: "front",
+        width: 800,
+        height: 600,
+        status: "ready",
+      },
+      {
+        id: "ast_061_inner",
+        productId: "prod_061",
+        assetType: "inner_page",
+        fileUrl: "inner",
+        width: 800,
+        height: 600,
+        status: "ready",
+      },
+      {
+        id: "ast_061_side",
+        productId: "prod_061",
+        assetType: "side",
+        fileUrl: "side",
+        width: 800,
+        height: 600,
+        status: "ready",
+      },
+      {
+        id: "ast_061_detail_ring",
+        productId: "prod_061",
+        assetType: "detail_ring",
+        fileUrl: "ring",
+        width: 800,
+        height: 600,
+        status: "ready",
+      },
+      {
+        id: "ast_061_ad",
+        productId: "prod_061",
+        assetType: "ad_area",
+        fileUrl: "ad",
+        width: 800,
+        height: 300,
+        status: "ready",
+      },
+      {
+        id: "ast_061_png",
+        productId: "prod_061",
+        assetType: "transparent_png",
+        fileUrl: "png",
+        width: 1000,
+        height: 1000,
+        status: "ready",
+      },
+    ],
   },
   {
     id: "prod_062",
@@ -85,10 +227,34 @@ export const INITIAL_PRODUCTS: Product[] = [
     themeColor: "#E11D48", // crimson
     illustrationType: "dragon",
     assets: [
-      { id: "ast_062_cover", productId: "prod_062", assetType: "front_cover", fileUrl: "front", width: 800, height: 600, status: "ready" },
-      { id: "ast_062_inner", productId: "prod_062", assetType: "inner_page", fileUrl: "inner", width: 800, height: 600, status: "ready" },
-      { id: "ast_062_png", productId: "prod_062", assetType: "transparent_png", fileUrl: "png", width: 1000, height: 1000, status: "ready" }
-    ]
+      {
+        id: "ast_062_cover",
+        productId: "prod_062",
+        assetType: "front_cover",
+        fileUrl: "front",
+        width: 800,
+        height: 600,
+        status: "ready",
+      },
+      {
+        id: "ast_062_inner",
+        productId: "prod_062",
+        assetType: "inner_page",
+        fileUrl: "inner",
+        width: 800,
+        height: 600,
+        status: "ready",
+      },
+      {
+        id: "ast_062_png",
+        productId: "prod_062",
+        assetType: "transparent_png",
+        fileUrl: "png",
+        width: 1000,
+        height: 1000,
+        status: "ready",
+      },
+    ],
   },
   {
     id: "prod_063",
@@ -111,9 +277,25 @@ export const INITIAL_PRODUCTS: Product[] = [
     themeColor: "#0F766E", // teal
     illustrationType: "landscape",
     assets: [
-      { id: "ast_063_cover", productId: "prod_063", assetType: "front_cover", fileUrl: "front", width: 800, height: 600, status: "ready" },
-      { id: "ast_063_png", productId: "prod_063", assetType: "transparent_png", fileUrl: "png", width: 1000, height: 1000, status: "ready" }
-    ]
+      {
+        id: "ast_063_cover",
+        productId: "prod_063",
+        assetType: "front_cover",
+        fileUrl: "front",
+        width: 800,
+        height: 600,
+        status: "ready",
+      },
+      {
+        id: "ast_063_png",
+        productId: "prod_063",
+        assetType: "transparent_png",
+        fileUrl: "png",
+        width: 1000,
+        height: 1000,
+        status: "ready",
+      },
+    ],
   },
   {
     id: "prod_064",
@@ -136,9 +318,25 @@ export const INITIAL_PRODUCTS: Product[] = [
     themeColor: "#D97706", // amber / warm orange
     illustrationType: "cartoon",
     assets: [
-      { id: "ast_064_cover", productId: "prod_064", assetType: "front_cover", fileUrl: "front", width: 800, height: 600, status: "ready" },
-      { id: "ast_064_png", productId: "prod_064", assetType: "transparent_png", fileUrl: "png", width: 1000, height: 1000, status: "ready" }
-    ]
+      {
+        id: "ast_064_cover",
+        productId: "prod_064",
+        assetType: "front_cover",
+        fileUrl: "front",
+        width: 800,
+        height: 600,
+        status: "ready",
+      },
+      {
+        id: "ast_064_png",
+        productId: "prod_064",
+        assetType: "transparent_png",
+        fileUrl: "png",
+        width: 1000,
+        height: 1000,
+        status: "ready",
+      },
+    ],
   },
   {
     id: "prod_065",
@@ -161,8 +359,16 @@ export const INITIAL_PRODUCTS: Product[] = [
     themeColor: "#991B1B", // dark red
     illustrationType: "dragon",
     assets: [
-      { id: "ast_065_cover", productId: "prod_065", assetType: "front_cover", fileUrl: "front", width: 800, height: 1200, status: "ready" }
-    ]
+      {
+        id: "ast_065_cover",
+        productId: "prod_065",
+        assetType: "front_cover",
+        fileUrl: "front",
+        width: 800,
+        height: 1200,
+        status: "ready",
+      },
+    ],
   },
   {
     id: "prod_066",
@@ -184,7 +390,7 @@ export const INITIAL_PRODUCTS: Product[] = [
     status: "missing_assets",
     themeColor: "#B91C1C",
     illustrationType: "cartoon",
-    assets: []
+    assets: [],
   },
   {
     id: "prod_067",
@@ -207,10 +413,26 @@ export const INITIAL_PRODUCTS: Product[] = [
     themeColor: "#854D0E", // rich gold / dark yellow
     illustrationType: "dragon",
     assets: [
-      { id: "ast_067_cover", productId: "prod_067", assetType: "front_cover", fileUrl: "front", width: 1200, height: 1200, status: "ready" },
-      { id: "ast_067_png", productId: "prod_067", assetType: "transparent_png", fileUrl: "png", width: 1200, height: 1200, status: "ready" }
-    ]
-  }
+      {
+        id: "ast_067_cover",
+        productId: "prod_067",
+        assetType: "front_cover",
+        fileUrl: "front",
+        width: 1200,
+        height: 1200,
+        status: "ready",
+      },
+      {
+        id: "ast_067_png",
+        productId: "prod_067",
+        assetType: "transparent_png",
+        fileUrl: "png",
+        width: 1200,
+        height: 1200,
+        status: "ready",
+      },
+    ],
+  },
 ];
 
 export const PRESET_TEMPLATES: Template[] = [
@@ -224,7 +446,7 @@ export const PRESET_TEMPLATES: Template[] = [
     outputHeight: 800,
     background: {
       type: "scene",
-      sceneStyle: "warm_light"
+      sceneStyle: "warm_light",
     },
     status: "enabled",
     slots: [
@@ -243,8 +465,8 @@ export const PRESET_TEMPLATES: Template[] = [
         allowRotation: false,
         allowCrop: false,
         layer: 3,
-        shadowRule: "strong_desk_contact_shadow"
-      }
+        shadowRule: "strong_desk_contact_shadow",
+      },
     ],
     textFields: [
       {
@@ -259,7 +481,7 @@ export const PRESET_TEMPLATES: Template[] = [
         fontSize: 32,
         fontWeight: "font-bold",
         align: "center",
-        color: "#B91C1C"
+        color: "#B91C1C",
       },
       {
         id: "t_main_2",
@@ -273,7 +495,7 @@ export const PRESET_TEMPLATES: Template[] = [
         fontSize: 22,
         fontWeight: "font-bold",
         align: "center",
-        color: "#1F2937"
+        color: "#1F2937",
       },
       {
         id: "t_main_3",
@@ -287,7 +509,7 @@ export const PRESET_TEMPLATES: Template[] = [
         fontSize: 14,
         fontWeight: "font-medium",
         align: "center",
-        color: "#4B5563"
+        color: "#4B5563",
       },
       {
         id: "t_main_4",
@@ -301,15 +523,15 @@ export const PRESET_TEMPLATES: Template[] = [
         fontSize: 14,
         fontWeight: "font-semibold",
         align: "center",
-        color: "#B91C1C"
-      }
+        color: "#B91C1C",
+      },
     ],
     exportSettings: {
       format: "JPG",
       quality: 95,
       width: 800,
-      height: 800
-    }
+      height: 800,
+    },
   },
   {
     id: "MAIN_002",
@@ -321,7 +543,7 @@ export const PRESET_TEMPLATES: Template[] = [
     outputHeight: 800,
     background: {
       type: "scene",
-      sceneStyle: "beige_paper"
+      sceneStyle: "beige_paper",
     },
     status: "enabled",
     slots: [
@@ -340,8 +562,8 @@ export const PRESET_TEMPLATES: Template[] = [
         allowRotation: false,
         allowCrop: false,
         layer: 3,
-        shadowRule: "desk_contact_soft_shadow"
-      }
+        shadowRule: "desk_contact_soft_shadow",
+      },
     ],
     textFields: [
       {
@@ -356,7 +578,7 @@ export const PRESET_TEMPLATES: Template[] = [
         fontSize: 96,
         fontWeight: "font-extrabold",
         align: "center",
-        color: "rgba(185, 28, 28, 0.08)"
+        color: "rgba(185, 28, 28, 0.08)",
       },
       {
         id: "t2_2",
@@ -370,7 +592,7 @@ export const PRESET_TEMPLATES: Template[] = [
         fontSize: 28,
         fontWeight: "font-bold",
         align: "center",
-        color: "#1F2937"
+        color: "#1F2937",
       },
       {
         id: "t2_3",
@@ -384,15 +606,15 @@ export const PRESET_TEMPLATES: Template[] = [
         fontSize: 14,
         fontWeight: "font-normal",
         align: "center",
-        color: "#6B7280"
-      }
+        color: "#6B7280",
+      },
     ],
     exportSettings: {
       format: "JPG",
       quality: 95,
       width: 800,
-      height: 800
-    }
+      height: 800,
+    },
   },
   {
     id: "MAIN_003",
@@ -404,7 +626,7 @@ export const PRESET_TEMPLATES: Template[] = [
     outputHeight: 800,
     background: {
       type: "scene",
-      sceneStyle: "luxury_gold"
+      sceneStyle: "luxury_gold",
     },
     status: "enabled",
     slots: [
@@ -423,7 +645,7 @@ export const PRESET_TEMPLATES: Template[] = [
         allowRotation: true,
         allowCrop: false,
         layer: 2,
-        shadowRule: "very_light_shadow_or_none"
+        shadowRule: "very_light_shadow_or_none",
       },
       {
         id: "s3_fg",
@@ -440,8 +662,8 @@ export const PRESET_TEMPLATES: Template[] = [
         allowRotation: false,
         allowCrop: false,
         layer: 3,
-        shadowRule: "strong_desk_contact_shadow"
-      }
+        shadowRule: "strong_desk_contact_shadow",
+      },
     ],
     textFields: [
       {
@@ -456,7 +678,7 @@ export const PRESET_TEMPLATES: Template[] = [
         fontSize: 26,
         fontWeight: "font-bold",
         align: "center",
-        color: "#854D0E"
+        color: "#854D0E",
       },
       {
         id: "t3_2",
@@ -470,15 +692,15 @@ export const PRESET_TEMPLATES: Template[] = [
         fontSize: 14,
         fontWeight: "font-medium",
         align: "center",
-        color: "#4B5563"
-      }
+        color: "#4B5563",
+      },
     ],
     exportSettings: {
       format: "JPG",
       quality: 95,
       width: 800,
-      height: 800
-    }
+      height: 800,
+    },
   },
   {
     id: "SKU_001",
@@ -490,7 +712,7 @@ export const PRESET_TEMPLATES: Template[] = [
     outputHeight: 800,
     background: {
       type: "scene",
-      sceneStyle: "studio_white"
+      sceneStyle: "studio_white",
     },
     status: "enabled",
     slots: [
@@ -509,8 +731,8 @@ export const PRESET_TEMPLATES: Template[] = [
         allowRotation: false,
         allowCrop: false,
         layer: 3,
-        shadowRule: "desk_contact_soft_shadow"
-      }
+        shadowRule: "desk_contact_soft_shadow",
+      },
     ],
     textFields: [
       {
@@ -525,7 +747,7 @@ export const PRESET_TEMPLATES: Template[] = [
         fontSize: 28,
         fontWeight: "font-bold",
         align: "center",
-        color: "#1F2937"
+        color: "#1F2937",
       },
       {
         id: "tsku_2",
@@ -539,7 +761,7 @@ export const PRESET_TEMPLATES: Template[] = [
         fontSize: 14,
         fontWeight: "font-medium",
         align: "center",
-        color: "#4B5563"
+        color: "#4B5563",
       },
       {
         id: "tsku_3",
@@ -553,15 +775,15 @@ export const PRESET_TEMPLATES: Template[] = [
         fontSize: 14,
         fontWeight: "font-semibold",
         align: "center",
-        color: "#4B5563"
-      }
+        color: "#4B5563",
+      },
     ],
     exportSettings: {
       format: "PNG",
       quality: 95,
       width: 800,
-      height: 800
-    }
+      height: 800,
+    },
   },
   {
     id: "DETAIL_001",
@@ -573,7 +795,7 @@ export const PRESET_TEMPLATES: Template[] = [
     outputHeight: 1000,
     background: {
       type: "scene",
-      sceneStyle: "beige_paper"
+      sceneStyle: "beige_paper",
     },
     status: "enabled",
     slots: [
@@ -592,8 +814,8 @@ export const PRESET_TEMPLATES: Template[] = [
         allowRotation: false,
         allowCrop: false,
         layer: 3,
-        shadowRule: "strong_desk_contact_shadow"
-      }
+        shadowRule: "strong_desk_contact_shadow",
+      },
     ],
     textFields: [
       {
@@ -608,7 +830,7 @@ export const PRESET_TEMPLATES: Template[] = [
         fontSize: 26,
         fontWeight: "font-bold",
         align: "center",
-        color: "#1F2937"
+        color: "#1F2937",
       },
       {
         id: "td_desc",
@@ -622,7 +844,7 @@ export const PRESET_TEMPLATES: Template[] = [
         fontSize: 14,
         fontWeight: "font-medium",
         align: "center",
-        color: "#991B1B"
+        color: "#991B1B",
       },
       {
         id: "td_line1",
@@ -636,7 +858,7 @@ export const PRESET_TEMPLATES: Template[] = [
         fontSize: 14,
         fontWeight: "font-medium",
         align: "left",
-        color: "#374151"
+        color: "#374151",
       },
       {
         id: "td_line2",
@@ -650,7 +872,7 @@ export const PRESET_TEMPLATES: Template[] = [
         fontSize: 14,
         fontWeight: "font-medium",
         align: "left",
-        color: "#374151"
+        color: "#374151",
       },
       {
         id: "td_line3",
@@ -664,15 +886,15 @@ export const PRESET_TEMPLATES: Template[] = [
         fontSize: 14,
         fontWeight: "font-medium",
         align: "left",
-        color: "#374151"
-      }
+        color: "#374151",
+      },
     ],
     exportSettings: {
       format: "JPG",
       quality: 92,
       width: 750,
-      height: 1000
-    }
+      height: 1000,
+    },
   },
   {
     id: "DETAIL_002",
@@ -684,7 +906,7 @@ export const PRESET_TEMPLATES: Template[] = [
     outputHeight: 1000,
     background: {
       type: "scene",
-      sceneStyle: "festive_red"
+      sceneStyle: "festive_red",
     },
     status: "enabled",
     slots: [
@@ -703,7 +925,7 @@ export const PRESET_TEMPLATES: Template[] = [
         allowRotation: false,
         allowCrop: true,
         layer: 3,
-        shadowRule: "very_light_shadow_or_none"
+        shadowRule: "very_light_shadow_or_none",
       },
       {
         id: "sub_2",
@@ -720,7 +942,7 @@ export const PRESET_TEMPLATES: Template[] = [
         allowRotation: false,
         allowCrop: true,
         layer: 3,
-        shadowRule: "very_light_shadow_or_none"
+        shadowRule: "very_light_shadow_or_none",
       },
       {
         id: "sub_3",
@@ -737,7 +959,7 @@ export const PRESET_TEMPLATES: Template[] = [
         allowRotation: false,
         allowCrop: true,
         layer: 3,
-        shadowRule: "very_light_shadow_or_none"
+        shadowRule: "very_light_shadow_or_none",
       },
       {
         id: "sub_4",
@@ -754,8 +976,8 @@ export const PRESET_TEMPLATES: Template[] = [
         allowRotation: false,
         allowCrop: true,
         layer: 3,
-        shadowRule: "very_light_shadow_or_none"
-      }
+        shadowRule: "very_light_shadow_or_none",
+      },
     ],
     textFields: [
       {
@@ -770,7 +992,7 @@ export const PRESET_TEMPLATES: Template[] = [
         fontSize: 26,
         fontWeight: "font-bold",
         align: "center",
-        color: "#FFFFFF"
+        color: "#FFFFFF",
       },
       {
         id: "tqc_s1",
@@ -784,7 +1006,7 @@ export const PRESET_TEMPLATES: Template[] = [
         fontSize: 12,
         fontWeight: "font-semibold",
         align: "center",
-        color: "#FFFFFF"
+        color: "#FFFFFF",
       },
       {
         id: "tqc_s2",
@@ -798,7 +1020,7 @@ export const PRESET_TEMPLATES: Template[] = [
         fontSize: 12,
         fontWeight: "font-semibold",
         align: "center",
-        color: "#FFFFFF"
+        color: "#FFFFFF",
       },
       {
         id: "tqc_s3",
@@ -812,7 +1034,7 @@ export const PRESET_TEMPLATES: Template[] = [
         fontSize: 12,
         fontWeight: "font-semibold",
         align: "center",
-        color: "#FFFFFF"
+        color: "#FFFFFF",
       },
       {
         id: "tqc_s4",
@@ -826,31 +1048,103 @@ export const PRESET_TEMPLATES: Template[] = [
         fontSize: 12,
         fontWeight: "font-semibold",
         align: "center",
-        color: "#FFFFFF"
-      }
+        color: "#FFFFFF",
+      },
     ],
     exportSettings: {
       format: "JPG",
       quality: 90,
       width: 750,
-      height: 1000
-    }
-  }
+      height: 1000,
+    },
+  },
 ];
 
 export const SLOT_DEFINITIONS = [
-  { id: "CAL_SLOT_001", name: "单本台历标准正面槽", widthRange: "82% - 88%", heightRange: "48% - 58%", desc: "适用于款式展示、SKU配图，含标准防偏阴影约束层。" },
-  { id: "CAL_SLOT_002", name: "单本台历大主图槽", widthRange: "88% - 94%", heightRange: "55% - 68%", desc: "适用于800x800标准大图，顶部有留白供文案展示。" },
-  { id: "CAL_SLOT_003", name: "SKU单款固定槽", widthRange: "82% - 86%", heightRange: "52% - 58%", desc: "支持底边定位，背景固定微缩轻质纸感质感。" },
-  { id: "CAL_SLOT_004", name: "白底标准产品槽", widthRange: "82% - 88%", heightRange: "72% - 80%", desc: "主打规范图，强制纯白背景，去除一切装饰物。" },
-  { id: "CAL_SLOT_005", name: "双本前后层叠槽", widthRange: "82% - 92%", heightRange: "多层叠", desc: "主副双品阶阶梯排布，前景产品必须完整展示。" },
-  { id: "CAL_SLOT_006", name: "三本内页阶梯槽", widthRange: "阶梯分布", heightRange: "阶梯分布", desc: "由深至浅、左右拉开的多月份展示槽位。" },
-  { id: "CAL_SLOT_007", name: "工艺细节四宫格", widthRange: "2*2拼图", heightRange: "2*2拼图", desc: "分块对齐裁剪，显示线圈、烫印、纸张细节。" },
-  { id: "CAL_SLOT_008", name: "侧面结构槽", widthRange: "88% - 96%", heightRange: "55% - 68%", desc: "专为45度侧面立体三角架倾斜拍摄而设。" },
-  { id: "CAL_SLOT_009", name: "广告位定制槽", widthRange: "88% - 94%", heightRange: "45% - 55%", desc: "底座局部放大，高亮镂空定制烫金区域。" },
-  { id: "CAL_SLOT_010", name: "尺寸参数展示槽", widthRange: "48% - 58%", heightRange: "35% - 45%", desc: "左对角线缩，配合右侧、底下多行系统参数字。" },
-  { id: "CAL_SLOT_011", name: "款式一览宫格槽", widthRange: "多宫格", heightRange: "多格缩放", desc: "展示2x3（6款）或3x4（12款）的系列总览。" },
-  { id: "CAL_SLOT_012", name: "内页功能互动槽", widthRange: "88% - 96%", heightRange: "52% - 62%", desc: "带握笔手势剪影，凸显格间大间距文字备忘功能。" }
+  {
+    id: "CAL_SLOT_001",
+    name: "单本台历标准正面槽",
+    widthRange: "82% - 88%",
+    heightRange: "48% - 58%",
+    desc: "适用于款式展示、SKU配图，含标准防偏阴影约束层。",
+  },
+  {
+    id: "CAL_SLOT_002",
+    name: "单本台历大主图槽",
+    widthRange: "88% - 94%",
+    heightRange: "55% - 68%",
+    desc: "适用于800x800标准大图，顶部有留白供文案展示。",
+  },
+  {
+    id: "CAL_SLOT_003",
+    name: "SKU单款固定槽",
+    widthRange: "82% - 86%",
+    heightRange: "52% - 58%",
+    desc: "支持底边定位，背景固定微缩轻质纸感质感。",
+  },
+  {
+    id: "CAL_SLOT_004",
+    name: "白底标准产品槽",
+    widthRange: "82% - 88%",
+    heightRange: "72% - 80%",
+    desc: "主打规范图，强制纯白背景，去除一切装饰物。",
+  },
+  {
+    id: "CAL_SLOT_005",
+    name: "双本前后层叠槽",
+    widthRange: "82% - 92%",
+    heightRange: "多层叠",
+    desc: "主副双品阶阶梯排布，前景产品必须完整展示。",
+  },
+  {
+    id: "CAL_SLOT_006",
+    name: "三本内页阶梯槽",
+    widthRange: "阶梯分布",
+    heightRange: "阶梯分布",
+    desc: "由深至浅、左右拉开的多月份展示槽位。",
+  },
+  {
+    id: "CAL_SLOT_007",
+    name: "工艺细节四宫格",
+    widthRange: "2*2拼图",
+    heightRange: "2*2拼图",
+    desc: "分块对齐裁剪，显示线圈、烫印、纸张细节。",
+  },
+  {
+    id: "CAL_SLOT_008",
+    name: "侧面结构槽",
+    widthRange: "88% - 96%",
+    heightRange: "55% - 68%",
+    desc: "专为45度侧面立体三角架倾斜拍摄而设。",
+  },
+  {
+    id: "CAL_SLOT_009",
+    name: "广告位定制槽",
+    widthRange: "88% - 94%",
+    heightRange: "45% - 55%",
+    desc: "底座局部放大，高亮镂空定制烫金区域。",
+  },
+  {
+    id: "CAL_SLOT_010",
+    name: "尺寸参数展示槽",
+    widthRange: "48% - 58%",
+    heightRange: "35% - 45%",
+    desc: "左对角线缩，配合右侧、底下多行系统参数字。",
+  },
+  {
+    id: "CAL_SLOT_011",
+    name: "款式一览宫格槽",
+    widthRange: "多宫格",
+    heightRange: "多格缩放",
+    desc: "展示2x3（6款）或3x4（12款）的系列总览。",
+  },
+  {
+    id: "CAL_SLOT_012",
+    name: "内页功能互动槽",
+    widthRange: "88% - 96%",
+    heightRange: "52% - 62%",
+    desc: "带握笔手势剪影，凸显格间大间距文字备忘功能。",
+  },
 ];
 
 export const PRESET_RUNNINGHUB_WORKFLOWS: RunningHubWorkflowConfig[] = [
@@ -873,7 +1167,7 @@ export const PRESET_RUNNINGHUB_WORKFLOWS: RunningHubWorkflowConfig[] = [
     enabled: false,
     transparentOutputIndex: 0,
     whiteBgOutputIndex: 1,
-    maskOutputIndex: 2
+    maskOutputIndex: 2,
   },
   {
     id: "rh_flux2_klein_light_fusion",
@@ -905,12 +1199,13 @@ export const PRESET_RUNNINGHUB_WORKFLOWS: RunningHubWorkflowConfig[] = [
 
     outputNodeId: "48",
 
-    defaultPrompt: "产品与背景自然融合，并进行统一重新打光。光影统一，保持产品主体、图案、文字、颜色和结构不变，只增强环境光、接触阴影、边缘融合 and 整体质感，make image high quality,",
+    defaultPrompt:
+      "产品与背景自然融合，并进行统一重新打光。光影统一，保持产品主体、图案、文字、颜色和结构不变，只增强环境光、接触阴影、边缘融合 and 整体质感，make image high quality,",
     defaultNegativePrompt: "",
     defaultDenoise: 1,
     defaultSteps: 4,
     defaultCfg: 1,
-    enabled: true
+    enabled: true,
   },
   {
     id: "wf_flux_kontext",
@@ -924,11 +1219,13 @@ export const PRESET_RUNNINGHUB_WORKFLOWS: RunningHubWorkflowConfig[] = [
     seedNodeId: "30",
     denoiseNodeId: "40",
     outputNodeId: "9",
-    defaultPrompt: "将输入图中的台历产品自然融合到低透视新中式空桌面场景中，只增强环境光、接触阴影、桌面氛围和边缘融合。必须保持台历产品主体、红色封面、金色烫印工艺、马图案、产品上的所有中文文字、年份数字、挂环、底座结构完全不变。产品清晰突出，电商主图风格，高级但不过度重绘。",
-    defaultNegativePrompt: "不要修改产品图案，不要修改产品文字，不要改变年份数字，不要重绘马图案，不要改变产品比例，不要替换产品，不要新增台历，不要让产品变形，不要裁切产品，不要生成乱码文字，不要模糊产品主体，不要改变红色封面和金色工艺。",
+    defaultPrompt:
+      "将输入图中的台历产品自然融合到低透视新中式空桌面场景中，只增强环境光、接触阴影、桌面氛围和边缘融合。必须保持台历产品主体、红色封面、金色烫印工艺、马图案、产品上的所有中文文字、年份数字、挂环、底座结构完全不变。产品清晰突出，电商主图风格，高级但不过度重绘。",
+    defaultNegativePrompt:
+      "不要修改产品图案，不要修改产品文字，不要改变年份数字，不要重绘马图案，不要改变产品比例，不要替换产品，不要新增台历，不要让产品变形，不要裁切产品，不要生成乱码文字，不要模糊产品主体，不要改变红色封面和金色工艺。",
     defaultDenoise: 0.22,
-    enabled: true
-  }
+    enabled: true,
+  },
 ];
 
 // Presets for the new Suite-level E-commerce generation flow
@@ -940,7 +1237,8 @@ export const PRESET_TEMPLATE_SUITES: TemplateSuite[] = [
     category: "new_chinese",
     productType: "calendar",
     productArchetype: ProductArchetype.desk_calendar,
-    coverImage: "https://images.unsplash.com/photo-1579783902614-a3fb3927b6a5?q=80&w=600&auto=format&fit=crop",
+    coverImage:
+      "https://images.unsplash.com/photo-1579783902614-a3fb3927b6a5?q=80&w=600&auto=format&fit=crop",
     expectedSliceCounts: {
       mainSquareMinCount: 10,
       mainVerticalMinCount: 10,
@@ -948,7 +1246,7 @@ export const PRESET_TEMPLATE_SUITES: TemplateSuite[] = [
       skuMinCount: 5,
       detailMinCount: 8,
       whiteBgRequired: true,
-      transparentPngRequired: true
+      transparentPngRequired: true,
     },
     exportProfile: {
       folders: [
@@ -960,9 +1258,9 @@ export const PRESET_TEMPLATE_SUITES: TemplateSuite[] = [
         ExportFolderKey.customization_detail,
         ExportFolderKey.ad_custom_effect,
         ExportFolderKey.white_bg,
-        ExportFolderKey.transparent_png
+        ExportFolderKey.transparent_png,
       ],
-      namingRule: "{productCode}_{pageRole}_{index}"
+      namingRule: "{productCode}_{pageRole}_{index}",
     },
     pages: [
       {
@@ -979,7 +1277,7 @@ export const PRESET_TEMPLATE_SUITES: TemplateSuite[] = [
         isDeliverable: true,
         isRunningHubRecommended: true,
         outputFolder: ExportFolderKey.main_square,
-        outputFileNamePattern: "{productCode}_main_square_800.jpg"
+        outputFileNamePattern: "{productCode}_main_square_800.jpg",
       },
       {
         id: "tp_nc_001_main_v",
@@ -995,7 +1293,7 @@ export const PRESET_TEMPLATE_SUITES: TemplateSuite[] = [
         isDeliverable: true,
         isRunningHubRecommended: true,
         outputFolder: ExportFolderKey.main_vertical,
-        outputFileNamePattern: "{productCode}_main_vertical_750.jpg"
+        outputFileNamePattern: "{productCode}_main_vertical_750.jpg",
       },
       {
         id: "tp_nc_001_sku",
@@ -1010,7 +1308,7 @@ export const PRESET_TEMPLATE_SUITES: TemplateSuite[] = [
         actualAspectRatio: "1:1",
         isDeliverable: true,
         outputFolder: ExportFolderKey.sku,
-        outputFileNamePattern: "{productCode}_sku_var.jpg"
+        outputFileNamePattern: "{productCode}_sku_var.jpg",
       },
       {
         id: "tp_nc_001_det_01",
@@ -1025,7 +1323,7 @@ export const PRESET_TEMPLATE_SUITES: TemplateSuite[] = [
         actualAspectRatio: "3:4",
         isDeliverable: true,
         outputFolder: ExportFolderKey.detail,
-        outputFileNamePattern: "{productCode}_detail_page.jpg"
+        outputFileNamePattern: "{productCode}_detail_page.jpg",
       },
       {
         id: "tp_nc_001_white",
@@ -1041,7 +1339,7 @@ export const PRESET_TEMPLATE_SUITES: TemplateSuite[] = [
         isDeliverable: true,
         isCanvasOnly: true,
         outputFolder: ExportFolderKey.white_bg,
-        outputFileNamePattern: "{productCode}_whitebg.jpg"
+        outputFileNamePattern: "{productCode}_whitebg.jpg",
       },
       {
         id: "tp_nc_001_trans",
@@ -1057,17 +1355,18 @@ export const PRESET_TEMPLATE_SUITES: TemplateSuite[] = [
         isDeliverable: true,
         isCanvasOnly: true,
         outputFolder: ExportFolderKey.transparent_png,
-        outputFileNamePattern: "{productCode}_transparent.png"
-      }
+        outputFileNamePattern: "{productCode}_transparent.png",
+      },
     ],
     globalStyle: {
       colorPalette: ["#DC2626", "#F59E0B", "#111827", "#FEF3C7"],
       fontStyle: "Space Grotesk & Inter Mono",
       sceneStyle: "暖色调新中式高档家居场景",
       lightDirection: "右上45度柔和侧光",
-      description: "专为桌面台历打造的高端国风商务套系，保障方形主图最少10张、竖版主图最少10张，完备输出白底精修与透明PNG正式交付成品。"
+      description:
+        "专为桌面台历打造的高端国风商务套系，保障方形主图最少10张、竖版主图最少10张，完备输出白底精修与透明PNG正式交付成品。",
     },
-    status: "enabled"
+    status: "enabled",
   },
   {
     id: "suite_wall_002",
@@ -1076,7 +1375,8 @@ export const PRESET_TEMPLATE_SUITES: TemplateSuite[] = [
     category: "new_chinese",
     productType: "wall_calendar",
     productArchetype: ProductArchetype.wall_calendar,
-    coverImage: "https://images.unsplash.com/photo-1497366216548-37526070297c?q=80&w=600&auto=format&fit=crop",
+    coverImage:
+      "https://images.unsplash.com/photo-1497366216548-37526070297c?q=80&w=600&auto=format&fit=crop",
     expectedSliceCounts: {
       mainSquareMinCount: 12,
       mainVerticalMinCount: 12,
@@ -1084,7 +1384,7 @@ export const PRESET_TEMPLATE_SUITES: TemplateSuite[] = [
       skuMinCount: 6,
       detailMinCount: 10,
       whiteBgRequired: true,
-      transparentPngRequired: true
+      transparentPngRequired: true,
     },
     exportProfile: {
       folders: [
@@ -1096,9 +1396,9 @@ export const PRESET_TEMPLATE_SUITES: TemplateSuite[] = [
         ExportFolderKey.customization_detail,
         ExportFolderKey.ad_custom_effect,
         ExportFolderKey.white_bg,
-        ExportFolderKey.transparent_png
+        ExportFolderKey.transparent_png,
       ],
-      namingRule: "{productCode}_{pageRole}_{index}"
+      namingRule: "{productCode}_{pageRole}_{index}",
     },
     pages: [
       {
@@ -1115,7 +1415,7 @@ export const PRESET_TEMPLATE_SUITES: TemplateSuite[] = [
         isDeliverable: true,
         isRunningHubRecommended: true,
         outputFolder: ExportFolderKey.main_square,
-        outputFileNamePattern: "{productCode}_wall_square_800.jpg"
+        outputFileNamePattern: "{productCode}_wall_square_800.jpg",
       },
       {
         id: "tp_wall_main_vt",
@@ -1131,7 +1431,7 @@ export const PRESET_TEMPLATE_SUITES: TemplateSuite[] = [
         isDeliverable: true,
         isRunningHubRecommended: true,
         outputFolder: ExportFolderKey.main_vertical,
-        outputFileNamePattern: "{productCode}_wall_vertical_750.jpg"
+        outputFileNamePattern: "{productCode}_wall_vertical_750.jpg",
       },
       {
         id: "tp_wall_sku",
@@ -1146,7 +1446,7 @@ export const PRESET_TEMPLATE_SUITES: TemplateSuite[] = [
         actualAspectRatio: "1:1",
         isDeliverable: true,
         outputFolder: ExportFolderKey.sku,
-        outputFileNamePattern: "{productCode}_wall_sku.jpg"
+        outputFileNamePattern: "{productCode}_wall_sku.jpg",
       },
       {
         id: "tp_wall_white",
@@ -1162,17 +1462,18 @@ export const PRESET_TEMPLATE_SUITES: TemplateSuite[] = [
         isDeliverable: true,
         isCanvasOnly: true,
         outputFolder: ExportFolderKey.white_bg,
-        outputFileNamePattern: "{productCode}_wall_whitebg.jpg"
-      }
+        outputFileNamePattern: "{productCode}_wall_whitebg.jpg",
+      },
     ],
     globalStyle: {
       colorPalette: ["#1e293b", "#3b82f6", "#111827"],
       fontStyle: "Modern Elegance Serif",
       sceneStyle: "中式典雅红木卷轴挂墙场景",
       lightDirection: "垂直高透漫射光",
-      description: "挂历标准生产套系。包含最少方形12张、竖版12张主图卖点图，配备高解析度白底精修与透明PNG成品，完全面向最终交付。"
+      description:
+        "挂历标准生产套系。包含最少方形12张、竖版12张主图卖点图，配备高解析度白底精修与透明PNG成品，完全面向最终交付。",
     },
-    status: "enabled"
+    status: "enabled",
   },
   {
     id: "suite_fu_003",
@@ -1181,7 +1482,8 @@ export const PRESET_TEMPLATE_SUITES: TemplateSuite[] = [
     category: "custom",
     productType: "calendar",
     productArchetype: ProductArchetype.fu_plaque_calendar,
-    coverImage: "https://images.unsplash.com/photo-1549465220-1a8b9238cd48?q=80&w=600&auto=format&fit=crop",
+    coverImage:
+      "https://images.unsplash.com/photo-1549465220-1a8b9238cd48?q=80&w=600&auto=format&fit=crop",
     expectedSliceCounts: {},
     pages: [
       {
@@ -1197,18 +1499,19 @@ export const PRESET_TEMPLATE_SUITES: TemplateSuite[] = [
         actualAspectRatio: "1:1",
         isDeliverable: true,
         outputFolder: ExportFolderKey.main_square,
-        outputFileNamePattern: "{productCode}_fu_main.jpg"
-      }
+        outputFileNamePattern: "{productCode}_fu_main.jpg",
+      },
     ],
     globalStyle: {
       colorPalette: ["#DC2626", "#F59E0B"],
       fontStyle: "NianHuo Brush & Chinese Serif",
       sceneStyle: "尊贵雕镂艺术底座展台场景",
       lightDirection: "多维偏斜聚光射灯",
-      description: "专为工艺福牌年雕及各类挂折艺术年卡设计的挂件套系产品，工艺细节精致。"
+      description:
+        "专为工艺福牌年雕及各类挂折艺术年卡设计的挂件套系产品，工艺细节精致。",
     },
-    status: "enabled"
-  }
+    status: "enabled",
+  },
 ];
 
 export const PRESET_PRODUCT_ASSET_PACKS: ProductAssetPack[] = [
@@ -1230,7 +1533,7 @@ export const PRESET_PRODUCT_ASSET_PACKS: ProductAssetPack[] = [
         viewType: "front",
         perspectiveType: "front",
         isPrimary: true,
-        qualityStatus: "ready"
+        qualityStatus: "ready",
       },
       {
         id: "pk_ast_060_inner",
@@ -1244,7 +1547,7 @@ export const PRESET_PRODUCT_ASSET_PACKS: ProductAssetPack[] = [
         viewType: "front",
         perspectiveType: "front",
         isPrimary: false,
-        qualityStatus: "ready"
+        qualityStatus: "ready",
       },
       {
         id: "pk_ast_060_ring",
@@ -1258,7 +1561,7 @@ export const PRESET_PRODUCT_ASSET_PACKS: ProductAssetPack[] = [
         viewType: "detail",
         perspectiveType: "detail",
         isPrimary: false,
-        qualityStatus: "ready"
+        qualityStatus: "ready",
       },
       {
         id: "pk_ast_060_png",
@@ -1272,7 +1575,7 @@ export const PRESET_PRODUCT_ASSET_PACKS: ProductAssetPack[] = [
         viewType: "front",
         perspectiveType: "front",
         isPrimary: true,
-        qualityStatus: "ready"
+        qualityStatus: "ready",
       },
       {
         id: "pk_ast_060_mask",
@@ -1283,7 +1586,7 @@ export const PRESET_PRODUCT_ASSET_PACKS: ProductAssetPack[] = [
         height: 1000,
         status: "ready",
         assetRole: "mask",
-        qualityStatus: "ready"
+        qualityStatus: "ready",
       },
       {
         id: "pk_ast_060_white",
@@ -1297,7 +1600,7 @@ export const PRESET_PRODUCT_ASSET_PACKS: ProductAssetPack[] = [
         viewType: "front",
         perspectiveType: "front",
         isPrimary: false,
-        qualityStatus: "ready"
+        qualityStatus: "ready",
       },
       {
         id: "pk_ast_060_pkg",
@@ -1311,8 +1614,8 @@ export const PRESET_PRODUCT_ASSET_PACKS: ProductAssetPack[] = [
         viewType: "side",
         perspectiveType: "left_3_4",
         isPrimary: false,
-        qualityStatus: "ready"
-      }
+        qualityStatus: "ready",
+      },
     ],
     analysis: {
       hasPackage: true,
@@ -1320,9 +1623,9 @@ export const PRESET_PRODUCT_ASSET_PACKS: ProductAssetPack[] = [
       hasDetail: true,
       dominantColor: "#DC2626",
       recommendedStyle: "new_chinese",
-      missingAssetRoles: []
+      missingAssetRoles: [],
     },
-    status: "ready"
+    status: "ready",
   },
   {
     id: "pack_061",
@@ -1342,7 +1645,7 @@ export const PRESET_PRODUCT_ASSET_PACKS: ProductAssetPack[] = [
         viewType: "front",
         perspectiveType: "front",
         isPrimary: true,
-        qualityStatus: "ready"
+        qualityStatus: "ready",
       },
       {
         id: "pk_ast_061_png",
@@ -1356,7 +1659,7 @@ export const PRESET_PRODUCT_ASSET_PACKS: ProductAssetPack[] = [
         viewType: "front",
         perspectiveType: "front",
         isPrimary: true,
-        qualityStatus: "ready"
+        qualityStatus: "ready",
       },
       {
         id: "pk_ast_061_white",
@@ -1370,8 +1673,8 @@ export const PRESET_PRODUCT_ASSET_PACKS: ProductAssetPack[] = [
         viewType: "front",
         perspectiveType: "front",
         isPrimary: false,
-        qualityStatus: "ready"
-      }
+        qualityStatus: "ready",
+      },
     ],
     analysis: {
       hasPackage: false,
@@ -1379,9 +1682,9 @@ export const PRESET_PRODUCT_ASSET_PACKS: ProductAssetPack[] = [
       hasDetail: false,
       dominantColor: "#1E3A8A",
       recommendedStyle: "business",
-      missingAssetRoles: ["package", "detail_part"]
+      missingAssetRoles: ["package", "detail_part"],
     },
-    status: "needs_adjustment"
+    status: "needs_adjustment",
   },
   {
     id: "pack_062",
@@ -1401,7 +1704,7 @@ export const PRESET_PRODUCT_ASSET_PACKS: ProductAssetPack[] = [
         viewType: "front",
         perspectiveType: "front",
         isPrimary: true,
-        qualityStatus: "ready"
+        qualityStatus: "ready",
       },
       {
         id: "pk_ast_062_png",
@@ -1415,8 +1718,8 @@ export const PRESET_PRODUCT_ASSET_PACKS: ProductAssetPack[] = [
         viewType: "front",
         perspectiveType: "front",
         isPrimary: true,
-        qualityStatus: "ready"
-      }
+        qualityStatus: "ready",
+      },
     ],
     analysis: {
       hasPackage: false,
@@ -1424,8 +1727,8 @@ export const PRESET_PRODUCT_ASSET_PACKS: ProductAssetPack[] = [
       hasDetail: false,
       dominantColor: "#E11D48",
       recommendedStyle: "new_chinese",
-      missingAssetRoles: ["package", "white_bg", "detail_part"]
+      missingAssetRoles: ["package", "white_bg", "detail_part"],
     },
-    status: "incomplete"
-  }
+    status: "incomplete",
+  },
 ];

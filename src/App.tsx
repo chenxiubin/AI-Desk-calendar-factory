@@ -14,19 +14,29 @@ import { ExportCenter } from "./components/ExportCenter";
 import { DataStatistics, SystemSettings } from "./components/SystemViews";
 import { Sparkles } from "lucide-react";
 import { INITIAL_PRODUCTS, PRESET_TEMPLATES } from "./data";
-import { Product, Template, GenerationTask, GeneratedImage, ProductAsset } from "./types";
+import {
+  Product,
+  Template,
+  GenerationTask,
+  GeneratedImage,
+  ProductAsset,
+} from "./types";
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<string>("workspace");
-  const [pendingTemplateSuiteId, setPendingTemplateSuiteId] = useState<string | null>(null);
+  const [pendingTemplateSuiteId, setPendingTemplateSuiteId] = useState<
+    string | null
+  >(null);
 
   // Core Global States
   const [products, setProducts] = useState<Product[]>(INITIAL_PRODUCTS);
   const [templates, setTemplates] = useState<Template[]>(PRESET_TEMPLATES);
 
   // Set up active selection bridges between views
-  const [selectedProductForRefine, setSelectedProductForRefine] = useState<Product | null>(null);
-  const [selectedTemplateForEditor, setSelectedTemplateForEditor] = useState<Template | null>(null);
+  const [selectedProductForRefine, setSelectedProductForRefine] =
+    useState<Product | null>(null);
+  const [selectedTemplateForEditor, setSelectedTemplateForEditor] =
+    useState<Template | null>(null);
 
   // Initial active background rendering tasks
   const [tasks, setTasks] = useState<GenerationTask[]>([
@@ -41,7 +51,7 @@ export default function App() {
       pendingReviewCount: 18,
       status: "running",
       createdAt: new Date().toISOString(),
-      progress: 45
+      progress: 45,
     },
     {
       id: "task_2",
@@ -54,8 +64,8 @@ export default function App() {
       pendingReviewCount: 0,
       status: "completed",
       createdAt: new Date().toISOString(),
-      progress: 100
-    }
+      progress: 100,
+    },
   ]);
 
   // Seed 6 initial generated images so the Review Center looks beautifully populated and useful on open!
@@ -70,7 +80,7 @@ export default function App() {
       height: 800,
       reviewStatus: "pending",
       qualityIssues: [],
-      createdAt: new Date().toISOString()
+      createdAt: new Date().toISOString(),
     },
     {
       id: "img_seed_2",
@@ -85,7 +95,7 @@ export default function App() {
       createdAt: new Date().toISOString(),
       horizontalOffset: -4,
       verticalOffset: 2,
-      scaleFactor: 0.85
+      scaleFactor: 0.85,
     },
     {
       id: "img_seed_3",
@@ -97,7 +107,7 @@ export default function App() {
       height: 800,
       reviewStatus: "approved",
       qualityIssues: [],
-      createdAt: new Date().toISOString()
+      createdAt: new Date().toISOString(),
     },
     {
       id: "img_seed_4",
@@ -109,7 +119,7 @@ export default function App() {
       height: 1000,
       reviewStatus: "pending",
       qualityIssues: ["材质参数文字长度溢出，底部多线标记越界"],
-      createdAt: new Date().toISOString()
+      createdAt: new Date().toISOString(),
     },
     {
       id: "img_seed_5",
@@ -121,7 +131,7 @@ export default function App() {
       height: 800,
       reviewStatus: "approved",
       qualityIssues: [],
-      createdAt: new Date().toISOString()
+      createdAt: new Date().toISOString(),
     },
     {
       id: "img_seed_6",
@@ -133,8 +143,8 @@ export default function App() {
       height: 933,
       reviewStatus: "pending",
       qualityIssues: [],
-      createdAt: new Date().toISOString()
-    }
+      createdAt: new Date().toISOString(),
+    },
   ]);
 
   // Global modifiers triggers
@@ -145,7 +155,7 @@ export default function App() {
   const handleUpdateProductStatus = (
     productId: string,
     newStatus: Product["status"],
-    newAssets: ProductAsset[]
+    newAssets: ProductAsset[],
   ) => {
     setProducts((prev) =>
       prev.map((p) => {
@@ -153,44 +163,60 @@ export default function App() {
           return { ...p, status: newStatus, assets: newAssets };
         }
         return p;
-      })
+      }),
     );
   };
 
   const handleSaveTemplate = (updatedTemp: Template) => {
-    setTemplates((prev) => prev.map((t) => (t.id === updatedTemp.id ? updatedTemp : t)));
+    setTemplates((prev) =>
+      prev.map((t) => (t.id === updatedTemp.id ? updatedTemp : t)),
+    );
   };
 
   const handleCloneTemplate = (temp: Template) => {
     const cloned: Template = {
       ...temp,
       id: `TEMP_CLONE_${Date.now()}`,
-      templateName: `${temp.templateName} (副本)`
+      templateName: `${temp.templateName} (副本)`,
     };
     setTemplates((prev) => [...prev, cloned]);
-    alert(`【模板复制成功】已复制「${temp.templateName}」为「${cloned.templateName}」在模板库底部。`);
+    alert(
+      `【模板复制成功】已复制「${temp.templateName}」为「${cloned.templateName}」在模板库底部。`,
+    );
   };
 
   // Launching generation wizard binds
-  const handleStartWorkflow = (newTask: GenerationTask, syntheticImages: GeneratedImage[]) => {
+  const handleStartWorkflow = (
+    newTask: GenerationTask,
+    syntheticImages: GeneratedImage[],
+  ) => {
     setTasks((prev) => [newTask, ...prev]);
     setGeneratedImages((prev) => [...syntheticImages, ...prev]);
     // Set dynamic badge active counts
   };
 
   const handleUpdateImage = (updatedImg: GeneratedImage) => {
-    setGeneratedImages((prev) => prev.map((img) => (img.id === updatedImg.id ? updatedImg : img)));
+    setGeneratedImages((prev) =>
+      prev.map((img) => (img.id === updatedImg.id ? updatedImg : img)),
+    );
   };
 
-  const handleBatchAction = (action: "approve" | "reject" | "needs_adjustment") => {
-    const targetStatus = action === "approve" ? "approved" : action === "reject" ? "rejected" : "needs_adjustment";
+  const handleBatchAction = (
+    action: "approve" | "reject" | "needs_adjustment",
+  ) => {
+    const targetStatus =
+      action === "approve"
+        ? "approved"
+        : action === "reject"
+          ? "rejected"
+          : "needs_adjustment";
     setGeneratedImages((prev) =>
       prev.map((img) => {
         if (img.reviewStatus === "pending") {
           return { ...img, reviewStatus: targetStatus };
         }
         return img;
-      })
+      }),
     );
   };
 
@@ -212,7 +238,10 @@ export default function App() {
           <Workspace
             tasks={tasks}
             onNavigate={(id) => setActiveTab(id)}
-            reviewCount={generatedImages.filter((img) => img.reviewStatus === "pending").length}
+            reviewCount={
+              generatedImages.filter((img) => img.reviewStatus === "pending")
+                .length
+            }
           />
         );
       case "project_suite":
@@ -269,7 +298,9 @@ export default function App() {
             <div className="w-16 h-16 rounded-full bg-indigo-50 flex items-center justify-center text-indigo-600 mb-5 animate-pulse">
               <Sparkles className="w-8 h-8" />
             </div>
-            <h3 className="text-lg font-bold text-slate-800 mb-2">服务合并迁移通知</h3>
+            <h3 className="text-lg font-bold text-slate-800 mb-2">
+              服务合并迁移通知
+            </h3>
             <p className="text-sm text-slate-500 max-w-md leading-relaxed mb-6">
               旧版批量套版已合并到项目工作台，请前往项目工作台继续操作。
             </p>
@@ -296,7 +327,9 @@ export default function App() {
       case "export":
         return (
           <ExportCenter
-            generatedImages={generatedImages.filter((img) => img.reviewStatus === "approved")}
+            generatedImages={generatedImages.filter(
+              (img) => img.reviewStatus === "approved",
+            )}
             products={products}
             templates={templates}
           />
@@ -306,12 +339,23 @@ export default function App() {
       case "settings":
         return <SystemSettings />;
       default:
-        return <Workspace tasks={tasks} onNavigate={(id) => setActiveTab(id)} reviewCount={generatedImages.filter((img) => img.reviewStatus === "pending").length} />;
+        return (
+          <Workspace
+            tasks={tasks}
+            onNavigate={(id) => setActiveTab(id)}
+            reviewCount={
+              generatedImages.filter((img) => img.reviewStatus === "pending")
+                .length
+            }
+          />
+        );
     }
   };
 
   // Pending count badge shown on menu
-  const totalPendingReview = generatedImages.filter((img) => img.reviewStatus === "pending").length;
+  const totalPendingReview = generatedImages.filter(
+    (img) => img.reviewStatus === "pending",
+  ).length;
 
   return (
     <div className="flex bg-slate-50 w-screen h-screen overflow-hidden text-slate-800 font-sans">

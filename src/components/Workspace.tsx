@@ -9,7 +9,7 @@ import {
   Clock,
   Play,
   CheckCircle,
-  AlertCircle
+  AlertCircle,
 } from "lucide-react";
 import { GenerationTask } from "../types";
 
@@ -22,24 +22,89 @@ interface WorkspaceProps {
 export const Workspace: React.FC<WorkspaceProps> = ({
   tasks,
   onNavigate,
-  reviewCount
+  reviewCount,
 }) => {
   // Stat Card Items
   const stats = [
-    { label: "产品总数", value: "326 款", rate: "+12本昨日", desc: "实拍原图待入库", color: "text-blue-600", bg: "bg-blue-50" },
-    { label: "已完成白底精修", value: "280 款", rate: "85.8% 覆盖率", desc: "符合等比不变形标准", color: "text-emerald-600", bg: "bg-emerald-50" },
-    { label: "可用固定配置模板", value: "42 个", rate: "8大版式细分", desc: "主图/SKU/工艺详情", color: "text-purple-600", bg: "bg-purple-50" },
-    { label: "待人工审核图片", value: `${reviewCount} 张`, rate: "需100%质检", desc: "重点检查线圈遮挡", color: "text-amber-600", bg: "bg-amber-50" },
-    { label: "累计已批量导出", value: "3,200 张", rate: "5大电商格式", desc: "包含淘宝、拼多多", color: "text-rose-600", bg: "bg-rose-50" }
+    {
+      label: "产品总数",
+      value: "326 款",
+      rate: "+12本昨日",
+      desc: "实拍原图待入库",
+      color: "text-blue-600",
+      bg: "bg-blue-50",
+    },
+    {
+      label: "已完成白底精修",
+      value: "280 款",
+      rate: "85.8% 覆盖率",
+      desc: "符合等比不变形标准",
+      color: "text-emerald-600",
+      bg: "bg-emerald-50",
+    },
+    {
+      label: "可用固定配置模板",
+      value: "42 个",
+      rate: "8大版式细分",
+      desc: "主图/SKU/工艺详情",
+      color: "text-purple-600",
+      bg: "bg-purple-50",
+    },
+    {
+      label: "待人工审核图片",
+      value: `${reviewCount} 张`,
+      rate: "需100%质检",
+      desc: "重点检查线圈遮挡",
+      color: "text-amber-600",
+      bg: "bg-amber-50",
+    },
+    {
+      label: "累计已批量导出",
+      value: "3,200 张",
+      rate: "5大电商格式",
+      desc: "包含淘宝、拼多多",
+      color: "text-rose-600",
+      bg: "bg-rose-50",
+    },
   ];
 
   // Steps indicators
   const steps = [
-    { step: "1", name: "上传产品", desc: "实拍台历多角度入库", tabId: "assets", icon: Upload },
-    { step: "2", name: "白底精修", desc: "抠透明PNG并加阴影", tabId: "refine", icon: Scissors },
-    { step: "3", name: "配制模板", desc: "锁定槽宽高比与字段", tabId: "templates", icon: Layout },
-    { step: "4", name: "批量套版", desc: "一键匹配生成多格式", tabId: "batch", icon: Layers },
-    { step: "5", name: "质检审核", desc: "快速剔除变形图并导出", tabId: "review", icon: ShieldCheck }
+    {
+      step: "1",
+      name: "上传产品",
+      desc: "实拍台历多角度入库",
+      tabId: "assets",
+      icon: Upload,
+    },
+    {
+      step: "2",
+      name: "白底精修",
+      desc: "抠透明PNG并加阴影",
+      tabId: "refine",
+      icon: Scissors,
+    },
+    {
+      step: "3",
+      name: "配制模板",
+      desc: "锁定槽宽高比与字段",
+      tabId: "templates",
+      icon: Layout,
+    },
+    {
+      step: "4",
+      name: "批量套版",
+      desc: "一键匹配生成多格式",
+      tabId: "batch",
+      icon: Layers,
+    },
+    {
+      step: "5",
+      name: "质检审核",
+      desc: "快速剔除变形图并导出",
+      tabId: "review",
+      icon: ShieldCheck,
+    },
   ];
 
   return (
@@ -47,7 +112,9 @@ export const Workspace: React.FC<WorkspaceProps> = ({
       {/* Title */}
       <div className="flex justify-between items-center bg-white p-6 rounded-xl border border-slate-200/80 shadow-xs">
         <div>
-          <h2 className="text-xl font-bold text-slate-900 font-sans tracking-tight">AI台历/挂历电商图片批量生产控制中心</h2>
+          <h2 className="text-xl font-bold text-slate-900 font-sans tracking-tight">
+            AI台历/挂历电商图片批量生产控制中心
+          </h2>
           <p className="text-xs text-slate-500 mt-1">
             专注台历挂历电商图片（主图、SKU配图、四宫格详情等）的高质、精准、批量生产工厂。
           </p>
@@ -65,12 +132,17 @@ export const Workspace: React.FC<WorkspaceProps> = ({
       {/* Grid Stats */}
       <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
         {stats.map((item, idx) => (
-          <div key={idx} className="bg-white p-5 rounded-xl border border-slate-200/80 shadow-xs flex flex-col justify-between">
+          <div
+            key={idx}
+            className="bg-white p-5 rounded-xl border border-slate-200/80 shadow-xs flex flex-col justify-between"
+          >
             <span className="text-[11px] font-sans font-semibold text-slate-500 tracking-wider">
               {item.label}
             </span>
             <div className="my-2.5">
-              <span className={`text-2xl font-black font-mono tracking-tight ${item.color.replace('text-rose-', 'text-indigo-').replace('text-amber-', 'text-amber-500')}`}>
+              <span
+                className={`text-2xl font-black font-mono tracking-tight ${item.color.replace("text-rose-", "text-indigo-").replace("text-amber-", "text-amber-500")}`}
+              >
                 {item.value}
               </span>
             </div>
@@ -146,7 +218,9 @@ export const Workspace: React.FC<WorkspaceProps> = ({
                     ) : (
                       <Clock className="w-4 h-4 text-slate-400 shrink-0" />
                     )}
-                    <span className="text-xs font-bold text-slate-800">{task.taskName}</span>
+                    <span className="text-xs font-bold text-slate-800">
+                      {task.taskName}
+                    </span>
                   </div>
                   <div className="flex items-center space-x-2 text-[10px]">
                     <span
@@ -154,11 +228,15 @@ export const Workspace: React.FC<WorkspaceProps> = ({
                         task.status === "running"
                           ? "bg-blue-100 text-blue-800"
                           : task.status === "completed"
-                          ? "bg-emerald-100 text-emerald-800"
-                          : "bg-slate-100 text-slate-600"
+                            ? "bg-emerald-100 text-emerald-800"
+                            : "bg-slate-100 text-slate-600"
                       }`}
                     >
-                      {task.status === "running" ? "烘焙渲染中" : task.status === "completed" ? "已就绪" : "待执行"}
+                      {task.status === "running"
+                        ? "烘焙渲染中"
+                        : task.status === "completed"
+                          ? "已就绪"
+                          : "待执行"}
                     </span>
                     <span className="text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded font-mono">
                       {task.completedCount} / {task.totalCount}张成功
@@ -175,7 +253,9 @@ export const Workspace: React.FC<WorkspaceProps> = ({
                   <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
                     <div
                       className={`h-full rounded-full transition-all duration-300 ${
-                        task.status === "completed" ? "bg-emerald-500" : "bg-blue-600"
+                        task.status === "completed"
+                          ? "bg-emerald-500"
+                          : "bg-blue-600"
                       }`}
                       style={{ width: `${task.progress}%` }}
                     />
@@ -186,11 +266,31 @@ export const Workspace: React.FC<WorkspaceProps> = ({
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-3 text-[10px] text-slate-400 border-t border-slate-100 pt-2.5">
                   <div className="flex items-center space-x-1">
                     <Clock className="w-3.5 h-3.5 shrink-0" />
-                    <span>耗时: {task.status === "completed" ? "00:08:24" : "00:02:15"}</span>
+                    <span>
+                      耗时:{" "}
+                      {task.status === "completed" ? "00:08:24" : "00:02:15"}
+                    </span>
                   </div>
-                  <div>估算剩余: {task.status === "running" ? "00:06:10" : "00:00:00"}</div>
-                  <div>失败率: <span className={task.failedCount > 0 ? "text-rose-500 font-bold" : ""}>{task.failedCount}张</span></div>
-                  <div>待审核: <span className="font-bold text-amber-600">{task.pendingReviewCount}张</span></div>
+                  <div>
+                    估算剩余:{" "}
+                    {task.status === "running" ? "00:06:10" : "00:00:00"}
+                  </div>
+                  <div>
+                    失败率:{" "}
+                    <span
+                      className={
+                        task.failedCount > 0 ? "text-rose-500 font-bold" : ""
+                      }
+                    >
+                      {task.failedCount}张
+                    </span>
+                  </div>
+                  <div>
+                    待审核:{" "}
+                    <span className="font-bold text-amber-600">
+                      {task.pendingReviewCount}张
+                    </span>
+                  </div>
                 </div>
               </div>
             ))}
@@ -207,7 +307,9 @@ export const Workspace: React.FC<WorkspaceProps> = ({
               <div className="flex items-start space-x-2.5 text-xs">
                 <AlertCircle className="w-4 h-4 text-rose-500 shrink-0 mt-0.5" />
                 <div>
-                  <span className="font-bold text-slate-800">等比例防变形锁定</span>
+                  <span className="font-bold text-slate-800">
+                    等比例防变形锁定
+                  </span>
                   <p className="text-[10px] text-slate-500 mt-1 leading-relaxed">
                     台历线圈高比、底座角度及文字属于静态实物。AI生成背景与装饰时，绝对禁止拉伸、裁剪核心正面产品部件。
                   </p>
@@ -217,9 +319,15 @@ export const Workspace: React.FC<WorkspaceProps> = ({
               <div className="flex items-start space-x-2.5 text-xs">
                 <AlertCircle className="w-4 h-4 text-blue-500 shrink-0 mt-0.5" />
                 <div>
-                  <span className="font-bold text-slate-800">阴影层独立拆分规则</span>
+                  <span className="font-bold text-slate-800">
+                    阴影层独立拆分规则
+                  </span>
                   <p className="text-[10px] text-slate-500 mt-1 leading-relaxed">
-                    产品实物PNG抠图须为去背纯透明图，硬塞阴影不便后期多维度背景贴合。阴影由对应模板槽的 <code className="font-mono bg-slate-100 px-1 py-0.5 rounded text-[9px] text-slate-600">shadowRule</code> 动态提供。
+                    产品实物PNG抠图须为去背纯透明图，硬塞阴影不便后期多维度背景贴合。阴影由对应模板槽的{" "}
+                    <code className="font-mono bg-slate-100 px-1 py-0.5 rounded text-[9px] text-slate-600">
+                      shadowRule
+                    </code>{" "}
+                    动态提供。
                   </p>
                 </div>
               </div>
@@ -227,7 +335,9 @@ export const Workspace: React.FC<WorkspaceProps> = ({
               <div className="flex items-start space-x-2.5 text-xs">
                 <AlertCircle className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
                 <div>
-                  <span className="font-bold text-slate-800">系统文案由前端矢量排字</span>
+                  <span className="font-bold text-slate-800">
+                    系统文案由前端矢量排字
+                  </span>
                   <p className="text-[10px] text-slate-500 mt-1 leading-relaxed">
                     年份、标题、产品标签不使用扩散生图乱揉生成。由前端图层或精细Canvas叠加标准思源/黑体动态渲染。
                   </p>

@@ -1,7 +1,18 @@
 import React, { useState } from "react";
-import { Template, TemplateSuite, TemplatePage, TemplatePageType, ExportFolderKey, PageRole, BusinessRatioType } from "../types";
+import {
+  Template,
+  TemplateSuite,
+  TemplatePage,
+  TemplatePageType,
+  ExportFolderKey,
+  PageRole,
+  BusinessRatioType,
+} from "../types";
 import { PRESET_TEMPLATE_SUITES } from "../data";
-import { getExportFolderName, groupPagesByExportFolder } from "../utils/businessRuleHelpers";
+import {
+  getExportFolderName,
+  groupPagesByExportFolder,
+} from "../utils/businessRuleHelpers";
 import {
   Layout,
   Check,
@@ -21,7 +32,7 @@ import {
   Trash2,
   Sliders,
   Maximize2,
-  Layers3
+  Layers3,
 } from "lucide-react";
 
 interface TemplateLibraryProps {
@@ -37,7 +48,7 @@ export const TemplateLibrary: React.FC<TemplateLibraryProps> = ({
   onSelectTemplateForEditor,
   onNavigate,
   onCloneTemplate,
-  onUseSuiteForNewProject
+  onUseSuiteForNewProject,
 }) => {
   // Local list of suites initialized with PRESET_TEMPLATE_SUITES + 3 more gorgeous preset suites
   const [suites, setSuites] = useState<TemplateSuite[]>(() => {
@@ -49,7 +60,8 @@ export const TemplateLibrary: React.FC<TemplateLibraryProps> = ({
         styleName: "喜庆国潮 / 年货送礼 / 浓烈红金",
         category: "festive_red",
         productType: "calendar",
-        coverImage: "https://images.unsplash.com/photo-1544816155-12df9643f363?q=80&w=600&auto=format&fit=crop",
+        coverImage:
+          "https://images.unsplash.com/photo-1544816155-12df9643f363?q=80&w=600&auto=format&fit=crop",
         pages: [
           {
             id: "tp_festive_main",
@@ -58,7 +70,7 @@ export const TemplateLibrary: React.FC<TemplateLibraryProps> = ({
             templateId: "MAIN_001",
             order: 1,
             requiredAssetRoles: ["main_product", "front"],
-            enabled: true
+            enabled: true,
           },
           {
             id: "tp_festive_sku",
@@ -67,7 +79,7 @@ export const TemplateLibrary: React.FC<TemplateLibraryProps> = ({
             templateId: "SKU_001",
             order: 2,
             requiredAssetRoles: ["sku_product", "left_3_4"],
-            enabled: true
+            enabled: true,
           },
           {
             id: "tp_festive_det_01",
@@ -76,7 +88,7 @@ export const TemplateLibrary: React.FC<TemplateLibraryProps> = ({
             templateId: "DETAIL_001",
             order: 3,
             requiredAssetRoles: ["front"],
-            enabled: true
+            enabled: true,
           },
           {
             id: "tp_festive_scene",
@@ -85,17 +97,18 @@ export const TemplateLibrary: React.FC<TemplateLibraryProps> = ({
             templateId: "MAIN_002",
             order: 4,
             requiredAssetRoles: ["main_product"],
-            enabled: true
-          }
+            enabled: true,
+          },
         ],
         globalStyle: {
           colorPalette: ["#DC2626", "#F59E0B", "#B45309", "#000000"],
           fontStyle: "NianHuo Brush & Inter Serif",
           sceneStyle: "中式茶室红木茶案温暖烛光",
           lightDirection: "正前上方高角度聚光灯",
-          description: "年货节、春节送礼专属系列，重磅红金两色搭配，呈现极高中国年味氛围，拉满高端礼品属性。"
+          description:
+            "年货节、春节送礼专属系列，重磅红金两色搭配，呈现极高中国年味氛围，拉满高端礼品属性。",
         },
-        status: "enabled"
+        status: "enabled",
       },
       {
         id: "suite_gift_004",
@@ -103,7 +116,8 @@ export const TemplateLibrary: React.FC<TemplateLibraryProps> = ({
         styleName: "商务礼盒 / 尊贵定制 / 金属底座",
         category: "gift",
         productType: "gift_box",
-        coverImage: "https://images.unsplash.com/photo-1549465220-1a8b9238cd48?q=80&w=600&auto=format&fit=crop",
+        coverImage:
+          "https://images.unsplash.com/photo-1549465220-1a8b9238cd48?q=80&w=600&auto=format&fit=crop",
         pages: [
           {
             id: "tp_gift_main",
@@ -112,7 +126,7 @@ export const TemplateLibrary: React.FC<TemplateLibraryProps> = ({
             templateId: "MAIN_001",
             order: 1,
             requiredAssetRoles: ["combo"],
-            enabled: true
+            enabled: true,
           },
           {
             id: "tp_gift_pkg",
@@ -121,7 +135,7 @@ export const TemplateLibrary: React.FC<TemplateLibraryProps> = ({
             templateId: "DETAIL_001",
             order: 2,
             requiredAssetRoles: ["package"],
-            enabled: true
+            enabled: true,
           },
           {
             id: "tp_gift_size",
@@ -130,17 +144,18 @@ export const TemplateLibrary: React.FC<TemplateLibraryProps> = ({
             templateId: "DETAIL_002",
             order: 3,
             requiredAssetRoles: ["white_bg"],
-            enabled: true
-          }
+            enabled: true,
+          },
         ],
         globalStyle: {
           colorPalette: ["#1E3A8A", "#D97706", "#4B5563"],
           fontStyle: "Modern Corporate Sans",
           sceneStyle: "高级岩板深灰色玄关台漫反射",
           lightDirection: "侧方斜射漫反射自然光源",
-          description: "适合企业年终大会礼品、VIP贵宾专属贺卡及包装套系，体现极高企划精神与尊贵地位。"
+          description:
+            "适合企业年终大会礼品、VIP贵宾专属贺卡及包装套系，体现极高企划精神与尊贵地位。",
         },
-        status: "enabled"
+        status: "enabled",
       },
       {
         id: "suite_min_005",
@@ -148,7 +163,8 @@ export const TemplateLibrary: React.FC<TemplateLibraryProps> = ({
         styleName: "极致干净 / 纯白摄影 / 软阴影",
         category: "minimal",
         productType: "calendar",
-        coverImage: "https://images.unsplash.com/photo-1506784983877-45594efa4cbe?q=80&w=600&auto=format&fit=crop",
+        coverImage:
+          "https://images.unsplash.com/photo-1506784983877-45594efa4cbe?q=80&w=600&auto=format&fit=crop",
         pages: [
           {
             id: "tp_min_main",
@@ -157,7 +173,7 @@ export const TemplateLibrary: React.FC<TemplateLibraryProps> = ({
             templateId: "MAIN_003",
             order: 1,
             requiredAssetRoles: ["front"],
-            enabled: true
+            enabled: true,
           },
           {
             id: "tp_min_sku",
@@ -166,23 +182,24 @@ export const TemplateLibrary: React.FC<TemplateLibraryProps> = ({
             templateId: "SKU_001",
             order: 2,
             requiredAssetRoles: ["sku_product"],
-            enabled: true
-          }
+            enabled: true,
+          },
         ],
         globalStyle: {
           colorPalette: ["#94A3B8", "#F8FAFC", "#FFFFFF"],
           fontStyle: "Helvetica Neue Grid",
           sceneStyle: "极简白墙透进落地窗软自然光",
           lightDirection: "偏上85度大面积均匀扩散光",
-          description: "去繁就简，完美烘托产品本身细节，自带通透高级感的纯白背景与现代摄影微阴影。"
+          description:
+            "去繁就简，完美烘托产品本身细节，自带通透高级感的纯白背景与现代摄影微阴影。",
         },
-        status: "draft"
-      }
+        status: "draft",
+      },
     ];
 
     // Filter duplicates just in case
     const uniqueMap = new Map<string, TemplateSuite>();
-    extendedSuites.forEach(s => uniqueMap.set(s.id, s));
+    extendedSuites.forEach((s) => uniqueMap.set(s.id, s));
     return Array.from(uniqueMap.values());
   });
 
@@ -213,7 +230,7 @@ export const TemplateLibrary: React.FC<TemplateLibraryProps> = ({
     { id: "festival", label: "节日礼品套系" },
     { id: "minimal_bg", label: "简约白底套系" },
     { id: "draft", label: "草稿" },
-    { id: "active", label: "已启用" }
+    { id: "active", label: "已启用" },
   ];
 
   // Helper functions for labels and styling
@@ -286,7 +303,7 @@ export const TemplateLibrary: React.FC<TemplateLibraryProps> = ({
       package: 0,
       size_material: 0,
       scene: 0,
-      other: 0
+      other: 0,
     };
 
     pages.forEach((p) => {
@@ -320,7 +337,7 @@ export const TemplateLibrary: React.FC<TemplateLibraryProps> = ({
       ...suite,
       id: `suite_${Date.now()}`,
       suiteName: `${suite.suiteName} (复制)`,
-      status: "draft"
+      status: "draft",
     };
     setSuites([clone, ...suites]);
     showToast(`成功复制套系: ${suite.suiteName}`);
@@ -329,11 +346,24 @@ export const TemplateLibrary: React.FC<TemplateLibraryProps> = ({
   // Filter suite list by categories + SearchQuery and Advanced filters
   const filteredSuites = suites.filter((suite) => {
     // 1. Tab filter
-    if (activeTab === "calendar" && suite.productType !== "calendar") return false;
-    if (activeTab === "wall_calendar" && suite.productType !== "wall_calendar") return false;
-    if (activeTab === "enterprise" && suite.category !== "custom" && suite.suiteName.indexOf("企业") === -1) return false;
-    if (activeTab === "festival" && suite.category !== "gift" && suite.category !== "festive_red") return false;
-    if (activeTab === "minimal_bg" && suite.category !== "minimal") return false;
+    if (activeTab === "calendar" && suite.productType !== "calendar")
+      return false;
+    if (activeTab === "wall_calendar" && suite.productType !== "wall_calendar")
+      return false;
+    if (
+      activeTab === "enterprise" &&
+      suite.category !== "custom" &&
+      suite.suiteName.indexOf("企业") === -1
+    )
+      return false;
+    if (
+      activeTab === "festival" &&
+      suite.category !== "gift" &&
+      suite.category !== "festive_red"
+    )
+      return false;
+    if (activeTab === "minimal_bg" && suite.category !== "minimal")
+      return false;
     if (activeTab === "draft" && suite.status !== "draft") return false;
     if (activeTab === "active" && suite.status !== "enabled") return false;
 
@@ -342,12 +372,15 @@ export const TemplateLibrary: React.FC<TemplateLibraryProps> = ({
       const q = searchQuery.toLowerCase();
       const inName = suite.suiteName.toLowerCase().includes(q);
       const inStyle = suite.styleName.toLowerCase().includes(q);
-      const inType = getProductTypeLabel(suite.productType).toLowerCase().includes(q);
+      const inType = getProductTypeLabel(suite.productType)
+        .toLowerCase()
+        .includes(q);
       if (!inName && !inStyle && !inType) return false;
     }
 
     // 3. Dropdown Filters
-    if (filterProductType !== "all" && suite.productType !== filterProductType) return false;
+    if (filterProductType !== "all" && suite.productType !== filterProductType)
+      return false;
     if (filterStyle !== "all" && suite.category !== filterStyle) return false;
     if (filterStatus !== "all" && suite.status !== filterStatus) return false;
 
@@ -398,7 +431,9 @@ export const TemplateLibrary: React.FC<TemplateLibraryProps> = ({
               <span>返回套系库</span>
             </button>
             <div className="flex items-center space-x-2">
-              <span className="text-[10px] text-slate-400 font-medium">套系ID: {activeSuite.id}</span>
+              <span className="text-[10px] text-slate-400 font-medium">
+                套系ID: {activeSuite.id}
+              </span>
               {getStatusBadge(activeSuite.status)}
             </div>
           </div>
@@ -408,7 +443,10 @@ export const TemplateLibrary: React.FC<TemplateLibraryProps> = ({
             {/* Left Image aspect */}
             <div className="md:w-1/3 relative h-48 md:h-auto min-h-[160px] bg-slate-950">
               <img
-                src={activeSuite.coverImage || "https://images.unsplash.com/photo-1579783902614-a3fb3927b6a5?q=80&w=600&auto=format&fit=crop"}
+                src={
+                  activeSuite.coverImage ||
+                  "https://images.unsplash.com/photo-1579783902614-a3fb3927b6a5?q=80&w=600&auto=format&fit=crop"
+                }
                 alt={activeSuite.suiteName}
                 referrerPolicy="no-referrer"
                 className="w-full h-full object-cover opacity-80"
@@ -427,12 +465,17 @@ export const TemplateLibrary: React.FC<TemplateLibraryProps> = ({
                     风格: {getCategoryLabel(activeSuite.category)}
                   </span>
                 </div>
-                <h1 className="text-xl md:text-2xl font-bold tracking-tight text-white">{activeSuite.suiteName}</h1>
+                <h1 className="text-xl md:text-2xl font-bold tracking-tight text-white">
+                  {activeSuite.suiteName}
+                </h1>
                 <p className="text-xs text-slate-400 font-mono italic">
-                  风格特征: {activeSuite.styleName} | 主配字体: {activeSuite.globalStyle.fontStyle}
+                  风格特征: {activeSuite.styleName} | 主配字体:{" "}
+                  {activeSuite.globalStyle.fontStyle}
                 </p>
                 <p className="text-xs text-slate-350 leading-relaxed max-w-2xl bg-white/5 p-2.5 rounded-lg border border-white/5">
-                  精巧设计: {activeSuite.globalStyle.description || "成套电商主图与SKU/详情视觉规划方案，提供完美一致渲染流程。"}
+                  精巧设计:{" "}
+                  {activeSuite.globalStyle.description ||
+                    "成套电商主图与SKU/详情视觉规划方案，提供完美一致渲染流程。"}
                 </p>
               </div>
 
@@ -463,7 +506,10 @@ export const TemplateLibrary: React.FC<TemplateLibraryProps> = ({
             </div>
 
             {(() => {
-              const groupedFolders = groupPagesByExportFolder(activeSuite.pages, activeSuite);
+              const groupedFolders = groupPagesByExportFolder(
+                activeSuite.pages,
+                activeSuite,
+              );
 
               const getFolderColorAccent = (folderKey: string) => {
                 switch (folderKey) {
@@ -496,9 +542,15 @@ export const TemplateLibrary: React.FC<TemplateLibraryProps> = ({
                     if (grp.pagesList.length === 0) return null;
                     return (
                       <div key={grp.folderKey} className="space-y-3.5">
-                        <div className={`p-2.5 rounded-lg border-l-4 text-xs font-bold leading-none ${getFolderColorAccent(grp.folderKey)} flex justify-between items-center`}>
-                          <span>{grp.folderName} ({grp.pagesList.length} 张)</span>
-                          <span className="text-[10px] text-slate-450 font-mono tracking-wide">目录型Key: {grp.folderKey}</span>
+                        <div
+                          className={`p-2.5 rounded-lg border-l-4 text-xs font-bold leading-none ${getFolderColorAccent(grp.folderKey)} flex justify-between items-center`}
+                        >
+                          <span>
+                            {grp.folderName} ({grp.pagesList.length} 张)
+                          </span>
+                          <span className="text-[10px] text-slate-450 font-mono tracking-wide">
+                            目录型Key: {grp.folderKey}
+                          </span>
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -507,34 +559,72 @@ export const TemplateLibrary: React.FC<TemplateLibraryProps> = ({
                             // Find matching Template object
                             const matchedTemplate =
                               templates.find((t) => t.id === page.templateId) ||
-                              templates.find((t) => t.templateType === page.pageType) ||
+                              templates.find(
+                                (t) => t.templateType === page.pageType,
+                              ) ||
                               templates[0];
 
                             // Determine specs
-                            const tRatio = page.actualAspectRatio || (matchedTemplate ? matchedTemplate.aspectRatio : "1:1");
-                            const slotsCount = matchedTemplate ? matchedTemplate.slots.length : 1;
-                            const requiredString = page.requiredAssetRoles.join(" / ");
-                            
+                            const tRatio =
+                              page.actualAspectRatio ||
+                              (matchedTemplate
+                                ? matchedTemplate.aspectRatio
+                                : "1:1");
+                            const slotsCount = matchedTemplate
+                              ? matchedTemplate.slots.length
+                              : 1;
+                            const requiredString =
+                              page.requiredAssetRoles.join(" / ");
+
                             // Determine rendering suggestions
                             const pRole = page.pageRole || "";
                             let suggestionLabel = "";
                             let suggestionStyle = "bg-slate-101 text-slate-600";
-                            
-                            if (pRole === "white_bg" || pRole === "transparent_png" || page.pageType === "white_bg" || page.pageType === "transparent_png") {
+
+                            if (
+                              pRole === "white_bg" ||
+                              pRole === "transparent_png" ||
+                              page.pageType === "white_bg" ||
+                              page.pageType === "transparent_png"
+                            ) {
                               suggestionLabel = "正式交付资产";
-                              suggestionStyle = "bg-teal-50 text-teal-700 border border-teal-200/60 font-bold";
-                            } else if (["sku_variant", "detail_inner_page", "customization_detail", "sample_book_mockup", "detail_sequence", "detail_core_selling", "detail_size_material", "detail_craft_closeup", "detail_package"].includes(pRole)) {
+                              suggestionStyle =
+                                "bg-teal-50 text-teal-700 border border-teal-200/60 font-bold";
+                            } else if (
+                              [
+                                "sku_variant",
+                                "detail_inner_page",
+                                "customization_detail",
+                                "sample_book_mockup",
+                                "detail_sequence",
+                                "detail_core_selling",
+                                "detail_size_material",
+                                "detail_craft_closeup",
+                                "detail_package",
+                              ].includes(pRole)
+                            ) {
                               suggestionLabel = "Canvas优先";
-                              suggestionStyle = "bg-blue-50 text-blue-700 border border-blue-100 font-medium";
-                            } else if (["primary_main_square", "primary_main_vertical", "main_marketing_square", "main_marketing_vertical"].includes(pRole)) {
+                              suggestionStyle =
+                                "bg-blue-50 text-blue-700 border border-blue-100 font-medium";
+                            } else if (
+                              [
+                                "primary_main_square",
+                                "primary_main_vertical",
+                                "main_marketing_square",
+                                "main_marketing_vertical",
+                              ].includes(pRole)
+                            ) {
                               suggestionLabel = "可 RunningHub 增强";
-                              suggestionStyle = "bg-indigo-50 text-indigo-700 border border-indigo-200/60 font-medium";
+                              suggestionStyle =
+                                "bg-indigo-50 text-indigo-700 border border-indigo-200/60 font-medium";
                             } else if (page.isCanvasOnly) {
                               suggestionLabel = "Canvas优先";
-                              suggestionStyle = "bg-blue-50 text-blue-700 border border-blue-100 font-medium";
+                              suggestionStyle =
+                                "bg-blue-50 text-blue-700 border border-blue-100 font-medium";
                             } else if (page.isRunningHubRecommended) {
                               suggestionLabel = "建议 RunningHub";
-                              suggestionStyle = "bg-indigo-50 text-indigo-700 border border-indigo-100/50";
+                              suggestionStyle =
+                                "bg-indigo-50 text-indigo-700 border border-indigo-100/50";
                             }
 
                             return (
@@ -555,23 +645,42 @@ export const TemplateLibrary: React.FC<TemplateLibraryProps> = ({
                                   {/* Business-oriented Specifications Grid */}
                                   <div className="grid grid-cols-2 gap-y-1.5 gap-x-2 mt-2.5 text-[10px] bg-slate-50/70 p-2.5 rounded-lg border border-slate-100">
                                     <div className="text-slate-500 overflow-hidden truncate">
-                                      角色: <span className="font-bold text-slate-700 font-mono text-[9px]">{page.pageRole || page.pageType}</span>
+                                      角色:{" "}
+                                      <span className="font-bold text-slate-700 font-mono text-[9px]">
+                                        {page.pageRole || page.pageType}
+                                      </span>
                                     </div>
                                     <div className="text-slate-500 text-right overflow-hidden truncate">
-                                      比例: <span className="font-bold text-slate-700">{page.businessRatioType || "标准"}</span>
+                                      比例:{" "}
+                                      <span className="font-bold text-slate-700">
+                                        {page.businessRatioType || "标准"}
+                                      </span>
                                     </div>
                                     <div className="text-slate-500 col-span-2 overflow-hidden truncate">
-                                      导出目录: <span className="font-bold text-indigo-600">{getExportFolderName(grp.folderKey)}</span>
+                                      导出目录:{" "}
+                                      <span className="font-bold text-indigo-600">
+                                        {getExportFolderName(grp.folderKey)}
+                                      </span>
                                     </div>
                                     <div className="text-slate-500 overflow-hidden truncate">
-                                      交付属性: <span className="font-bold text-slate-700">{page.isDeliverable !== false ? "正式交付" : "参考属性"}</span>
+                                      交付属性:{" "}
+                                      <span className="font-bold text-slate-700">
+                                        {page.isDeliverable !== false
+                                          ? "正式交付"
+                                          : "参考属性"}
+                                      </span>
                                     </div>
                                     <div className="text-slate-500 text-right overflow-hidden truncate">
-                                      槽位: <span className="font-bold text-slate-700">{slotsCount} 个</span>
+                                      槽位:{" "}
+                                      <span className="font-bold text-slate-700">
+                                        {slotsCount} 个
+                                      </span>
                                     </div>
                                     <div className="text-slate-500 col-span-2 flex items-center justify-between gap-1 pt-1 border-t border-slate-100 mt-1 select-none">
                                       <span>交付性质:</span>
-                                      <span className={`px-1.5 py-0.5 rounded text-[8.5px] ${suggestionStyle}`}>
+                                      <span
+                                        className={`px-1.5 py-0.5 rounded text-[8.5px] ${suggestionStyle}`}
+                                      >
                                         {suggestionLabel || "建议直接输出"}
                                       </span>
                                     </div>
@@ -597,7 +706,9 @@ export const TemplateLibrary: React.FC<TemplateLibraryProps> = ({
                                   <button
                                     onClick={() => {
                                       if (matchedTemplate) {
-                                        onSelectTemplateForEditor(matchedTemplate);
+                                        onSelectTemplateForEditor(
+                                          matchedTemplate,
+                                        );
                                         onNavigate("editor");
                                       } else {
                                         showToast("未找到可编辑模板");
@@ -611,7 +722,9 @@ export const TemplateLibrary: React.FC<TemplateLibraryProps> = ({
 
                                   <button
                                     onClick={() => {
-                                      showToast("已应用此模板至当前活动套系工作流...");
+                                      showToast(
+                                        "已应用此模板至当前活动套系工作流...",
+                                      );
                                       setTimeout(() => {
                                         onNavigate("project_suite");
                                       }, 1000);
@@ -656,14 +769,17 @@ export const TemplateLibrary: React.FC<TemplateLibraryProps> = ({
               <button
                 id="create-new-suite-btn"
                 onClick={() => {
-                  showToast("已创建本地草稿套系，刷新页面后不会保留，后续将接入模板资产库保存。");
+                  showToast(
+                    "已创建本地草稿套系，刷新页面后不会保留，后续将接入模板资产库保存。",
+                  );
                   const newSuite: TemplateSuite = {
                     id: `suite_${Date.now()}`,
                     suiteName: "全新自定义企划套系",
                     styleName: "自定义 / 自由配饰",
                     category: "custom",
                     productType: "calendar",
-                    coverImage: "https://images.unsplash.com/photo-1579783902614-a3fb3927b6a5?q=80&w=600&auto=format&fit=crop",
+                    coverImage:
+                      "https://images.unsplash.com/photo-1579783902614-a3fb3927b6a5?q=80&w=600&auto=format&fit=crop",
                     pages: [
                       {
                         id: `tp_${Date.now()}_main`,
@@ -672,16 +788,16 @@ export const TemplateLibrary: React.FC<TemplateLibraryProps> = ({
                         templateId: "MAIN_001",
                         order: 1,
                         requiredAssetRoles: ["front"],
-                        enabled: true
-                      }
+                        enabled: true,
+                      },
                     ],
                     globalStyle: {
                       colorPalette: ["#1e293b", "#3b82f6"],
                       fontStyle: "Modern Sans",
                       sceneStyle: "纯色极简",
-                      lightDirection: "垂直散射官"
+                      lightDirection: "垂直散射官",
                     },
-                    status: "draft"
+                    status: "draft",
                   };
                   setSuites([newSuite, ...suites]);
                 }}
@@ -715,7 +831,9 @@ export const TemplateLibrary: React.FC<TemplateLibraryProps> = ({
               {/* Stat Indicator banner */}
               <div className="text-[11px] text-slate-450 flex items-center space-x-1 font-medium select-none">
                 <span>共找到</span>
-                <span className="font-bold text-indigo-600 font-mono text-xs">{filteredSuites.length}</span>
+                <span className="font-bold text-indigo-600 font-mono text-xs">
+                  {filteredSuites.length}
+                </span>
                 <span>个套系符合条件</span>
               </div>
             </div>
@@ -724,7 +842,9 @@ export const TemplateLibrary: React.FC<TemplateLibraryProps> = ({
             <div className="pt-3 border-t border-slate-100 grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
               {/* Product type filter */}
               <div className="space-y-1">
-                <label className="block text-[10px] font-bold text-slate-400">产品类型 :</label>
+                <label className="block text-[10px] font-bold text-slate-400">
+                  产品类型 :
+                </label>
                 <select
                   value={filterProductType}
                   onChange={(e) => setFilterProductType(e.target.value)}
@@ -739,7 +859,9 @@ export const TemplateLibrary: React.FC<TemplateLibraryProps> = ({
 
               {/* Style category filter */}
               <div className="space-y-1">
-                <label className="block text-[10px] font-bold text-slate-400">视觉风格 :</label>
+                <label className="block text-[10px] font-bold text-slate-400">
+                  视觉风格 :
+                </label>
                 <select
                   value={filterStyle}
                   onChange={(e) => setFilterStyle(e.target.value)}
@@ -757,7 +879,9 @@ export const TemplateLibrary: React.FC<TemplateLibraryProps> = ({
 
               {/* Aspect Ratio Filter */}
               <div className="space-y-1">
-                <label className="block text-[10px] font-bold text-slate-400">画布比例 :</label>
+                <label className="block text-[10px] font-bold text-slate-400">
+                  画布比例 :
+                </label>
                 <select
                   value={filterRatio}
                   onChange={(e) => setFilterRatio(e.target.value)}
@@ -773,7 +897,9 @@ export const TemplateLibrary: React.FC<TemplateLibraryProps> = ({
 
               {/* Status filter */}
               <div className="space-y-1">
-                <label className="block text-[10px] font-bold text-slate-400">生命周期状态 :</label>
+                <label className="block text-[10px] font-bold text-slate-400">
+                  生命周期状态 :
+                </label>
                 <select
                   value={filterStatus}
                   onChange={(e) => setFilterStatus(e.target.value)}
@@ -812,7 +938,9 @@ export const TemplateLibrary: React.FC<TemplateLibraryProps> = ({
           {filteredSuites.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-20 text-center bg-white border border-slate-200 rounded-2xl">
               <Layers className="w-10 h-10 text-slate-300 stroke-[1.5] mb-3" />
-              <h3 className="text-sm font-bold text-slate-700">没有找到匹配的模板套系</h3>
+              <h3 className="text-sm font-bold text-slate-700">
+                没有找到匹配的模板套系
+              </h3>
               <p className="text-[11px] text-slate-400 mt-1 max-w-xs leading-relaxed">
                 请尝试更换筛选条件或重置顶部的搜索过滤内容。
               </p>
@@ -821,12 +949,22 @@ export const TemplateLibrary: React.FC<TemplateLibraryProps> = ({
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {(() => {
                 const sortedSuites = [...filteredSuites].sort((a, b) => {
-                  const isProdA = a.id === "suite_nc_001" || a.id === "suite_wall_002" || a.id === "suite_fu_003";
-                  const isProdB = b.id === "suite_nc_001" || b.id === "suite_wall_002" || b.id === "suite_fu_003";
+                  const isProdA =
+                    a.id === "suite_nc_001" ||
+                    a.id === "suite_wall_002" ||
+                    a.id === "suite_fu_003";
+                  const isProdB =
+                    b.id === "suite_nc_001" ||
+                    b.id === "suite_wall_002" ||
+                    b.id === "suite_fu_003";
                   if (isProdA && !isProdB) return -1;
                   if (!isProdA && isProdB) return 1;
                   if (isProdA && isProdB) {
-                    const order = ["suite_nc_001", "suite_wall_002", "suite_fu_003"];
+                    const order = [
+                      "suite_nc_001",
+                      "suite_wall_002",
+                      "suite_fu_003",
+                    ];
                     return order.indexOf(a.id) - order.indexOf(b.id);
                   }
                   return 0;
@@ -843,7 +981,10 @@ export const TemplateLibrary: React.FC<TemplateLibraryProps> = ({
                       {/* Cover graphic banner wrapper */}
                       <div className="relative h-40 w-full bg-slate-101 overflow-hidden group">
                         <img
-                          src={suite.coverImage || "https://images.unsplash.com/photo-1579783902614-a3fb3927b6a5?q=80&w=600&auto=format&fit=crop"}
+                          src={
+                            suite.coverImage ||
+                            "https://images.unsplash.com/photo-1579783902614-a3fb3927b6a5?q=80&w=600&auto=format&fit=crop"
+                          }
                           alt={suite.suiteName}
                           referrerPolicy="no-referrer"
                           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
@@ -857,7 +998,11 @@ export const TemplateLibrary: React.FC<TemplateLibraryProps> = ({
                             {getProductTypeLabel(suite.productType)}
                           </span>
                           <div className="flex items-center space-x-1.5">
-                            {!(suite.id === "suite_nc_001" || suite.id === "suite_wall_002" || suite.id === "suite_fu_003") && (
+                            {!(
+                              suite.id === "suite_nc_001" ||
+                              suite.id === "suite_wall_002" ||
+                              suite.id === "suite_fu_003"
+                            ) && (
                               <span className="inline-flex items-center py-0.5 px-1.5 bg-amber-500 text-white text-[9px] font-black rounded border border-amber-400 font-sans shadow-sm">
                                 演示草稿
                               </span>
@@ -880,122 +1025,187 @@ export const TemplateLibrary: React.FC<TemplateLibraryProps> = ({
                           <div className="flex items-center justify-between">
                             <h3 className="font-bold text-slate-800 tracking-tight truncate max-w-[190px] flex items-center gap-1.5">
                               {suite.suiteName}
-                              {!(suite.id === "suite_nc_001" || suite.id === "suite_wall_002" || suite.id === "suite_fu_003") && (
-                                <span className="text-[9px] font-bold text-amber-600 bg-amber-50 px-1 rounded hover:opacity-80 scale-95 origin-left shrink-0">演示</span>
+                              {!(
+                                suite.id === "suite_nc_001" ||
+                                suite.id === "suite_wall_002" ||
+                                suite.id === "suite_fu_003"
+                              ) && (
+                                <span className="text-[9px] font-bold text-amber-600 bg-amber-50 px-1 rounded hover:opacity-80 scale-95 origin-left shrink-0">
+                                  演示
+                                </span>
                               )}
                             </h3>
-                            <span className="text-[10px] text-slate-400 font-mono">{getCategoryLabel(suite.category)}风格</span>
+                            <span className="text-[10px] text-slate-400 font-mono">
+                              {getCategoryLabel(suite.category)}风格
+                            </span>
                           </div>
 
-                        {/* Page counts breakdown statistics tag list */}
-                        <div className="grid grid-cols-3 gap-1.5 bg-slate-50 border border-slate-100 p-2 rounded-xl text-[10px]">
-                          <div className="text-slate-500 text-center">
-                            主图: <span className="font-bold text-slate-800">{stats.main}张</span>
+                          {/* Page counts breakdown statistics tag list */}
+                          <div className="grid grid-cols-3 gap-1.5 bg-slate-50 border border-slate-100 p-2 rounded-xl text-[10px]">
+                            <div className="text-slate-500 text-center">
+                              主图:{" "}
+                              <span className="font-bold text-slate-800">
+                                {stats.main}张
+                              </span>
+                            </div>
+                            <div className="text-slate-500 text-center">
+                              SKU图:{" "}
+                              <span className="font-bold text-slate-800">
+                                {stats.sku}张
+                              </span>
+                            </div>
+                            <div className="text-slate-500 text-center">
+                              详情图:{" "}
+                              <span className="font-bold text-slate-800">
+                                {stats.detail +
+                                  stats.package +
+                                  stats.size_material +
+                                  stats.scene}
+                                张
+                              </span>
+                            </div>
                           </div>
-                          <div className="text-slate-500 text-center">
-                            SKU图: <span className="font-bold text-slate-800">{stats.sku}张</span>
-                          </div>
-                          <div className="text-slate-500 text-center">
-                            详情图: <span className="font-bold text-slate-800">{stats.detail + stats.package + stats.size_material + stats.scene}张</span>
-                          </div>
-                        </div>
 
-                        {/* 交付规则 */}
-                        <div className="bg-indigo-50/50 border border-indigo-100/50 p-2.5 rounded-xl space-y-1 text-[10px]">
-                          <span className="font-bold text-slate-700 block pb-0.5">交付规则 (套系要求) :</span>
-                          {suite.expectedSliceCounts && Object.keys(suite.expectedSliceCounts).length > 0 ? (
-                            <div className="space-y-0.5 text-slate-600 font-sans">
-                              <div className="flex justify-between">
-                                <span>1:1 主图卖点图:</span>
-                                <span className="font-bold text-slate-800">≥ {suite.expectedSliceCounts.mainSquareMinCount || 0} 张</span>
+                          {/* 交付规则 */}
+                          <div className="bg-indigo-50/50 border border-indigo-100/50 p-2.5 rounded-xl space-y-1 text-[10px]">
+                            <span className="font-bold text-slate-700 block pb-0.5">
+                              交付规则 (套系要求) :
+                            </span>
+                            {suite.expectedSliceCounts &&
+                            Object.keys(suite.expectedSliceCounts).length >
+                              0 ? (
+                              <div className="space-y-0.5 text-slate-600 font-sans">
+                                <div className="flex justify-between">
+                                  <span>1:1 主图卖点图:</span>
+                                  <span className="font-bold text-slate-800">
+                                    ≥{" "}
+                                    {suite.expectedSliceCounts
+                                      .mainSquareMinCount || 0}{" "}
+                                    张
+                                  </span>
+                                </div>
+                                <div className="flex justify-between">
+                                  <span>3:4 主图卖点图:</span>
+                                  <span className="font-bold text-slate-800">
+                                    ≥{" "}
+                                    {suite.expectedSliceCounts
+                                      .mainVerticalMinCount || 0}{" "}
+                                    张
+                                  </span>
+                                </div>
+                                <div className="flex justify-between border-t border-indigo-100 pt-0.5 font-bold text-indigo-900">
+                                  <span>主图卖点图合计:</span>
+                                  <span className="font-extrabold text-indigo-650">
+                                    ≥{" "}
+                                    {suite.expectedSliceCounts
+                                      .mainMarketingTotalMinCount || 0}{" "}
+                                    张
+                                  </span>
+                                </div>
+                                <div className="flex gap-x-2 pt-1">
+                                  <span
+                                    className={`px-1 py-0.5 rounded text-[8.5px] font-medium leading-none ${suite.expectedSliceCounts.whiteBgRequired ? "bg-emerald-50 text-emerald-700 border border-emerald-200" : "bg-slate-100 text-slate-500"}`}
+                                  >
+                                    白底精修:{" "}
+                                    {suite.expectedSliceCounts.whiteBgRequired
+                                      ? "必交付"
+                                      : "可选"}
+                                  </span>
+                                  <span
+                                    className={`px-1 py-0.5 rounded text-[8.5px] font-medium leading-none ${suite.expectedSliceCounts.transparentPngRequired ? "bg-emerald-50 text-emerald-700 border border-emerald-200" : "bg-slate-100 text-slate-500"}`}
+                                  >
+                                    透明PNG:{" "}
+                                    {suite.expectedSliceCounts
+                                      .transparentPngRequired
+                                      ? "必交付"
+                                      : "可选"}
+                                  </span>
+                                </div>
                               </div>
-                              <div className="flex justify-between">
-                                <span>3:4 主图卖点图:</span>
-                                <span className="font-bold text-slate-800">≥ {suite.expectedSliceCounts.mainVerticalMinCount || 0} 张</span>
+                            ) : (
+                              <div className="text-slate-400 italic">
+                                该套系暂未配置完整交付规则
                               </div>
-                              <div className="flex justify-between border-t border-indigo-100 pt-0.5 font-bold text-indigo-900">
-                                <span>主图卖点图合计:</span>
-                                <span className="font-extrabold text-indigo-650">≥ {suite.expectedSliceCounts.mainMarketingTotalMinCount || 0} 张</span>
-                              </div>
-                              <div className="flex gap-x-2 pt-1">
-                                <span className={`px-1 py-0.5 rounded text-[8.5px] font-medium leading-none ${suite.expectedSliceCounts.whiteBgRequired ? "bg-emerald-50 text-emerald-700 border border-emerald-200" : "bg-slate-100 text-slate-500"}`}>
-                                  白底精修: {suite.expectedSliceCounts.whiteBgRequired ? "必交付" : "可选"}
-                                </span>
-                                <span className={`px-1 py-0.5 rounded text-[8.5px] font-medium leading-none ${suite.expectedSliceCounts.transparentPngRequired ? "bg-emerald-50 text-emerald-700 border border-emerald-200" : "bg-slate-100 text-slate-500"}`}>
-                                  透明PNG: {suite.expectedSliceCounts.transparentPngRequired ? "必交付" : "可选"}
-                                </span>
+                            )}
+                          </div>
+
+                          {/* 导出目录 */}
+                          {suite.exportProfile?.folders &&
+                          suite.exportProfile.folders.length > 0 ? (
+                            <div className="space-y-1">
+                              <span className="text-[10px] text-slate-450 font-semibold block">
+                                正式导出目录 :
+                              </span>
+                              <div className="flex flex-wrap gap-1 max-h-[46px] overflow-y-auto">
+                                {suite.exportProfile.folders.map(
+                                  (folder, index) => (
+                                    <span
+                                      key={index}
+                                      className="px-1.5 py-0.5 bg-slate-50 border border-slate-200 text-[8.5px] text-slate-650 rounded font-medium"
+                                    >
+                                      {getExportFolderName(folder)}
+                                    </span>
+                                  ),
+                                )}
                               </div>
                             </div>
                           ) : (
-                            <div className="text-slate-400 italic">该套系暂未配置完整交付规则</div>
+                            <div className="text-[10px] text-slate-400 italic">
+                              该套系暂未配置完整交付规则
+                            </div>
                           )}
-                        </div>
 
-                        {/* 导出目录 */}
-                        {suite.exportProfile?.folders && suite.exportProfile.folders.length > 0 ? (
+                          {/* Ratios & Required asset properties list */}
                           <div className="space-y-1">
-                            <span className="text-[10px] text-slate-450 font-semibold block">正式导出目录 :</span>
-                            <div className="flex flex-wrap gap-1 max-h-[46px] overflow-y-auto">
-                              {suite.exportProfile.folders.map((folder, index) => (
-                                <span key={index} className="px-1.5 py-0.5 bg-slate-50 border border-slate-200 text-[8.5px] text-slate-650 rounded font-medium">
-                                  {getExportFolderName(folder)}
-                                </span>
-                              ))}
-                            </div>
-                          </div>
-                        ) : (
-                          <div className="text-[10px] text-slate-400 italic">该套系暂未配置完整交付规则</div>
-                        )}
-
-                        {/* Ratios & Required asset properties list */}
-                        <div className="space-y-1">
-                          <div className="flex items-center gap-2 text-[10px]">
-                            <span className="text-slate-400 font-semibold shrink-0">包含比例 :</span>
-                            <div className="flex flex-wrap gap-1">
-                              {ratios.map((r, i) => (
-                                <span
-                                  key={i}
-                                  className="px-1.5 bg-slate-101 border border-slate-200 rounded text-[9px] text-slate-600 font-bold font-mono"
-                                >
-                                  {r}
-                                </span>
-                              ))}
+                            <div className="flex items-center gap-2 text-[10px]">
+                              <span className="text-slate-400 font-semibold shrink-0">
+                                包含比例 :
+                              </span>
+                              <div className="flex flex-wrap gap-1">
+                                {ratios.map((r, i) => (
+                                  <span
+                                    key={i}
+                                    className="px-1.5 bg-slate-101 border border-slate-200 rounded text-[9px] text-slate-600 font-bold font-mono"
+                                  >
+                                    {r}
+                                  </span>
+                                ))}
+                              </div>
                             </div>
                           </div>
                         </div>
-                      </div>
 
-                      {/* Card standard buttons row */}
-                      <div className="border-t border-slate-100 pt-3 flex items-center justify-between gap-1.5">
-                        <button
-                          onClick={() => handleCopySuite(suite)}
-                          className="p-2 bg-slate-50 hover:bg-slate-100 border border-slate-250 text-slate-400 hover:text-slate-700 rounded-xl flex items-center transition-all cursor-pointer"
-                          title="复制套系"
-                        >
-                          <Copy className="w-3.5 h-3.5" />
-                        </button>
+                        {/* Card standard buttons row */}
+                        <div className="border-t border-slate-100 pt-3 flex items-center justify-between gap-1.5">
+                          <button
+                            onClick={() => handleCopySuite(suite)}
+                            className="p-2 bg-slate-50 hover:bg-slate-100 border border-slate-250 text-slate-400 hover:text-slate-700 rounded-xl flex items-center transition-all cursor-pointer"
+                            title="复制套系"
+                          >
+                            <Copy className="w-3.5 h-3.5" />
+                          </button>
 
-                        <button
-                          onClick={() => setSelectedSuiteId(suite.id)}
-                          className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-2 px-2.5 rounded-xl text-[11px] flex items-center justify-center space-x-1 cursor-pointer transition-colors"
-                        >
-                          <span>查看套系</span>
-                        </button>
+                          <button
+                            onClick={() => setSelectedSuiteId(suite.id)}
+                            className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-2 px-2.5 rounded-xl text-[11px] flex items-center justify-center space-x-1 cursor-pointer transition-colors"
+                          >
+                            <span>查看套系</span>
+                          </button>
 
-                        <button
-                          id={`use-suite-${suite.id}`}
-                          onClick={() => handleUseSuiteForNewProject(suite)}
-                          className="bg-indigo-600 hover:bg-indigo-550 text-white font-extrabold py-2 px-3 rounded-xl text-[11px] cursor-pointer shadow-sm shadow-indigo-600/5 hover:shadow-indigo-600/15"
-                        >
-                          <span>用于新项目</span>
-                        </button>
+                          <button
+                            id={`use-suite-${suite.id}`}
+                            onClick={() => handleUseSuiteForNewProject(suite)}
+                            className="bg-indigo-600 hover:bg-indigo-550 text-white font-extrabold py-2 px-3 rounded-xl text-[11px] cursor-pointer shadow-sm shadow-indigo-600/5 hover:shadow-indigo-600/15"
+                          >
+                            <span>用于新项目</span>
+                          </button>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                );
-              });
-            })()}
-          </div>
+                  );
+                });
+              })()}
+            </div>
           )}
         </div>
       )}

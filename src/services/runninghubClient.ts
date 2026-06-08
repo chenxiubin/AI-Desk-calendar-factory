@@ -1,6 +1,8 @@
 import { RunningHubWorkflowConfig } from "../types";
 
-export async function uploadImageToRunningHub(fileOrBlob: File | Blob): Promise<{ fileName: string }> {
+export async function uploadImageToRunningHub(
+  fileOrBlob: File | Blob,
+): Promise<{ fileName: string }> {
   const formData = new FormData();
   formData.append("image", fileOrBlob);
 
@@ -40,7 +42,7 @@ export async function createRunningHubTask(payload: {
 
 export async function queryRunningHubOutputs(
   taskId: string,
-  apiMode?: "comfyui_openapi" | "run_workflow_v2"
+  apiMode?: "comfyui_openapi" | "run_workflow_v2",
 ): Promise<{
   status: "idle" | "uploading" | "queued" | "running" | "completed" | "failed";
   outputUrl?: string;
@@ -105,8 +107,8 @@ export async function runSceneFusion(payload: {
     ...payload,
     workflowConfig: {
       ...payload.workflowConfig,
-      apiMode: payload.workflowConfig.apiMode || "run_workflow_v2"
-    }
+      apiMode: payload.workflowConfig.apiMode || "run_workflow_v2",
+    },
   };
 
   const res = await fetch("/api/runninghub/scene-fusion", {

@@ -11,7 +11,7 @@ import {
   BarChart3,
   Settings,
   Calendar,
-  Sparkles
+  Sparkles,
 } from "lucide-react";
 
 interface SidebarProps {
@@ -23,7 +23,7 @@ interface SidebarProps {
 export const Sidebar: React.FC<SidebarProps> = ({
   activeTab,
   setActiveTab,
-  pendingReviewCount
+  pendingReviewCount,
 }) => {
   const menuItems = [
     { id: "workspace", label: "工作台首页", icon: LayoutDashboard },
@@ -36,11 +36,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
       id: "review",
       label: "图片审核",
       icon: ShieldCheck,
-      badge: pendingReviewCount > 0 ? pendingReviewCount.toString() : undefined
+      badge: pendingReviewCount > 0 ? pendingReviewCount.toString() : undefined,
     },
     { id: "export", label: "导出中心", icon: Download },
     { id: "statistics", label: "数据统计", icon: BarChart3 },
-    { id: "settings", label: "系统设置", icon: Settings }
+    { id: "settings", label: "系统设置", icon: Settings },
   ];
 
   return (
@@ -66,8 +66,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
           运营
         </div>
         <div className="min-w-0 flex-1">
-          <div className="text-xs font-bold text-slate-200 truncate">运营管理员 (云端)</div>
-          <p className="text-[9px] text-slate-500 truncate mt-0.5">Chenxiubin86@...</p>
+          <div className="text-xs font-bold text-slate-200 truncate">
+            运营管理员 (云端)
+          </div>
+          <p className="text-[9px] text-slate-500 truncate mt-0.5">
+            Chenxiubin86@...
+          </p>
         </div>
         <span className="w-2 h-2 rounded-full bg-emerald-500 shadow-sm animate-pulse" />
       </div>
@@ -89,7 +93,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
             >
               <IconComponent
                 className={`w-4 h-4 mr-3 shrink-0 ${
-                  isActive ? "text-white" : "text-slate-500 group-hover:text-slate-300"
+                  isActive
+                    ? "text-white"
+                    : "text-slate-500 group-hover:text-slate-300"
                 }`}
               />
               <span className="flex-1 text-left truncate">{item.label}</span>
