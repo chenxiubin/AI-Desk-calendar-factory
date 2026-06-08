@@ -286,6 +286,127 @@ export const CropCanvas: React.FC<CropCanvasProps> = ({
     }));
   }, [locked, cropBox]);
 
+  const fitCropBoxToSubjectBBox = useCallback(
+    (
+      bbox: RawImageAutoCropResult["bbox"],
+      options?: {
+        paddingRatio?: number;
+        minSize?: number;
+        maxSizeRatio?: number;
+      },
+    ): CropBox | undefined => {
+      const img = imgRef.current;
+      if (!img) return;
+
+      const currentTransform = imageTransformRef.current;
+      const viewport = viewportSize;
+
+      if (
+        !currentTransform ||
+        currentTransform.scale <= 0 ||
+        viewport.width <= 0 ||
+        viewport.height <= 0 ||
+        bbox.width <= 0 ||
+        bbox.height <= 0
+      ) {
+        return;
+      }
+
+      const paddingRatio = options?.paddingRatio ?? safetyPaddingRatio;
+      const minSize = options?.minSize ?? 80;
+      const maxSizeRatio = options?.maxSizeRatio ?? 0.92;
+
+      // 原图 bbox 转 viewport 坐标
+      const subjectViewportBox = {
+        x: currentTransform.x + bbox.x * currentTransform.scale,
+        y: currentTransform.y + bbox.y * currentTransform.scale,
+        width: bbox.width * currentTransform.scale,
+        height: bbox.height * currentTransform.scale,
+      };
+
+      const subjectCenterX =
+        subjectViewportBox.x + subjectViewportBox.width / 2;
+      const subjectCenterY =
+        subjectViewportBox.y + subjectViewportBox.height / 2;
+
+      // 根据主体较长边生成 1:1 裁剪框，并加入安全边距
+      const subjectMaxSide = Math.max(
+        subjectViewportBox.width,
+        subjectViewportBox.height,
+      );
+
+      const paddedSize = subjectMaxSide / Math.max(0.1, 1 - paddingRatio * 2);
+
+      const maxSize = Math.min(viewport.width, viewport.height) * maxSizeRatio;
+
+      const cropSize = Math.max(
+        minSize,
+        Math.min(paddedSize, maxSize),
+      );
+
+      const nextCropBox: CropBox = {
+        x: subjectCenterX - cropSize / 2,
+        y: subjectCenterY - cropSize / 2,
+        width: cropSize,
+        height: cropSize,
+      };
+
+      setCropBox(nextCropBox);
+
+      return nextCropBox;
+    },
+    [viewportSize, safetyPaddingRatio],
+  );
+
+  const applySubjectBBoxToCanvas = useCallback(
+    (
+      bbox: RawImageAutoCropResult["bbox"],
+      source: "auto" | "manual",
+    ) => {
+      const nextCropBox = fitCropBoxToSubjectBBox(bbox, {
+        paddingRatio: safetyPaddingRatio,
+      });
+
+      const effectiveCropBox = nextCropBox || cropBoxRef.current;
+
+      // 再确保主体在裁剪框安全区内
+      applyAutoCropResult(bbox, effectiveCropBox);
+
+      setDebugAutoBBox(bbox);
+
+      setAutoCropDebug({
+        confidence: source === "manual" ? 1 : 0.8,
+        method: source === "manual" ? "manual-roi" : "background-diff",
+        warnings:
+          source === "manual"
+            ? ["已使用手动主体框"]
+            : ["已根据自动识别主体匹配裁剪框"],
+        applied: true,
+        reason:
+          source === "manual"
+            ? "已根据手动主体框自动匹配 1:1 裁剪框"
+            : "已根据自动识别主体自动匹配 1:1 裁剪框",
+        bbox,
+      });
+
+      onAutoCropResult?.({
+        bbox,
+        confidence: source === "manual" ? 1 : 0.8,
+        method: source === "manual" ? "manual-roi" : "background-diff",
+        warnings:
+          source === "manual"
+            ? ["已使用手动主体框"]
+            : ["已根据自动识别主体匹配裁剪框"],
+      });
+    },
+    [
+      fitCropBoxToSubjectBBox,
+      applyAutoCropResult,
+      safetyPaddingRatio,
+      onAutoCropResult,
+    ],
+  );
+
   const handleAutoCropResult = useCallback((
     result: RawImageAutoCropResult,
     currentCropBox?: CropBox,
@@ -333,11 +454,11 @@ export const CropCanvas: React.FC<CropCanvasProps> = ({
     });
   
     if (shouldApply) {
-      applyAutoCropResult(result.bbox, currentCropBox);
+      applySubjectBBoxToCanvas(result.bbox, "auto");
     } else {
       fitProductToCropBox(currentCropBox);
     }
-  }, [applyAutoCropResult, fitProductToCropBox]);
+  }, [applySubjectBBoxToCanvas, fitProductToCropBox]);
 
   const autoDetectProduct = useCallback(async (currentCropBox?: CropBox, runId?: string) => {
     if (locked || isAutoCropping || !imgRef.current || !containerRef.current) return;
@@ -1058,17 +1179,7 @@ export const CropCanvas: React.FC<CropCanvasProps> = ({
                   if (locked || !subjectGuideBox) return;
                   
                   const bbox = convertViewportGuideBoxToImageBBox(subjectGuideBox);
-                  applyAutoCropResult(bbox, cropBoxRef.current);
-                  
-                  setDebugAutoBBox(bbox);
-                  setAutoCropDebug({
-                    confidence: 1,
-                    method: "manual-roi",
-                    warnings: ["已使用手动主体框"],
-                    applied: true,
-                    reason: "已根据手动主体框居中产品",
-                    bbox,
-                  });
+                  applySubjectBBoxToCanvas(bbox, "manual");
                   
                   setSubjectGuideMode("off");
                   setSubjectGuideBox(null);
