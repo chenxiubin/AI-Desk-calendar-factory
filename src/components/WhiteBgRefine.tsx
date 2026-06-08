@@ -183,7 +183,7 @@ export const WhiteBgRefine: React.FC<WhiteBgRefineProps> = ({
   };
 
   // Helper to compose a white background from transparent PNG to resolve CORS/local rendering
-  const composeWhiteBgFromTransparentPng = async (
+  const composeWhiteBgFromTransparentPng = (
     transparentPngUrl: string,
   ): Promise<string> => {
     return new Promise((resolve, reject) => {
@@ -316,13 +316,11 @@ export const WhiteBgRefine: React.FC<WhiteBgRefineProps> = ({
 
     if (!confirmedCropInputUrl) {
       setMattingError("请先确认裁剪，生成 RunningHub 输入图。");
-      setMattingStatus("failed");
       return;
     }
 
     if (!isCropPreviewApproved) {
       setMattingError("请先确认裁剪预览图，再开始 RunningHub 抠图。");
-      setMattingStatus("failed");
       return;
     }
 

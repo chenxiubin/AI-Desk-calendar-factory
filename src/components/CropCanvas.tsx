@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, MouseEvent, WheelEvent } from "react";
+import React, { useState, useRef, useEffect, MouseEvent, WheelEvent, useCallback } from "react";
 
 export interface CropBox {
   x: number;
@@ -24,7 +24,7 @@ export interface CropCanvasState {
   viewportSize: ViewportSize;
 }
 
-interface CropCanvasProps {
+export interface CropCanvasProps {
   imageUrl: string;
   targetSize: number;
   cropAspectLocked: boolean;
@@ -32,6 +32,15 @@ interface CropCanvasProps {
   locked?: boolean;
   onStateChange: (state: CropCanvasState) => void;
 }
+
+type DragMode =
+  | "none"
+  | "image"
+  | "crop"
+  | "resize-nw"
+  | "resize-ne"
+  | "resize-sw"
+  | "resize-se";
 
 export const CropCanvas: React.FC<CropCanvasProps> = ({
   imageUrl,
@@ -52,42 +61,58 @@ export const CropCanvas: React.FC<CropCanvasProps> = ({
   const [isReady, setIsReady] = useState(false);
 
   // Interaction State
-  const [dragMode, setDragMode] = useState<"none" | "image" | "crop" | "resize-nw" | "resize-ne" | "resize-sw" | "resize-se">("none");
+  const dragModeRef = useRef<DragMode>("none");
+  const [dragMode, setDragMode] = useState<DragMode>("none");
   const dragStartRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
   const initTransformRef = useRef<ImageTransform>({ x: 0, y: 0, scale: 1 });
   const initCropBoxRef = useRef<CropBox>({ x: 0, y: 0, width: 0, height: 0 });
 
-  // Initialize bounds on image load
-  const handleImageLoad = () => {
-    if (!containerRef.current || !imgRef.current) return;
-    const { width: vw, height: vh } = containerRef.current.getBoundingClientRect();
-    const iw = imgRef.current.naturalWidth;
-    const ih = imgRef.current.naturalHeight;
+  const safeSetPointerCapture = (pointerId: number) => {
+    const el = containerRef.current;
+    if (el && !el.hasPointerCapture(pointerId)) {
+      el.setPointerCapture(pointerId);
+    }
+  };
 
-    setViewportSize({ width: vw, height: vh });
+  const safeReleasePointerCapture = (pointerId: number) => {
+    const el = containerRef.current;
+    if (el && el.hasPointerCapture(pointerId)) {
+      el.releasePointerCapture(pointerId);
+    }
+  };
 
-    // Fit image into viewport
+  const resetCanvasToFit = useCallback(() => {
+    const container = containerRef.current;
+    const img = imgRef.current;
+    if (!container || !img) return;
+
+    const { width: vw, height: vh } = container.getBoundingClientRect();
+    const iw = img.naturalWidth;
+    const ih = img.naturalHeight;
+
     const scale = Math.min((vw * 0.8) / iw, (vh * 0.8) / ih);
     const w = iw * scale;
     const h = ih * scale;
     const x = (vw - w) / 2;
     const y = (vh - h) / 2;
 
-    setImageTransform({ x, y, scale });
+    const cropSize = Math.min(vw, vh) * 0.72;
 
-    // Initial cropbox (square, 80% of min dimension)
-    const cw = Math.min(w, h) * 0.8;
+    setViewportSize({ width: vw, height: vh });
+    setImageTransform({ x, y, scale });
     setCropBox({
-      x: (vw - cw) / 2,
-      y: (vh - cw) / 2,
-      width: cw,
-      height: cw,
+      x: (vw - cropSize) / 2,
+      y: (vh - cropSize) / 2,
+      width: cropSize,
+      height: cropSize,
     });
     setIsReady(true);
-  };
+  }, []);
 
-  // Reset/Fit button exposed to parent? We can just expose functions or handle via props... 
-  // For now, we manage it here.
+  // Initialize bounds on image load
+  const handleImageLoad = () => {
+    resetCanvasToFit();
+  };
 
   // Notify parent
   const onStateChangeRef = useRef(onStateChange);
@@ -96,9 +121,12 @@ export const CropCanvas: React.FC<CropCanvasProps> = ({
   }, [onStateChange]);
 
   useEffect(() => {
-    if (isReady) {
-      onStateChangeRef.current({ cropBox, imageTransform, viewportSize });
-    }
+    if (!isReady) return;
+    onStateChangeRef.current({
+      cropBox,
+      imageTransform,
+      viewportSize,
+    });
   }, [cropBox, imageTransform, viewportSize, isReady]);
 
   const snapThreshold = snapEnabled ? 10 : 0;
@@ -106,8 +134,8 @@ export const CropCanvas: React.FC<CropCanvasProps> = ({
   const clampScale = (s: number) => Math.max(0.25, Math.min(s, 4));
 
   const handleWheel = (e: WheelEvent<HTMLDivElement>) => {
-    e.preventDefault();
     if (locked || !containerRef.current) return;
+    e.preventDefault();
     
     const rect = containerRef.current.getBoundingClientRect();
     const mx = e.clientX - rect.left;
@@ -124,18 +152,17 @@ export const CropCanvas: React.FC<CropCanvasProps> = ({
     setImageTransform({ x: nx, y: ny, scale: newScale });
   };
 
-  const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>, mode: typeof dragMode) => {
+  const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>, mode: DragMode) => {
     e.preventDefault();
     e.stopPropagation();
     if (locked) return;
+    dragModeRef.current = mode;
     setDragMode(mode);
     dragStartRef.current = { x: e.clientX, y: e.clientY };
     initTransformRef.current = { ...imageTransform };
     initCropBoxRef.current = { ...cropBox };
     
-    if (containerRef.current) {
-      containerRef.current.setPointerCapture(e.pointerId);
-    }
+    safeSetPointerCapture(e.pointerId);
   };
 
   const applySnapping = (cb: CropBox): CropBox => {
@@ -170,24 +197,26 @@ export const CropCanvas: React.FC<CropCanvasProps> = ({
   };
 
   const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (dragMode === "none") return;
+    const mode = dragModeRef.current;
+    if (mode === "none") return;
+    
     const dx = e.clientX - dragStartRef.current.x;
     const dy = e.clientY - dragStartRef.current.y;
 
-    if (dragMode === "image") {
+    if (mode === "image") {
       setImageTransform({
         ...initTransformRef.current,
         x: initTransformRef.current.x + dx,
         y: initTransformRef.current.y + dy,
       });
-    } else if (dragMode === "crop") {
+    } else if (mode === "crop") {
       let nx = initCropBoxRef.current.x + dx;
       let ny = initCropBoxRef.current.y + dy;
       setCropBox(applySnapping({ ...initCropBoxRef.current, x: nx, y: ny }));
-    } else if (dragMode.startsWith("resize")) {
+    } else if (mode.startsWith("resize")) {
       let { x, y, width, height } = initCropBoxRef.current;
 
-      if (dragMode === "resize-nw") {
+      if (mode === "resize-nw") {
         let d = cropAspectLocked ? Math.min(dx, dy) : 0;
         let ndx = cropAspectLocked ? d : dx;
         let ndy = cropAspectLocked ? d : dy;
@@ -195,19 +224,19 @@ export const CropCanvas: React.FC<CropCanvasProps> = ({
         y += ndy;
         width -= ndx;
         height -= ndy;
-      } else if (dragMode === "resize-ne") {
+      } else if (mode === "resize-ne") {
         let ndx = dx;
         let ndy = cropAspectLocked ? -dx : dy;
         y += ndy;
         width += ndx;
         height -= ndy;
-      } else if (dragMode === "resize-sw") {
+      } else if (mode === "resize-sw") {
         let ndx = dx;
         let ndy = cropAspectLocked ? -dx : dy;
         x += ndx;
         width -= ndx;
         height += ndy;
-      } else if (dragMode === "resize-se") {
+      } else if (mode === "resize-se") {
         let d = cropAspectLocked ? Math.max(dx, dy) : 0;
         let ndx = cropAspectLocked ? d : dx;
         let ndy = cropAspectLocked ? d : dy;
@@ -229,10 +258,9 @@ export const CropCanvas: React.FC<CropCanvasProps> = ({
   };
 
   const handlePointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
+    dragModeRef.current = "none";
     setDragMode("none");
-    if (containerRef.current) {
-      containerRef.current.releasePointerCapture(e.pointerId);
-    }
+    safeReleasePointerCapture(e.pointerId);
   };
 
   // Update cropBox to aspect 1:1 when locked
@@ -347,7 +375,10 @@ export const CropCanvas: React.FC<CropCanvasProps> = ({
                disabled={locked}
                min="0.25" max="4" step="0.05"
                value={imageTransform.scale}
-               onChange={(e) => setImageTransform((prev) => ({ ...prev, scale: parseFloat(e.target.value) }))}
+               onChange={(e) => {
+                 if (locked) return;
+                 setImageTransform((prev) => ({ ...prev, scale: parseFloat(e.target.value) }));
+               }}
                className="w-20 accent-blue-500 disabled:opacity-50"
                onPointerDown={(e) => e.stopPropagation()} // Prevent dragging the canvas when sliding
              />
@@ -361,7 +392,8 @@ export const CropCanvas: React.FC<CropCanvasProps> = ({
             disabled={locked}
             onClick={(e) => {
               e.stopPropagation();
-              handleImageLoad(); // Reposition and fit image again
+              if (locked) return;
+              resetCanvasToFit();
             }}
             className={`text-[10px] font-medium tracking-wide transition-colors ${locked ? 'text-slate-500 cursor-not-allowed' : 'hover:text-blue-400'}`}
           >

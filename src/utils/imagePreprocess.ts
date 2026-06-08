@@ -15,9 +15,9 @@ export interface BoundingBoxInfo {
   normalizedCenterY: number;
 }
 
-export const calculateTransparentImageBoundingBox = async (
+export function calculateTransparentImageBoundingBox(
   imageUrl: string
-): Promise<BoundingBoxInfo> => {
+): Promise<BoundingBoxInfo> {
   return new Promise((resolve, reject) => {
     const img = new Image();
     if (!imageUrl.startsWith("data:")) {
@@ -93,7 +93,7 @@ export const calculateTransparentImageBoundingBox = async (
   });
 };
 
-export async function renderCropCanvasToDataUrl(params: {
+export function renderCropCanvasToDataUrl(params: {
   imageUrl: string;
   cropBox: { x: number; y: number; width: number; height: number };
   imageTransform: { x: number; y: number; scale: number };
