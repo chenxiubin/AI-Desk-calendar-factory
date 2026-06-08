@@ -139,7 +139,7 @@ export const WhiteBgRefine: React.FC<WhiteBgRefineProps> = ({
     }
 
     if (!isWorkflowConfigured) {
-      setMattingError("请先配置 RunningHub 抠图工作流 workflowId 和输入输出节点。");
+      setMattingError("RunningHub 抠图工作流尚未配置，请先在系统设置或工作流配置中填写 workflowId 和节点映射。");
       setMattingStatus("failed");
       return;
     }
@@ -285,9 +285,25 @@ export const WhiteBgRefine: React.FC<WhiteBgRefineProps> = ({
   const isFinished = mattingStatus === "completed";
 
   return (
-    <div className="flex h-full min-h-[600px] gap-4 text-left font-sans">
-      {/* 1. Left Section: File uploads and list queue */}
-      <div className="w-64 bg-white rounded-xl border border-slate-200/80 p-4 flex flex-col justify-between shrink-0 shadow-xs">
+    <div className="flex flex-col gap-4 h-full min-h-[600px] text-left font-sans">
+      {/* 1. Page Title Bar */}
+      <div className="bg-white rounded-xl border border-slate-200/80 p-5 shadow-xs shrink-0">
+        <div className="flex items-center gap-3">
+          <div className="p-2 bg-indigo-50 text-indigo-600 rounded-lg">
+            <Scissors className="w-5 h-5" />
+          </div>
+          <div>
+            <h2 className="text-base font-bold text-slate-900">RunningHub 抠图资产生成</h2>
+            <p className="text-slate-500 text-xs mt-0.5">
+              用于从产品实拍图生成透明 PNG、白底 JPG 和可选 Mask，作为后续套版、场景融合和运营交付资产。
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div className="flex flex-1 gap-4 min-h-0">
+        {/* 2. Left Section: File uploads and list queue */}
+        <div className="w-64 bg-white rounded-xl border border-slate-200/80 p-4 flex flex-col justify-between shrink-0 shadow-xs">
         <div className="space-y-4 flex-1 flex flex-col min-h-0">
           <div className="border-b border-slate-100 pb-2">
             <h3 className="text-xs font-bold text-slate-800 tracking-wider">上传与资产生成 queue</h3>
@@ -593,7 +609,7 @@ export const WhiteBgRefine: React.FC<WhiteBgRefineProps> = ({
                 />
                 <div className="text-left">
                   <span className="font-medium block">输出 White BG 资产</span>
-                  <span className="text-[9px] text-neutral-400 block mt-0.5">作为白底精修成品正式交付</span>
+                  <span className="text-[9px] text-neutral-400 block mt-0.5">作为白底 JPG 资产正式交付</span>
                 </div>
               </label>
 
@@ -646,15 +662,21 @@ export const WhiteBgRefine: React.FC<WhiteBgRefineProps> = ({
             </div>
           </div>
 
-          {/* Prompt instruction or reminder label */}
-          <div className="bg-slate-50 text-[10px] p-3 rounded-lg border border-slate-100 text-slate-500 space-y-1">
+          {/* Workflow Specification Guide Bullet Points */}
+          <div className="bg-slate-50 text-[10px] p-3 rounded-lg border border-slate-100 text-slate-500 space-y-1.5">
             <div className="font-semibold text-slate-700 flex items-center">
-              <FileIcon className="w-3.5 h-3.5 mr-1 text-slate-400" />
-              资产打包规则说明
+              <FileIcon className="w-3.5 h-3.5 mr-1 text-indigo-500" />
+              RunningHub 抠图工作流提示
             </div>
-            <p className="leading-relaxed">
-              台历与挂历设计不需要复杂精修，本模块作为 RunningHub 抠图工作流一环，稳定输出 transparent_png 与 white_bg 资产交由后续高质感场景融图工作流处理。
-            </p>
+            <ul className="space-y-1 leading-relaxed list-disc list-inside text-[9px] text-slate-600 pl-1">
+              <li>上传或选择产品实拍原图图片</li>
+              <li>提效调用 RunningHub 专门抠图工作流</li>
+              <li>快速输出透明 PNG 资产档</li>
+              <li>一键输出白底 JPG 规范图</li>
+              <li>可选配产出高解析黑白 Mask 蒙版</li>
+              <li>自动写入原始资产包并更新状态</li>
+              <li>后续场景融合由 RunningHub 融图流继续处理</li>
+            </ul>
           </div>
         </div>
 
@@ -678,6 +700,8 @@ export const WhiteBgRefine: React.FC<WhiteBgRefineProps> = ({
           <Play className="w-3.5 h-3.5 shrink-0" />
           <span>{isPending ? "抠图执行中..." : "开始 RunningHub 抠图"}</span>
         </button>
+      </div>
+      {/* Close flex flex-1 wrapper */}
       </div>
     </div>
   );
