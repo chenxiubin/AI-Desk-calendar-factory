@@ -499,44 +499,49 @@ export async function createImageThumbnailDataUrl(
     backgroundColor?: string;
   }
 ): Promise<string> {
+  const size = options?.size ?? 160;
+  const backgroundColor = options?.backgroundColor ?? "#ffffff";
+
   return new Promise((resolve, reject) => {
     const img = new Image();
-    img.crossOrigin = "anonymous";
-    img.onload = () => {
-      const w = img.width;
-      const h = img.height;
-      const maxDim = Math.max(w, h);
-      
-      if (maxDim === 0) {
-        reject(new Error("Image dimension is zero"));
-        return;
-      }
 
-      const targetSize = options?.size ?? 160;
-      const canvas = document.createElement("canvas");
-      canvas.width = targetSize;
-      canvas.height = targetSize;
-      
-      const ctx = canvas.getContext("2d");
-      if (!ctx) {
-        reject(new Error("Failed to get 2d context"));
-        return;
+    if (!imageUrl.startsWith("data:")) {
+      img.crossOrigin = "anonymous";
+    }
+
+    img.onload = () => {
+      try {
+        const canvas = document.createElement("canvas");
+        canvas.width = size;
+        canvas.height = size;
+
+        const ctx = canvas.getContext("2d");
+        if (!ctx) {
+          reject(new Error("无法创建缩略图 Canvas 上下文"));
+          return;
+        }
+
+        ctx.fillStyle = backgroundColor;
+        ctx.fillRect(0, 0, size, size);
+
+        const scale = Math.min(size / img.width, size / img.height);
+        const drawWidth = img.width * scale;
+        const drawHeight = img.height * scale;
+        const drawX = (size - drawWidth) / 2;
+        const drawY = (size - drawHeight) / 2;
+
+        ctx.drawImage(img, drawX, drawY, drawWidth, drawHeight);
+
+        resolve(canvas.toDataURL("image/jpeg", 0.85));
+      } catch (err) {
+        reject(err);
       }
-      
-      ctx.fillStyle = options?.backgroundColor ?? "#ffffff";
-      ctx.fillRect(0, 0, targetSize, targetSize);
-      
-      const scale = targetSize / maxDim;
-      const drawW = w * scale;
-      const drawH = h * scale;
-      const drawX = (targetSize - drawW) / 2;
-      const drawY = (targetSize - drawH) / 2;
-      
-      ctx.drawImage(img, drawX, drawY, drawW, drawH);
-      
-      resolve(canvas.toDataURL("image/jpeg", 0.85));
     };
-    img.onerror = () => reject(new Error("Failed to load image for thumbnail"));
+
+    img.onerror = () => {
+      reject(new Error("缩略图生成失败：图片加载失败"));
+    };
+
     img.src = imageUrl;
   });
 }
