@@ -492,3 +492,51 @@ export function renderCropCanvasToDataUrl(params: {
   });
 }
 
+export async function createImageThumbnailDataUrl(
+  imageUrl: string,
+  options?: {
+    size?: number;
+    backgroundColor?: string;
+  }
+): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.onload = () => {
+      const w = img.width;
+      const h = img.height;
+      const maxDim = Math.max(w, h);
+      
+      if (maxDim === 0) {
+        reject(new Error("Image dimension is zero"));
+        return;
+      }
+
+      const targetSize = options?.size ?? 160;
+      const canvas = document.createElement("canvas");
+      canvas.width = targetSize;
+      canvas.height = targetSize;
+      
+      const ctx = canvas.getContext("2d");
+      if (!ctx) {
+        reject(new Error("Failed to get 2d context"));
+        return;
+      }
+      
+      ctx.fillStyle = options?.backgroundColor ?? "#ffffff";
+      ctx.fillRect(0, 0, targetSize, targetSize);
+      
+      const scale = targetSize / maxDim;
+      const drawW = w * scale;
+      const drawH = h * scale;
+      const drawX = (targetSize - drawW) / 2;
+      const drawY = (targetSize - drawH) / 2;
+      
+      ctx.drawImage(img, drawX, drawY, drawW, drawH);
+      
+      resolve(canvas.toDataURL("image/jpeg", 0.85));
+    };
+    img.onerror = () => reject(new Error("Failed to load image for thumbnail"));
+    img.src = imageUrl;
+  });
+}

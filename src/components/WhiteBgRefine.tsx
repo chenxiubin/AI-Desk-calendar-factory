@@ -9,7 +9,8 @@ import {
   calculateTransparentImageBoundingBox, 
   BoundingBoxInfo,
   renderCropCanvasToDataUrl,
-  RawImageAutoCropResult
+  RawImageAutoCropResult,
+  createImageThumbnailDataUrl
 } from "../utils/imagePreprocess";
 import { CropCanvas, CropCanvasState } from "./CropCanvas";
 
@@ -29,6 +30,47 @@ import {
   Download,
   AlertTriangle,
 } from "lucide-react";
+
+export type MattingQueueStatus =
+  | "waiting_preview_approval"
+  | "ready"
+  | "queued"
+  | "running"
+  | "succeeded"
+  | "failed";
+
+export type MattingQueueItem = {
+  id: string;
+  productId?: string;
+  productName?: string;
+
+  sourceImageUrl: string;
+  cropInputUrl: string;
+  thumbnailUrl: string;
+
+  targetSize: 1600 | 2048 | 2560;
+  cropAspectRatio: "1:1";
+
+  status: MattingQueueStatus;
+  createdAt: string;
+  approvedAt?: string;
+
+  runningHubTaskId?: string;
+  transparentPngUrl?: string;
+  whiteBgUrl?: string;
+  maskUrl?: string;
+
+  errorMessage?: string;
+};
+
+const QUEUE_STATUS_LABELS: Record<MattingQueueStatus, string> = {
+  waiting_preview_approval: "待确认预览",
+  ready: "待发送",
+  queued: "已加入队列",
+  running: "处理中",
+  succeeded: "已完成",
+  failed: "失败",
+};
 
 interface WhiteBgRefineProps {
   products: Product[];
@@ -88,6 +130,9 @@ export const WhiteBgRefine: React.FC<WhiteBgRefineProps> = ({
   const [previewMode, setPreviewMode] = useState<
     "raw" | "crop_input" | "png" | "white_bg" | "mask"
   >("raw");
+
+  const [mattingQueue, setMattingQueue] = useState<MattingQueueItem[]>([]);
+  const [activeQueueItemId, setActiveQueueItemId] = useState<string | null>(null);
 
   const [cropCanvasState, setCropCanvasState] = useState<CropCanvasState | null>(null);
   const [cropAspectLocked, setCropAspectLocked] = useState(true);
@@ -278,8 +323,6 @@ export const WhiteBgRefine: React.FC<WhiteBgRefineProps> = ({
     : "";
 
   const handleConfirmCrop = async () => {
-    if (!selectedProduct) return;
-
     if (!sourceImageUrl) {
       setMattingError("请先上传或选择原始实拍图。");
       return;
@@ -307,6 +350,38 @@ export const WhiteBgRefine: React.FC<WhiteBgRefineProps> = ({
         quality: 0.95,
       });
 
+      const thumbnailUrl = await createImageThumbnailDataUrl(dataUrl, {
+        size: 160,
+        backgroundColor: "#ffffff",
+      });
+
+      const queueItem: MattingQueueItem = {
+        id: crypto.randomUUID(),
+        productId: selectedProduct?.id,
+        productName: selectedProduct?.name,
+        sourceImageUrl,
+        cropInputUrl: dataUrl,
+        thumbnailUrl,
+        targetSize,
+        cropAspectRatio: "1:1",
+        status: "waiting_preview_approval",
+        createdAt: new Date().toISOString(),
+      };
+
+      setMattingQueue((prev) => {
+        const filtered = prev.filter((item) => {
+          if (!selectedProduct?.id) return item.id !== activeQueueItemId;
+          const isSameProduct = item.productId === selectedProduct.id;
+          const canReplace =
+            item.status === "waiting_preview_approval" ||
+            item.status === "ready" ||
+            item.status === "failed";
+          return !(isSameProduct && canReplace);
+        });
+        return [queueItem, ...filtered];
+      });
+
+      setActiveQueueItemId(queueItem.id);
       setConfirmedCropInputUrl(dataUrl);
       setIsCropConfirmed(true);
       setIsCanvasLocked(true);
@@ -326,28 +401,54 @@ export const WhiteBgRefine: React.FC<WhiteBgRefineProps> = ({
     setConfirmedCropInputUrl("");
     setMattingError("");
     setPreviewMode("raw");
+
+    setMattingQueue((prev) =>
+      prev.filter((item) => {
+        if (item.id !== activeQueueItemId) return true;
+        return item.status !== "waiting_preview_approval" && item.status !== "ready";
+      })
+    );
+    setActiveQueueItemId(null);
   };
 
   const handleApproveCropPreview = () => {
-    if (!confirmedCropInputUrl) {
-      setMattingError("请先确认裁剪，生成预览图。");
+    if (!confirmedCropInputUrl || !activeQueueItemId) {
+      setMattingError("无有效的裁剪预览项。");
       return;
     }
     setIsCropPreviewApproved(true);
     setMattingError("");
+
+    setMattingQueue((prev) =>
+      prev.map((item) =>
+        item.id === activeQueueItemId
+          ? {
+              ...item,
+              status: "ready",
+              approvedAt: new Date().toISOString(),
+            }
+          : item
+      )
+    );
   };
 
   // Implement the core matting pipeline trigger
-  const handleStartMatting = async () => {
-    if (!selectedProduct) return;
+  const handleStartMattingFromQueue = async (queueItemId?: string) => {
+    const targetItemId = queueItemId || activeQueueItemId;
+    const activeQueueItem = mattingQueue.find((item) => item.id === targetItemId);
 
-    if (!confirmedCropInputUrl) {
-      setMattingError("请先确认裁剪，生成 RunningHub 输入图。");
+    if (!activeQueueItem) {
+      setMattingError("未找到待发送队列项，请重新确认输入图。");
       return;
     }
 
-    if (!isCropPreviewApproved) {
-      setMattingError("请先确认裁剪预览图，再开始 RunningHub 抠图。");
+    if (activeQueueItem.status !== "ready" && activeQueueItem.status !== "failed") {
+      setMattingError("选中的任务状态不可发送抠图。");
+      return;
+    }
+
+    if (!activeQueueItem.cropInputUrl) {
+      setMattingError("队列项缺少 RunningHub 输入图，请重新确认裁剪。");
       return;
     }
 
@@ -362,11 +463,19 @@ export const WhiteBgRefine: React.FC<WhiteBgRefineProps> = ({
       setMattingStatus("queued");
       setMattingProgress(15);
       
+      setMattingQueue((prev) =>
+        prev.map((item) =>
+          item.id === targetItemId
+            ? { ...item, status: "queued", errorMessage: undefined }
+            : item
+        )
+      );
+      
       // Reset bounding box before new generation
       setBoundingBox(null);
 
       const res = await runRunningHubMatting({
-        imageUrlOrBase64: confirmedCropInputUrl,
+        imageUrlOrBase64: activeQueueItem.cropInputUrl,
         workflowConfig: mattingWorkflow,
       });
 
@@ -374,18 +483,34 @@ export const WhiteBgRefine: React.FC<WhiteBgRefineProps> = ({
       setMattingStatus("running");
       setMattingProgress(40);
 
+      setMattingQueue((prev) =>
+        prev.map((item) =>
+          item.id === targetItemId
+            ? { ...item, status: "running", runningHubTaskId: res.taskId }
+            : item
+        )
+      );
+
       // Start asynchronous state polling
-      startPolling(res.taskId);
+      startPolling(res.taskId, targetItemId);
     } catch (err: any) {
       console.error(err);
       setMattingError(err.message || "RunningHub 抠图启动失败");
       setMattingStatus("failed");
       setMattingProgress(0);
+
+      setMattingQueue((prev) =>
+        prev.map((item) =>
+          item.id === targetItemId
+            ? { ...item, status: "failed", errorMessage: err.message || "启动失败" }
+            : item
+        )
+      );
     }
   };
 
   // Process completed workflow results with correct assets mapping and Canvas composition fallback
-  const handleCompletedStatus = async (results: string[]) => {
+  const handleCompletedStatus = async (results: string[], targetItemId: string) => {
     try {
       const transparentPngUrl = results[0] || "";
       const whiteBgUrl = results[1] || "";
@@ -426,6 +551,20 @@ export const WhiteBgRefine: React.FC<WhiteBgRefineProps> = ({
 
       setMattingStatus("completed");
       setMattingProgress(100);
+
+      setMattingQueue((prev) =>
+        prev.map((item) =>
+          item.id === targetItemId
+            ? {
+                ...item,
+                status: "succeeded",
+                transparentPngUrl,
+                whiteBgUrl: finalWhiteBg,
+                maskUrl,
+              }
+            : item
+        )
+      );
 
       // Write results to the product assets list if writeToAssets is enabled
       if (writeToAssets && selectedProduct) {
@@ -502,11 +641,19 @@ export const WhiteBgRefine: React.FC<WhiteBgRefineProps> = ({
       setMattingError(err.message || "处理抠图结果归档时发生异常");
       setMattingStatus("failed");
       setMattingProgress(0);
+
+      setMattingQueue((prev) =>
+        prev.map((item) =>
+          item.id === targetItemId
+            ? { ...item, status: "failed", errorMessage: err.message || "归档失败" }
+            : item
+        )
+      );
     }
   };
 
   // Poll RunningHub task progress asynchronously
-  const startPolling = (taskId: string) => {
+  const startPolling = (taskId: string, targetItemId: string) => {
     let tickCount = 0;
     const interval = setInterval(async () => {
       try {
@@ -516,12 +663,20 @@ export const WhiteBgRefine: React.FC<WhiteBgRefineProps> = ({
         const res = await pollRunningHubTask(taskId);
         if (res.status === "completed") {
           clearInterval(interval);
-          handleCompletedStatus(res.results || []);
+          handleCompletedStatus(res.results || [], targetItemId);
         } else if (res.status === "failed") {
           clearInterval(interval);
           setMattingStatus("failed");
           setMattingProgress(0);
           setMattingError(res.errorMessage || "RunningHub 抠图工作流失败");
+
+          setMattingQueue((prev) =>
+            prev.map((item) =>
+              item.id === targetItemId
+                ? { ...item, status: "failed", errorMessage: res.errorMessage || "工作流失败" }
+                : item
+            )
+          );
         } else {
           // Safety timeout check (approximately 120 seconds max timeout)
           if (tickCount > 40) {
@@ -529,6 +684,14 @@ export const WhiteBgRefine: React.FC<WhiteBgRefineProps> = ({
             setMattingStatus("failed");
             setMattingProgress(0);
             setMattingError("轮询超时，请检查 RunningHub 工作流状态。");
+
+            setMattingQueue((prev) =>
+              prev.map((item) =>
+                item.id === targetItemId
+                  ? { ...item, status: "failed", errorMessage: "轮询超时" }
+                  : item
+              )
+            );
           }
         }
       } catch (err: any) {
@@ -536,6 +699,14 @@ export const WhiteBgRefine: React.FC<WhiteBgRefineProps> = ({
         setMattingStatus("failed");
         setMattingProgress(0);
         setMattingError(err.message || "轮询抠图状态时发生异常");
+
+        setMattingQueue((prev) =>
+          prev.map((item) =>
+            item.id === targetItemId
+              ? { ...item, status: "failed", errorMessage: err.message || "轮询异常" }
+              : item
+          )
+        );
       }
     }, 3000);
   };
@@ -1286,16 +1457,16 @@ export const WhiteBgRefine: React.FC<WhiteBgRefineProps> = ({
 
           {/* Action Button */}
           <button
-            onClick={handleStartMatting}
+            onClick={() => handleStartMattingFromQueue()}
             disabled={
               isPending ||
               !sourceImageUrl ||
-              !isCropConfirmed ||
-              !isCropPreviewApproved ||
+              !mattingQueue.find(q => q.id === activeQueueItemId) ||
+              mattingQueue.find(q => q.id === activeQueueItemId)?.status !== "ready" ||
               !isWorkflowConfigured
             }
             className={`w-full mt-4 font-bold py-2.5 px-4 rounded-xl text-xs flex items-center justify-center space-x-1.5 shadow transition-all duration-300 active:scale-[0.98] ${
-              isPending || !sourceImageUrl || !isCropConfirmed || !isCropPreviewApproved || !isWorkflowConfigured
+              isPending || !sourceImageUrl || !mattingQueue.find(q => q.id === activeQueueItemId) || mattingQueue.find(q => q.id === activeQueueItemId)?.status !== "ready" || !isWorkflowConfigured
                 ? "bg-slate-200 text-slate-400 cursor-not-allowed"
                 : "bg-blue-650 hover:bg-blue-700 text-white"
             }`}
@@ -1306,15 +1477,163 @@ export const WhiteBgRefine: React.FC<WhiteBgRefineProps> = ({
                 ? "抠图执行中..."
                 : !sourceImageUrl
                 ? "请先上传或选择原始图"
-                : !isCropConfirmed
+                : !mattingQueue.find(q => q.id === activeQueueItemId)
                 ? "请先确认裁剪"
-                : !isCropPreviewApproved
+                : mattingQueue.find(q => q.id === activeQueueItemId)?.status !== "ready" && mattingQueue.find(q => q.id === activeQueueItemId)?.status !== "failed"
                 ? "请先确认预览图"
                 : !isWorkflowConfigured
                 ? "工作流未配置"
                 : "开始 RunningHub 抠图"}
             </span>
           </button>
+
+          {/* Queue Section */}
+          <div className="mt-6 border-t pt-4">
+            <h4 className="text-xs font-bold text-slate-700 mb-3 flex items-center">
+              <Clock className="w-3.5 h-3.5 mr-1" />
+              RunningHub 抠图待发送队列
+            </h4>
+            
+            {mattingQueue.length === 0 ? (
+              <div className="text-[10px] text-slate-400 text-center py-6 border border-dashed rounded-lg">
+                暂无队列项，请先确认输入图
+              </div>
+            ) : (
+              <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
+                {mattingQueue.map((item) => (
+                  <div 
+                    key={item.id}
+                    className={`p-2 rounded-lg border flex flex-col gap-2 transition-all cursor-pointer ${
+                      activeQueueItemId === item.id ? "border-blue-400 bg-blue-50/30" : "border-slate-200 hover:border-slate-300 bg-white"
+                    }`}
+                    onClick={() => {
+                      setActiveQueueItemId(item.id);
+                      if (item.status === 'succeeded' && item.transparentPngUrl) {
+                        setConfirmedCropInputUrl(item.cropInputUrl);
+                        setMattingResultUrl(item.transparentPngUrl);
+                        if (item.whiteBgUrl) setWhiteBgResultUrl(item.whiteBgUrl);
+                        if (item.maskUrl) setMaskResultUrl(item.maskUrl);
+                        setPreviewMode("png");
+                      } else {
+                        setConfirmedCropInputUrl(item.cropInputUrl);
+                        setPreviewMode("crop_input");
+                        setIsCropConfirmed(true);
+                        setIsCanvasLocked(item.status !== "waiting_preview_approval");
+                        setIsCropPreviewApproved(item.status === "ready" || item.status === "queued" || item.status === "running" || item.status === "succeeded" || item.status === "failed");
+                      }
+                    }}
+                  >
+                    <div className="flex justify-between items-start">
+                      <div className="flex gap-2">
+                        <img 
+                          src={item.thumbnailUrl} 
+                          alt="thumbnail" 
+                          className="w-12 h-12 object-contain bg-white rounded border flex-shrink-0"
+                        />
+                        <div className="flex flex-col justify-center">
+                          <span className="text-[10px] font-semibold text-slate-700 truncate w-24">
+                            {item.productName || "未命名产品"}
+                          </span>
+                          <span className="text-[9px] text-slate-500 mt-0.5">
+                            {item.targetSize}×{item.targetSize} (1:1)
+                          </span>
+                          <span className={`text-[8px] font-bold px-1.5 py-0.5 rounded-sm w-max mt-1 ${
+                            item.status === 'waiting_preview_approval' ? 'bg-slate-100 text-slate-600' :
+                            item.status === 'ready' ? 'bg-blue-100 text-blue-600' :
+                            item.status === 'queued' ? 'bg-indigo-100 text-indigo-600' :
+                            item.status === 'running' ? 'bg-orange-100 text-orange-600' :
+                            item.status === 'succeeded' ? 'bg-emerald-100 text-emerald-600' :
+                            'bg-red-100 text-red-600'
+                          }`}>
+                            {QUEUE_STATUS_LABELS[item.status]}
+                          </span>
+                        </div>
+                      </div>
+                      
+                      <div className="flex flex-col gap-1 items-end">
+                        {item.status === 'waiting_preview_approval' && (
+                          <>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setActiveQueueItemId(item.id);
+                                setConfirmedCropInputUrl(item.cropInputUrl);
+                                setPreviewMode("crop_input");
+                              }}
+                              className="text-[9px] bg-slate-100 hover:bg-slate-200 text-slate-700 px-2 py-1 rounded"
+                            >
+                              查看输入图
+                            </button>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleEditCrop();
+                              }}
+                              className="text-[9px] bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 px-2 py-1 rounded"
+                            >
+                              重新调整
+                            </button>
+                          </>
+                        )}
+                        {(item.status === 'ready' || item.status === 'failed') && (
+                          <>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setActiveQueueItemId(item.id);
+                                handleStartMattingFromQueue(item.id);
+                              }}
+                              className="text-[9px] bg-blue-50 hover:bg-blue-100 text-blue-600 border border-blue-200 px-2 py-1 rounded"
+                            >
+                              {item.status === 'failed' ? '重试抠图' : '开始抠图'}
+                            </button>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleEditCrop();
+                              }}
+                              className="text-[9px] bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 px-2 py-1 rounded mt-1"
+                            >
+                              重新调整
+                            </button>
+                          </>
+                        )}
+                        {(item.status === 'queued' || item.status === 'running') && (
+                          <span className="text-[10px] text-slate-400 px-2 py-1 flex items-center gap-1">
+                            {item.status === 'running' ? (
+                              <svg className="animate-spin h-3 w-3 text-orange-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                            ) : null}
+                            处理中...
+                          </span>
+                        )}
+                        {item.status === 'succeeded' && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setActiveQueueItemId(item.id);
+                              setConfirmedCropInputUrl(item.cropInputUrl);
+                              setMattingResultUrl(item.transparentPngUrl || "");
+                              if (item.whiteBgUrl) setWhiteBgResultUrl(item.whiteBgUrl);
+                              if (item.maskUrl) setMaskResultUrl(item.maskUrl);
+                              setPreviewMode("png");
+                            }}
+                            className="text-[9px] bg-emerald-50 hover:bg-emerald-100 text-emerald-600 border border-emerald-200 px-2 py-1 rounded"
+                          >
+                            查看结果
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                    {item.status === 'failed' && item.errorMessage && (
+                      <div className="text-[9px] text-red-500 bg-red-50 p-1.5 rounded line-clamp-2" title={item.errorMessage}>
+                        {item.errorMessage}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
         {/* Close flex flex-1 wrapper */}
       </div>
