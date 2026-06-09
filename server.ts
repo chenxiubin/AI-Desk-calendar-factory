@@ -27,7 +27,7 @@ app.use("/assets", express.static(assetDir));
 
 // Retrieve system-wide keys secured silently
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY || "";
-const RUNNINGHUB_API_KEY = process.env.RUNNINGHUB_API_KEY || "RH_MOCK_KEY_2026_TEST";
+const RUNNINGHUB_API_KEY = process.env.RUNNINGHUB_API_KEY || process.env.VITE_RUNNINGHUB_API_KEY || "RH_MOCK_KEY_2026_TEST";
 
 const isApiKeyMissingOrPlaceholder = 
   !RUNNINGHUB_API_KEY || 
@@ -499,7 +499,7 @@ app.post("/api/runninghub/scene-fusion", async (req, res) => {
       const base64Data = baseImageDataUrl.replace(/^data:image\/\w+;base64,/, "");
       const buffer = Buffer.from(base64Data, "base64");
 
-      const apiBase = process.env.RUNNINGHUB_API_BASE || "https://www.runninghub.cn";
+      const apiBase = process.env.RUNNINGHUB_API_BASE || process.env.VITE_RUNNINGHUB_API_BASE_URL || "https://www.runninghub.cn";
       const uploadUrl = `${apiBase}/openapi/v2/media/upload/binary`;
 
       const hubFormData = new FormData();

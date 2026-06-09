@@ -203,7 +203,8 @@ export const WhiteBgRefine: React.FC<WhiteBgRefineProps> = ({
     Boolean(mattingWorkflow.enabled) &&
     Boolean(mattingWorkflow.apiBaseUrl) &&
     Boolean(mattingWorkflow.workflowId) &&
-    Boolean(inputNodeId);
+    Boolean(inputNodeId) &&
+    Boolean(mattingWorkflow.apiKey);
 
   // Automatically switch preview modes when results load
   useEffect(() => {
@@ -1679,7 +1680,8 @@ export const WhiteBgRefine: React.FC<WhiteBgRefineProps> = ({
                                 setActiveQueueItemId(item.id);
                                 handleStartSingleQueueItem(item.id);
                               }}
-                              className="text-[9px] bg-blue-50 hover:bg-blue-100 text-blue-600 border border-blue-200 px-2 py-1 rounded"
+                              disabled={!isWorkflowConfigured}
+                              className={`text-[9px] px-2 py-1 rounded border ${!isWorkflowConfigured ? "bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed" : "bg-blue-50 hover:bg-blue-100 text-blue-600 border-blue-200"}`}
                             >
                               {item.status === 'failed' ? '重试' : '单发'}
                             </button>

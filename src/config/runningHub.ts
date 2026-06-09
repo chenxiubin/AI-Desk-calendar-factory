@@ -19,7 +19,7 @@ export const runningHubMattingConfig: RunningHubMattingConfig = {
 
   apiKey: import.meta.env.VITE_RUNNINGHUB_API_KEY || "",
 
-  workflowId: import.meta.env.VITE_RUNNINGHUB_MATTING_WORKFLOW_ID || "",
+  workflowId: import.meta.env.VITE_RUNNINGHUB_MATTING_WORKFLOW_ID || "2063802342654431234",
 
   inputImageNodeId: import.meta.env.VITE_RUNNINGHUB_MATTING_INPUT_IMAGE_NODE_ID || "",
 
