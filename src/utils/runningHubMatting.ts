@@ -1,4 +1,4 @@
-import { RunningHubWorkflowConfig } from "../types";
+import { RunningHubMattingConfig } from "../config/runningHub";
 import {
   uploadImageToRunningHub,
   createRunningHubTask,
@@ -6,7 +6,7 @@ import {
 
 interface RunMattingParams {
   imageUrlOrBase64: string;
-  workflowConfig: RunningHubWorkflowConfig;
+  workflowConfig: RunningHubMattingConfig;
 }
 
 export async function runRunningHubMatting({
@@ -59,7 +59,7 @@ export async function runRunningHubMatting({
   if (imageNodeId && fileName) {
     nodeInfoList.push({
       nodeId: imageNodeId,
-      fieldName: workflowConfig.baseImageFieldName || "image",
+      fieldName: "image",
       fieldValue: fileName,
     });
   }
@@ -68,7 +68,7 @@ export async function runRunningHubMatting({
   const result = await createRunningHubTask({
     workflowId: workflowConfig.workflowId,
     nodeInfoList,
-    apiMode: workflowConfig.apiMode || "run_workflow_v2",
+    apiMode: "run_workflow_v2",
   });
 
   return {

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Product, ProductAsset } from "../types";
-import { PRESET_RUNNINGHUB_WORKFLOWS } from "../data";
+import { runningHubMattingConfig } from "../config/runningHub";
 import {
   runRunningHubMatting,
   pollRunningHubTask,
@@ -193,29 +193,17 @@ export const WhiteBgRefine: React.FC<WhiteBgRefineProps> = ({
   }, [activeProductId]);
 
   // Retrieve the preset matting workflow configuration
-  const mattingWorkflow = PRESET_RUNNINGHUB_WORKFLOWS.find(
-    (w) => w.id === "rh_matting_cutout",
-  ) || {
-    id: "rh_matting_cutout",
-    name: "RunningHub 产品抠图 / 透明PNG生成",
-    workflowId: "",
-    apiMode: "run_workflow_v2",
-    modelType: "qwen_image_edit",
-    baseImageNodeId: "",
-    baseImageFieldName: "image",
-    promptNodeId: "",
-    promptFieldName: "",
-    outputNodeId: "",
-    defaultPrompt: "",
-    defaultNegativePrompt: "",
-    defaultDenoise: 1,
-    enabled: true,
-  };
+  const mattingWorkflow = runningHubMattingConfig;
 
-  const isWorkflowConfigured = !!(
-    mattingWorkflow.workflowId &&
-    (mattingWorkflow.baseImageNodeId || mattingWorkflow.inputImageNodeId)
-  );
+  const inputNodeId =
+    mattingWorkflow.inputImageNodeId ||
+    mattingWorkflow.baseImageNodeId;
+
+  const isWorkflowConfigured =
+    Boolean(mattingWorkflow.enabled) &&
+    Boolean(mattingWorkflow.apiBaseUrl) &&
+    Boolean(mattingWorkflow.workflowId) &&
+    Boolean(inputNodeId);
 
   // Automatically switch preview modes when results load
   useEffect(() => {
@@ -1425,8 +1413,49 @@ export const WhiteBgRefine: React.FC<WhiteBgRefineProps> = ({
               </div>
             </div>
 
-            {/* Workflow Specification Guide Bullet Points */}
+            {/* Workflow Config Status */}
             <div className="bg-slate-50 text-[10px] p-3 rounded-lg border border-slate-100 text-slate-500 space-y-1.5">
+              <div className="font-semibold text-slate-700 flex items-center mb-2">
+                <FileIcon className="w-3.5 h-3.5 mr-1 text-indigo-500" />
+                RunningHub 工作流配置状态
+              </div>
+              <ul className="space-y-1 leading-relaxed text-[9px] pl-1 font-mono">
+                <li className="flex justify-between">
+                  <span>总开关 (Enabled):</span>
+                  <span className={mattingWorkflow.enabled ? "text-emerald-600 font-bold" : "text-red-500 font-bold"}>{mattingWorkflow.enabled ? "已开启" : "未开启"}</span>
+                </li>
+                <li className="flex justify-between">
+                  <span>API Base URL:</span>
+                  <span className={mattingWorkflow.apiBaseUrl ? "text-emerald-600 font-bold" : "text-red-500 font-bold"}>{mattingWorkflow.apiBaseUrl ? "已填写" : "未填写"}</span>
+                </li>
+                <li className="flex justify-between">
+                  <span>API Key:</span>
+                  <span className={mattingWorkflow.apiKey ? "text-emerald-600 font-bold" : "text-red-500 font-bold"}>{mattingWorkflow.apiKey ? "已配置" : "未配置"}</span>
+                </li>
+                <li className="flex justify-between">
+                  <span>Workflow ID:</span>
+                  <span className={mattingWorkflow.workflowId ? "text-emerald-600 font-bold" : "text-red-500 font-bold"}>{mattingWorkflow.workflowId ? "已填写" : "未填写"}</span>
+                </li>
+                <li className="flex justify-between">
+                  <span>输入节点 ID:</span>
+                  <span className={inputNodeId ? "text-emerald-600 font-bold" : "text-red-500 font-bold"}>{inputNodeId ? "已填写" : "未填写"}</span>
+                </li>
+                <li className="flex justify-between border-t border-slate-200 mt-1 pt-1">
+                  <span className="font-semibold text-slate-700 text-[10px]">整体状态:</span>
+                  <span className={isWorkflowConfigured ? "text-emerald-600 font-bold text-[10px]" : "text-red-500 font-bold text-[10px]"} >{isWorkflowConfigured ? "已就绪" : "未完全配置"}</span>
+                </li>
+              </ul>
+              {!isWorkflowConfigured && (
+                <div className="mt-2 text-[9px] text-red-500 bg-red-50 p-1.5 rounded">
+                  RunningHub 工作流未配置，请先填写参配置。
+                  <br />
+                  {!mattingWorkflow.apiKey && "开发测试可使用 VITE_RUNNINGHUB_API_KEY，生产环境建议使用后端代理。"}
+                </div>
+              )}
+            </div>
+
+            {/* Workflow Specification Guide Bullet Points */}
+            <div className="bg-slate-50 text-[10px] p-3 rounded-lg border border-slate-100 text-slate-500 space-y-1.5 mt-3">
               <div className="font-semibold text-slate-700 flex items-center">
                 <FileIcon className="w-3.5 h-3.5 mr-1 text-indigo-500" />
                 RunningHub 抠图工作流提示
