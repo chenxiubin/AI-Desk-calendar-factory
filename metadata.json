@@ -1,0 +1,6 @@
+{
+  "name": "AI台历挂历电商图片批量生产系统",
+  "description": "电商台历与挂历图片批量生产管理系统后台，包含产品资产库、白底精修、模板编辑器、批量套版、图片审核、导出中心等功能模块",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
