@@ -52,44 +52,7 @@ export function convertTemplateToLayers(
 ): PageLayerInstance[] {
   const layers: PageLayerInstance[] = [];
 
-  // 1. Initial Scene Base Layer
-  let sceneUrl =
-    "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=800&auto=format&fit=crop";
-  if (
-    template.background?.type === "scene" &&
-    template.background.sceneStyle === "warm_light"
-  ) {
-    sceneUrl =
-      "https://images.unsplash.com/photo-1513519245088-0e12902e5a38?q=80&w=800&auto=format&fit=crop";
-  } else if (
-    template.background?.type === "scene" &&
-    template.background.sceneStyle === "festive_red"
-  ) {
-    sceneUrl =
-      "https://images.unsplash.com/photo-1540317580114-ed684c15fc97?q=80&w=800&auto=format&fit=crop";
-  }
-
-  layers.push({
-    id: `layer_scene_base_${Date.now()}_0`,
-    pageId,
-    layerType: "scene_base",
-    name: "场景立体底图 (scene_base)",
-    imageUrl: sceneUrl,
-    x: 50,
-    y: 50,
-    width: 100,
-    height: 100,
-    rotation: 0,
-    zIndex: 1,
-    visible: true,
-    locked: true,
-    opacity: 1.0,
-    anchor: "center",
-    lockAspectRatio: false,
-    sendToRunningHub: true,
-  });
-
-  // 2. Map existing template components onto Layers if defined
+  // If template has components, convert them directly (skip hardcoded Unsplash fallback)
   if (template.components && template.components.length > 0) {
     template.components.forEach((comp, idx) => {
       let lType: PageLayerType = "custom_asset";

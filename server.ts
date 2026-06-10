@@ -69,23 +69,22 @@ const assetStorage = multer.diskStorage({
 });
 const uploadToDisk = multer({ storage: assetStorage, limits: { fileSize: 50 * 1024 * 1024 } });
 
-// 1. POST /api/upload-canvas
-app.post("/api/upload-canvas", upload.single("image"), (req, res) => {
-
-// 0. POST /api/upload-asset — save file to assets/ folder, return URL
+// 0. POST /api/upload-asset — save file to assets/ folder, return URL for asset library
 app.post("/api/upload-asset", uploadToDisk.single("file"), (req, res) => {
   if (!req.file) {
     res.status(400).json({ error: "No file uploaded" });
     return;
   }
-  const fileName = req.file.filename;
   res.json({
-    fileUrl: `/assets/${fileName}`,
+    fileUrl: `/assets/${req.file.filename}`,
     fileName: req.file.originalname,
     width: 0,
     height: 0,
   });
 });
+
+// 1. POST /api/upload-canvas
+app.post("/api/upload-canvas", upload.single("image"), (req, res) => {
   if (!req.file) {
     res.status(400).json({ error: "No image file uploaded" });
     return;

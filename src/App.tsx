@@ -32,7 +32,7 @@ export default function App() {
   const LS_KEY_PRODUCTS = "calendar_app_products";
   const LS_KEY_TEMPLATES = "calendar_app_templates";
   const LS_KEY_DATA_VER = "calendar_app_data_version";
-  const DATA_VERSION = 5; // bump this when seed data changes to invalidate old localStorage
+  const DATA_VERSION = 6; // bump this when seed data changes to invalidate old localStorage
 
   // Core Global States — restore from localStorage, fallback to seed data
   const [products, setProducts] = useState<Product[]>(() => {

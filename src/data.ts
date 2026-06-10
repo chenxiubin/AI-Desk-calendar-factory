@@ -140,10 +140,7 @@ export const PRESET_TEMPLATES: Template[] = [
     aspectRatio: "1:1",
     outputWidth: 800,
     outputHeight: 800,
-    background: {
-      type: "scene",
-      sceneStyle: "warm_light",
-    },
+    background: { type: "color", color: "#FFFFFF" },
     status: "enabled",
     slots: [
       {
@@ -181,10 +178,7 @@ export const PRESET_TEMPLATES: Template[] = [
     aspectRatio: "1:1",
     outputWidth: 800,
     outputHeight: 800,
-    background: {
-      type: "scene",
-      sceneStyle: "beige_paper",
-    },
+    background: { type: "color", color: "#FFFFFF" },
     status: "enabled",
     slots: [
       {
@@ -222,10 +216,7 @@ export const PRESET_TEMPLATES: Template[] = [
     aspectRatio: "1:1",
     outputWidth: 800,
     outputHeight: 800,
-    background: {
-      type: "scene",
-      sceneStyle: "luxury_gold",
-    },
+    background: { type: "color", color: "#FFFFFF" },
     status: "enabled",
     slots: [
       {
@@ -280,10 +271,7 @@ export const PRESET_TEMPLATES: Template[] = [
     aspectRatio: "1:1",
     outputWidth: 800,
     outputHeight: 800,
-    background: {
-      type: "scene",
-      sceneStyle: "studio_white",
-    },
+    background: { type: "color", color: "#FFFFFF" },
     status: "enabled",
     slots: [
       {
@@ -321,10 +309,7 @@ export const PRESET_TEMPLATES: Template[] = [
     aspectRatio: "3:4",
     outputWidth: 750,
     outputHeight: 1000,
-    background: {
-      type: "scene",
-      sceneStyle: "beige_paper",
-    },
+    background: { type: "color", color: "#FFFFFF" },
     status: "enabled",
     slots: [
       {
@@ -362,10 +347,7 @@ export const PRESET_TEMPLATES: Template[] = [
     aspectRatio: "3:4",
     outputWidth: 750,
     outputHeight: 1000,
-    background: {
-      type: "scene",
-      sceneStyle: "festive_red",
-    },
+    background: { type: "color", color: "#FFFFFF" },
     status: "enabled",
     slots: [
       {
@@ -749,8 +731,8 @@ export const PRESET_TEMPLATE_SUITES: TemplateSuite[] = [
     globalStyle: {
       colorPalette: ["#DC2626", "#F59E0B", "#111827", "#FEF3C7"],
       fontStyle: "Space Grotesk & Inter Mono",
-      sceneStyle: "暖色调新中式高档家居场景",
-      lightDirection: "右上45度柔和侧光",
+      sceneStyle: "",
+            lightDirection: "右上45度柔和侧光",
       description:
         "专为桌面台历打造的高端国风商务套系，保障方形主图最少10张、竖版主图最少10张，完备输出白底精修与透明PNG正式交付成品。",
     },
@@ -856,8 +838,8 @@ export const PRESET_TEMPLATE_SUITES: TemplateSuite[] = [
     globalStyle: {
       colorPalette: ["#1e293b", "#3b82f6", "#111827"],
       fontStyle: "Modern Elegance Serif",
-      sceneStyle: "中式典雅红木卷轴挂墙场景",
-      lightDirection: "垂直高透漫射光",
+      sceneStyle: "",
+            lightDirection: "垂直高透漫射光",
       description:
         "挂历标准生产套系。包含最少方形12张、竖版12张主图卖点图，配备高解析度白底精修与透明PNG成品，完全面向最终交付。",
     },
@@ -893,8 +875,8 @@ export const PRESET_TEMPLATE_SUITES: TemplateSuite[] = [
     globalStyle: {
       colorPalette: ["#DC2626", "#F59E0B"],
       fontStyle: "NianHuo Brush & Chinese Serif",
-      sceneStyle: "尊贵雕镂艺术底座展台场景",
-      lightDirection: "多维偏斜聚光射灯",
+      sceneStyle: "",
+            lightDirection: "多维偏斜聚光射灯",
       description:
         "专为工艺福牌年雕及各类挂折艺术年卡设计的挂件套系产品，工艺细节精致。",
     },

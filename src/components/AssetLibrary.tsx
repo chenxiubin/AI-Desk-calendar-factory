@@ -527,8 +527,9 @@ export const AssetLibrary: React.FC<AssetLibraryProps> = ({
                       try {
                         for (let i = 0; i < fileList.length; i++) {
                           const file = fileList[i];
+                          if (!file) continue;
                           const formData = new FormData();
-                          formData.append("file", file);
+                          formData.append("file", file as File);
 
                           const res = await fetch("/api/upload-asset", {
                             method: "POST",
@@ -554,7 +555,7 @@ export const AssetLibrary: React.FC<AssetLibraryProps> = ({
                             width: dims.w,
                             height: dims.h,
                             status: "ready",
-                            fileName: file.name,
+                            fileName: (file as File).name,
                           } as any);
                         }
 

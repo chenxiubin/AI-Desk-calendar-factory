@@ -1232,78 +1232,50 @@ export function drawDecorAndLogoOverlays(
 export function getTemplateComponents(template: Template): TemplateComponent[] {
   const components: TemplateComponent[] = [];
 
-  // 1. scene_base
+  // 1. scene_base — always full canvas
   components.push({
     id: `comp_scene_${template.id}`,
-    name: "场景底图层 (scene_base)",
+    name: "场景底图",
     type: "scene_base",
     x: 0,
     y: 0,
-    width: template.outputWidth || 800,
-    height: template.outputHeight || 800,
-    zIndex: 1,
+    width: 100,
+    height: 100,
+    zIndex: 0,
     visible: true,
     sendToRunningHub: true,
   });
 
-  // 2. product_slot
+  // 2. product_slot for each slot
   template.slots.forEach((slot, idx) => {
     components.push({
       id: `comp_slot_${slot.id || idx}`,
-      name: `${slot.slotName || "产品槽位"} (product_slot)`,
+      name: slot.slotName || "产品槽位",
       type: "product_slot",
       x: slot.x,
       y: slot.y,
       width: slot.maxWidth,
       height: slot.maxHeight,
-      zIndex: slot.layer || 3,
+      zIndex: 10,
       visible: true,
       sendToRunningHub: true,
     });
   });
 
-  // 3. text_overlay components for each text rule
+  // 3. text_overlay for each text field
   template.textFields.forEach((field, idx) => {
     components.push({
       id: `comp_text_${field.id || idx}`,
-      name: `${field.fieldName || "文案控制"} (text_overlay)`,
+      name: field.fieldName || "文案层",
       type: "text_overlay",
       x: field.x,
       y: field.y,
       width: 40,
       height: 8,
-      zIndex: 10 + idx,
+      zIndex: 40 + idx,
       visible: true,
       sendToRunningHub: false,
     });
-  });
-
-  // 4. decorative overlays
-  components.push({
-    id: `comp_decor_${template.id}`,
-    name: "氛围装饰/印记章组件 (decor_overlay)",
-    type: "decor_overlay",
-    x: 88,
-    y: 88,
-    width: 12,
-    height: 12,
-    zIndex: 8,
-    visible: true,
-    sendToRunningHub: false,
-  });
-
-  // 5. logo components
-  components.push({
-    id: `comp_logo_${template.id}`,
-    name: "品质金星顶冠Logo组件 (logo_overlay)",
-    type: "logo_overlay",
-    x: 50,
-    y: 4,
-    width: 15,
-    height: 4,
-    zIndex: 9,
-    visible: true,
-    sendToRunningHub: false,
   });
 
   return components;

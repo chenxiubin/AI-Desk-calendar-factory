@@ -9,6 +9,7 @@ import {
   TextField,
 } from "../types";
 import { getTemplateComponents } from "../utils/renderTemplate";
+import { detectLayerType, getDefaultZIndexForType, getDefaultSendToRH, getTypeLabel, detectPageIndex } from "../utils/templateImport";
 import {
   Check,
   Eye,
@@ -872,6 +873,55 @@ export const TemplateEditor: React.FC<TemplateEditorProps> = ({
     reader.readAsDataURL(file);
   };
 
+  // Batch import: read all files, detect types, create components at once
+  const handleBatchImport = async (files: FileList) => {
+    const fileArray = Array.from(files);
+    const newComponents: TemplateComponent[] = [];
+
+    for (const file of fileArray) {
+      const dataUrl = await new Promise<string>((resolve) => {
+        const reader = new FileReader();
+        reader.onload = (e) => resolve(e.target?.result as string);
+        reader.readAsDataURL(file);
+      });
+      const baseName = file.name.replace(/\.[^.]+$/, "");
+      const type = detectLayerType(file.name);
+      const label = getTypeLabel(type);
+      const id = `comp_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+
+      newComponents.push({
+        id,
+        name: `${baseName} (${label})`,
+        type,
+        imageUrl: dataUrl,
+        x: type === "scene_base" ? 0 : 50,
+        y: type === "scene_base" ? 0 : 50,
+        width: type === "scene_base" ? 100 : 30,
+        height: type === "scene_base" ? 100 : 30,
+        zIndex: getDefaultZIndexForType(type),
+        visible: true,
+        sendToRunningHub: getDefaultSendToRH(type),
+        lockAspectRatio: true,
+        scaleMode: "contain",
+        anchor: "center",
+      });
+    }
+
+    if (newComponents.length === 0) return;
+
+    // Merge with existing components, scene_base goes first
+    const existing = (activeTemplate.components || []).filter(
+      (c) => !newComponents.some((nc) => nc.type === "scene_base" && c.type === "scene_base"),
+    );
+    const merged = [
+      ...newComponents.filter((c) => c.type === "scene_base"),
+      ...existing.filter((c) => c.type !== "scene_base"),
+      ...newComponents.filter((c) => c.type !== "scene_base"),
+    ];
+
+    handleUpdateTemplate({ ...activeTemplate, components: merged });
+  };
+
   const getRenderedContent = (textField: TextField, product: Product) => {
     if (!textField.isDynamic) return textField.content;
     return textField.content
@@ -1208,7 +1258,7 @@ export const TemplateEditor: React.FC<TemplateEditorProps> = ({
             onBusinessChange={updateBusinessConfig}
             onTemplateChange={handleUpdateTemplate}
             onBackgroundChange={updateBackground}
-            onImportFile={importComponentFile}
+            onBatchImport={handleBatchImport}
             onActivateLayers={activatePSEngine}
             onAddComponent={addComponent}
             onComponentSelect={(id) => {
@@ -1406,7 +1456,7 @@ const FloatingEditorPanel: React.FC<{
   onBusinessChange: (patch: Partial<BusinessTemplateConfig>) => void;
   onTemplateChange: (template: Template) => void;
   onBackgroundChange: (field: keyof TemplateBackground, value: unknown) => void;
-  onImportFile: (file: File) => void;
+  onBatchImport: (files: FileList) => void;
   onActivateLayers: () => void;
   onAddComponent: (
     type: TemplateComponentType,
@@ -1448,7 +1498,7 @@ const FloatingEditorPanel: React.FC<{
   onBusinessChange,
   onTemplateChange,
   onBackgroundChange,
-  onImportFile,
+  onBatchImport,
   onActivateLayers,
   onAddComponent,
   onComponentSelect,
@@ -1510,7 +1560,7 @@ const FloatingEditorPanel: React.FC<{
         )}
         {activePanel === "import" && (
           <ImportPanel
-            onImportFile={onImportFile}
+            onBatchImport={onBatchImport}
             onActivateLayers={onActivateLayers}
           />
         )}
@@ -1706,32 +1756,34 @@ const SelectField: React.FC<{
 );
 
 const ImportPanel: React.FC<{
-  onImportFile: (file: File) => void;
+  onBatchImport: (files: FileList) => void;
   onActivateLayers: () => void;
-}> = ({ onImportFile, onActivateLayers }) => (
+}> = ({ onBatchImport, onActivateLayers }) => (
   <div className="space-y-4">
     <div className="rounded-xl border border-indigo-100 bg-indigo-50 p-4">
       <div className="flex items-center gap-2 font-bold text-slate-900">
         <FolderOpen className="h-4 w-4 text-indigo-600" />
-        PS 导出图层
+        PS 导出图层批量导入
       </div>
       <p className="mt-2 text-xs leading-relaxed text-slate-600">
-        上传场景图、文案层、装饰 PNG 或 LOGO 层。平台会按文件名做初步识别。
+        批量上传从 PS 导出的分层 PNG。文件名含 scene/bg→场景底图, product→产品槽, text/文案→文案层, logo→LOGO层, decor/装饰→装饰层。
       </p>
       <label className="mt-4 flex cursor-pointer flex-col items-center justify-center rounded-xl border border-dashed border-indigo-300 bg-white px-4 py-7 text-center hover:bg-indigo-50">
         <input
           type="file"
+          multiple
           accept="image/png,image/jpeg,image/webp"
           className="hidden"
           onChange={(event) => {
-            const file = event.target.files?.[0];
-            if (file) onImportFile(file);
+            const files = event.target.files;
+            if (files && files.length > 0) onBatchImport(files);
+            event.target.value = "";
           }}
         />
         <Sparkles className="mb-2 h-7 w-7 text-indigo-500" />
-        <span className="text-sm font-bold text-slate-800">上传图层</span>
+        <span className="text-sm font-bold text-slate-800">批量上传图层</span>
         <span className="mt-1 text-[11px] text-slate-400">
-          PNG / JPG / WebP
+          PNG / JPG / WebP · 多选 · 自动识别类型
         </span>
       </label>
     </div>
