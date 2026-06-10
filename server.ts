@@ -2,6 +2,7 @@ import express from "express";
 import path from "path";
 import multer from "multer";
 import fs from "fs";
+import crypto from "crypto";
 import { createServer as createViteServer } from "vite";
 import { GoogleGenAI } from "@google/genai";
 
@@ -84,12 +85,25 @@ app.post("/api/upload-asset", uploadToDisk.single("file"), (req, res) => {
 });
 
 // 1. POST /api/upload-canvas
-app.post("/api/upload-canvas", upload.single("image"), (req, res) => {
+app.post("/api/upload-canvas", upload.single("image"), async (req, res) => {
   if (!req.file) {
     res.status(400).json({ error: "No image file uploaded" });
     return;
   }
-  res.json({ fileUrl: `/assets/${req.file.filename}` });
+  try {
+    const ext = path.extname(req.file.originalname) || ".png";
+    const filename = `${Date.now()}_${crypto.randomUUID().slice(0, 8)}${ext}`;
+    const filePath = path.join(assetDir, filename);
+    await fs.promises.writeFile(filePath, req.file.buffer);
+    res.json({
+      success: true,
+      fileUrl: `/assets/${filename}`,
+      filename,
+    });
+  } catch (err: any) {
+    console.error("upload-canvas error:", err);
+    res.status(500).json({ error: err.message || "Failed to save file" });
+  }
 });
 
 // RunningHub Integration Endpoints:

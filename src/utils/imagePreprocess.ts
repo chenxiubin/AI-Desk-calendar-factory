@@ -58,14 +58,27 @@ export function calculateTransparentImageBoundingBox(
       }
 
       if (!hasVisiblePixels) {
-        minX = 0;
-        minY = 0;
-        maxX = canvas.width;
-        maxY = canvas.height;
+        resolve({
+          x: 0,
+          y: 0,
+          width: canvas.width,
+          height: canvas.height,
+          centerX: canvas.width / 2,
+          centerY: canvas.height / 2,
+          imageWidth: canvas.width,
+          imageHeight: canvas.height,
+          normalizedX: 0,
+          normalizedY: 0,
+          normalizedWidth: 1,
+          normalizedHeight: 1,
+          normalizedCenterX: 0.5,
+          normalizedCenterY: 0.5,
+        });
+        return;
       }
 
-      const width = maxX - minX;
-      const height = maxY - minY;
+      const width = maxX - minX + 1;
+      const height = maxY - minY + 1;
       const centerX = minX + width / 2;
       const centerY = minY + height / 2;
 

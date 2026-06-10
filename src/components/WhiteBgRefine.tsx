@@ -202,7 +202,7 @@ export const WhiteBgRefine: React.FC<WhiteBgRefineProps> = ({
   const [configOverrides, setConfigOverrides] = useState({
     enabled: mattingWorkflow.enabled,
     apiBaseUrl: mattingWorkflow.apiBaseUrl || "",
-    apiKey: mattingWorkflow.apiKey || "",
+    apiKey: "",
     workflowId: mattingWorkflow.workflowId || "",
     inputImageNodeId: mattingWorkflow.inputImageNodeId || "",
     baseImageNodeId: mattingWorkflow.baseImageNodeId || "",
@@ -222,10 +222,8 @@ export const WhiteBgRefine: React.FC<WhiteBgRefineProps> = ({
 
   const isWorkflowConfigured =
     Boolean(effectiveConfig.enabled) &&
-    Boolean(effectiveConfig.apiBaseUrl) &&
     Boolean(effectiveConfig.workflowId) &&
-    Boolean(inputNodeId) &&
-    Boolean(effectiveConfig.apiKey);
+    Boolean(inputNodeId);
 
   // Automatically switch preview modes when results load
   useEffect(() => {
@@ -396,7 +394,7 @@ export const WhiteBgRefine: React.FC<WhiteBgRefineProps> = ({
         order: Date.now(),
         productId: selectedProduct?.id,
         productCode: selectedProduct?.productCode,
-        productName: selectedProduct?.name,
+        productName: selectedProduct?.productName,
         sourceImageUrl,
         cropInputUrl: dataUrl,
         thumbnailUrl,
@@ -723,9 +721,20 @@ export const WhiteBgRefine: React.FC<WhiteBgRefineProps> = ({
       return;
     }
 
-    if (item.status !== "ready") {
+    if (item.status !== "ready" && item.status !== "failed") {
       setMattingError("该队列项尚未确认预览，不能发送。");
       return;
+    }
+
+    // Clear previous error on retry
+    if (item.status === "failed") {
+      setMattingQueue((prev) =>
+        prev.map((q) =>
+          q.id === item.id
+            ? { ...q, errorMessage: undefined, status: "ready" }
+            : q,
+        ),
+      );
     }
 
     try {
@@ -1621,18 +1630,6 @@ export const WhiteBgRefine: React.FC<WhiteBgRefineProps> = ({
                 />
               </div>
 
-              {/* API Key */}
-              <div>
-                <label className="text-[11px] font-semibold text-slate-600 block mb-1">API Key</label>
-                <input
-                  type="password"
-                  value={configOverrides.apiKey}
-                  onChange={(e) => setConfigOverrides(prev => ({ ...prev, apiKey: e.target.value }))}
-                  placeholder="输入 RunningHub API Key"
-                  className="w-full text-xs px-3 py-2 border border-slate-200 rounded-lg focus:border-indigo-400 focus:ring-1 focus:ring-indigo-200 outline-none font-mono"
-                />
-              </div>
-
               {/* Workflow ID */}
               <div>
                 <label className="text-[11px] font-semibold text-slate-600 block mb-1">Workflow ID</label>
@@ -1683,7 +1680,7 @@ export const WhiteBgRefine: React.FC<WhiteBgRefineProps> = ({
                     setConfigOverrides({
                       enabled: mattingWorkflow.enabled,
                       apiBaseUrl: mattingWorkflow.apiBaseUrl || "",
-                      apiKey: mattingWorkflow.apiKey || "",
+                      apiKey: "",
                       workflowId: mattingWorkflow.workflowId || "",
                       inputImageNodeId: mattingWorkflow.inputImageNodeId || "",
                       baseImageNodeId: mattingWorkflow.baseImageNodeId || "",

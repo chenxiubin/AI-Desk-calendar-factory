@@ -95,7 +95,7 @@ export const Workspace: React.FC<WorkspaceProps> = ({
       step: "4",
       name: "批量套版",
       desc: "一键匹配生成多格式",
-      tabId: "batch",
+      tabId: "project_suite",
       icon: Layers,
     },
     {
