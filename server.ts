@@ -28,7 +28,7 @@ app.use("/assets", express.static(assetDir));
 
 // Retrieve system-wide keys secured silently
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY || "";
-const RUNNINGHUB_API_KEY = process.env.RUNNINGHUB_API_KEY || process.env.VITE_RUNNINGHUB_API_KEY || "RH_MOCK_KEY_2026_TEST";
+const RUNNINGHUB_API_KEY = process.env.RUNNINGHUB_API_KEY || "RH_MOCK_KEY_2026_TEST";
 
 const isRunningHubApiKeyMissingOrPlaceholder = (apiKey: string) =>
   !apiKey ||
