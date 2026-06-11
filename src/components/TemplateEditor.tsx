@@ -546,15 +546,13 @@ export const TemplateEditor: React.FC<TemplateEditorProps> = ({
   // --- Drag & Resize State ---
   const dragRef = useRef<{
     active: boolean;
-    type: "move" | "resize";
+    moveOrResize: "move" | "resize";
     handle?: "tl" | "tr" | "bl" | "br";
+    targetType: "component" | "slot" | "textField";
     targetId: string;
-    startX: number;
-    startY: number;
-    startCompX: number;
-    startCompY: number;
-    startCompW: number;
-    startCompH: number;
+    startX: number; startY: number;
+    startTargetX: number; startTargetY: number;
+    startTargetW: number; startTargetH: number;
   } | null>(null);
   const canvasAreaRef = useRef<HTMLDivElement | null>(null);
   const [, setDragTick] = useState(0); // force re-render during drag
@@ -579,7 +577,7 @@ export const TemplateEditor: React.FC<TemplateEditorProps> = ({
 
     dragRef.current = {
       active: true,
-      type: "move",
+      moveOrResize: "move",
       targetId: compId,
       startX: e.clientX,
       startY: e.clientY,
@@ -871,25 +869,25 @@ export const TemplateEditor: React.FC<TemplateEditorProps> = ({
       const comp = activeTemplate.components?.find((c) => c.id === drag.targetId);
       if (!comp) return;
 
-      if (drag.type === "move") {
-        const nextX = Math.max(0, Math.min(100 - comp.width, drag.startCompX + dxPct));
-        const nextY = Math.max(0, Math.min(100 - comp.height, drag.startCompY + dyPct));
+      if (drag.moveOrResize === "move") {
+        const nextX = Math.max(0, Math.min(100 - comp.width, drag.startTargetX + dxPct));
+        const nextY = Math.max(0, Math.min(100 - comp.height, drag.startTargetY + dyPct));
         updateComponent(drag.targetId, { x: nextX, y: nextY });
-      } else if (drag.type === "resize") {
-        let nextX = drag.startCompX, nextY = drag.startCompY,
-            nextW = drag.startCompW, nextH = drag.startCompH;
+      } else if (drag.moveOrResize === "resize") {
+        let nextX = drag.startTargetX, nextY = drag.startTargetY,
+            nextW = drag.startTargetW, nextH = drag.startTargetH;
         const min = 2;
         if (drag.handle === "tl") {
-          nextX = drag.startCompX + dxPct; nextY = drag.startCompY + dyPct;
-          nextW = drag.startCompW - dxPct; nextH = drag.startCompH - dyPct;
+          nextX = drag.startTargetX + dxPct; nextY = drag.startTargetY + dyPct;
+          nextW = drag.startTargetW - dxPct; nextH = drag.startTargetH - dyPct;
         } else if (drag.handle === "tr") {
-          nextY = drag.startCompY + dyPct;
-          nextW = drag.startCompW + dxPct; nextH = drag.startCompH - dyPct;
+          nextY = drag.startTargetY + dyPct;
+          nextW = drag.startTargetW + dxPct; nextH = drag.startTargetH - dyPct;
         } else if (drag.handle === "bl") {
-          nextX = drag.startCompX + dxPct;
-          nextW = drag.startCompW - dxPct; nextH = drag.startCompH + dyPct;
+          nextX = drag.startTargetX + dxPct;
+          nextW = drag.startTargetW - dxPct; nextH = drag.startTargetH + dyPct;
         } else if (drag.handle === "br") {
-          nextW = drag.startCompW + dxPct; nextH = drag.startCompH + dyPct;
+          nextW = drag.startTargetW + dxPct; nextH = drag.startTargetH + dyPct;
         }
         if (nextW < min) nextW = min; if (nextH < min) nextH = min;
         if (nextX < 0) nextX = 0; if (nextY < 0) nextY = 0;
@@ -1223,21 +1221,123 @@ export const TemplateEditor: React.FC<TemplateEditorProps> = ({
     );
   };
 
+  // TransformBox: renders selection frame + corner handles for selected component/slot/textField
+  const renderTransformBox = () => {
+    // Determine target pos/size based on selection type
+    let tx = 0, ty = 0, tw = 30, th = 30, tLocked = false, tVisible = true;
+    if (selectedComponentId && activeTemplate.components) {
+      const c = activeTemplate.components.find((x) => x.id === selectedComponentId);
+      if (!c || c.visible === false) return null;
+      if (c.type === "scene_base") return null;
+      tx = c.x ?? 50; ty = c.y ?? 50; tw = c.width ?? 30; th = c.height ?? 30;
+      tLocked = false; tVisible = true;
+    } else if (selectedSlotId) {
+      const s = activeTemplate.slots.find((x) => x.id === selectedSlotId);
+      if (!s) return null;
+      tx = s.x; ty = s.y; tw = s.maxWidth; th = s.maxHeight;
+    } else if (selectedTextFieldId) {
+      const tf = activeTemplate.textFields.find((x) => x.id === selectedTextFieldId);
+      if (!tf) return null;
+      tx = tf.x; ty = tf.y; tw = 24; th = 8; // textField estimated size
+    } else return null;
+    if (!tVisible) return null;
+
+    const handles = ["tl","tr","bl","br"] as const;
+    const hStyle = "absolute w-2.5 h-2.5 bg-white border-2 border-blue-500 rounded-sm z-[9999] pointer-events-auto";
+    const hCur = {tl:"nwse-resize",tr:"nesw-resize",bl:"nesw-resize",br:"nwse-resize"};
+    return (
+      <div className="pointer-events-none absolute z-[5000]" style={{left: tx + '%', top: ty + '%', width: tw + '%', height: th + '%'}}>
+        <div className="absolute inset-0 border-2 border-blue-500" />
+        {!tLocked && handles.map((h) => (
+          <div key={h} className={hStyle} style={{cursor:hCur[h],...(h==="tl"?{left:-5,top:-5}:h==="tr"?{right:-5,top:-5}:h==="bl"?{left:-5,bottom:-5}:{right:-5,bottom:-5})}}
+            onMouseDown={(e) => { e.stopPropagation();
+              if (selectedComponentId) handleHandleMouseDown(e, selectedComponentId, h, tx, ty, tw, th);
+            }}
+          />
+        ))}
+        <div className="absolute -top-6 left-1/2 -translate-x-1/2 whitespace-nowrap rounded bg-slate-900 px-2 py-0.5 text-[10px] font-bold text-white">
+          {Math.round(tx)},{Math.round(ty)} · {Math.round(tw)}×{Math.round(th)}
+        </div>
+      </div>
+    );
+  };
+
+  // Inspector: right panel content for selected element
+  const buildInspector = () => {
+    const sel = selectedComponent;
+    const sSlot = selectedSlot;
+    const sTf = selectedTextField;
+    if (!sel && !sSlot && !sTf) {
+      return <div className="text-center py-8 text-[11px] text-slate-400">请选择画布元素或左侧图层进行编辑</div>;
+    }
+    const Field = ({l,children}:{l:string,children:React.ReactNode}) => (
+      <div className="mb-2">
+        <div className="mb-0.5 text-[9px] font-bold text-slate-400">{l}</div>
+        {children}
+      </div>
+    );
+    const NInp = ({v,onCh,min,max}:{v:number,onCh:(n:number)=>void,min?:number,max?:number}) => (
+      <input type="number" value={Math.round(v*10)/10} step={0.5} min={min??0} max={max??100}
+        onChange={(e) => onCh(Number(e.target.value))}
+        className="w-full rounded border border-slate-200 px-2 py-1 text-[10px] font-mono" />
+    );
+    return (
+      <div className="space-y-3 text-[11px]">
+        {sel && (
+          <>
+            <Field l="名称"><input value={sel.name||""} onChange={(e) => updateComponent(sel.id,{name:e.target.value})} className="w-full rounded border border-slate-200 px-2 py-1 text-[10px] font-bold" /></Field>
+            <Field l="类型"><span className="text-[10px] text-slate-500">{COMPONENT_TYPE_LABEL[sel.type]}</span></Field>
+            <div className="grid grid-cols-2 gap-2">
+              <Field l="X"><NInp v={sel.x??50} onCh={(n) => updateComponent(sel.id,{x:n})} /></Field>
+              <Field l="Y"><NInp v={sel.y??50} onCh={(n) => updateComponent(sel.id,{y:n})} /></Field>
+              <Field l="宽度"><NInp v={sel.width??30} onCh={(n) => updateComponent(sel.id,{width:n})} min={2} /></Field>
+              <Field l="高度"><NInp v={sel.height??30} onCh={(n) => updateComponent(sel.id,{height:n})} min={2} /></Field>
+            </div>
+            <Field l="zIndex"><NInp v={sel.zIndex??0} onCh={(n) => updateComponent(sel.id,{zIndex:n})} min={0} max={999} /></Field>
+            <div className="flex items-center gap-3">
+              <label className="flex items-center gap-1 text-[10px] cursor-pointer"><input type="checkbox" checked={sel.visible!==false} onChange={(e) => updateComponent(sel.id,{visible:e.target.checked})} /> 可见</label>
+              <label className="flex items-center gap-1 text-[10px] cursor-pointer"><input type="checkbox" checked={sel.sendToRunningHub??false} onChange={(e) => updateComponent(sel.id,{sendToRunningHub:e.target.checked})} /> 发送RH</label>
+            </div>
+            <button type="button" onClick={() => deleteComponent(sel.id)} className="w-full rounded bg-rose-50 py-1.5 text-[10px] font-bold text-rose-600">删除图层</button>
+          </>
+        )}
+        {sSlot && (
+          <>
+            <div className="grid grid-cols-2 gap-2">
+              <Field l="X"><NInp v={sSlot.x} onCh={(n) => updateSlotGeometry(sSlot.id,"x",n)} /></Field>
+              <Field l="Y"><NInp v={sSlot.y} onCh={(n) => updateSlotGeometry(sSlot.id,"y",n)} /></Field>
+              <Field l="最大宽"><NInp v={sSlot.maxWidth} onCh={(n) => updateSlotGeometry(sSlot.id,"maxWidth",n)} min={2} /></Field>
+              <Field l="最大高"><NInp v={sSlot.maxHeight} onCh={(n) => updateSlotGeometry(sSlot.id,"maxHeight",n)} min={2} /></Field>
+            </div>
+          </>
+        )}
+        {sTf && (
+          <>
+            <Field l="文案内容"><textarea value={sTf.content} onChange={(e) => updateTextFieldValue(sTf.id,"content",e.target.value)} className="w-full min-h-[60px] rounded border border-slate-200 px-2 py-1 text-[10px] font-bold" /></Field>
+            <div className="grid grid-cols-2 gap-2">
+              <Field l="X"><NInp v={sTf.x} onCh={(n) => updateTextFieldValue(sTf.id,"x",n)} /></Field>
+              <Field l="Y"><NInp v={sTf.y} onCh={(n) => updateTextFieldValue(sTf.id,"y",n)} /></Field>
+              <Field l="字号"><NInp v={sTf.fontSize} onCh={(n) => updateTextFieldValue(sTf.id,"fontSize",n)} min={6} max={200} /></Field>
+              <Field l="颜色"><input type="color" value={sTf.color||"#000000"} onChange={(e) => updateTextFieldValue(sTf.id,"color",e.target.value)} className="w-full h-8 rounded border border-slate-200 p-0.5" /></Field>
+            </div>
+          </>
+        )}
+      </div>
+    );
+  };
+
   const renderLegacySlot = (slot: TemplateSlot) => {
     const isSelected = selectedSlotId === slot.id;
     return (
-      <button
+      <div
         key={slot.id}
-        type="button"
-        onClick={() => {
-          setActivePanel("slots");
-          setSelectedSlotId(slot.id);
-          setSelectedComponentId(null);
-          setSelectedTextFieldId(null);
+        onMouseDown={(e) => {
+          e.stopPropagation();
+          setSelectedSlotId(slot.id); setSelectedComponentId(null); setSelectedTextFieldId(null);
         }}
-        className={`absolute rounded-md border bg-blue-500/10 text-left ${
+        className={`absolute rounded-md border bg-blue-500/10 text-left cursor-move ${
           isSelected
-            ? "border-blue-500 ring-2 ring-blue-500 ring-offset-2"
+            ? "border-blue-500 ring-2 ring-blue-500"
             : "border-blue-400"
         }`}
         style={{
@@ -1253,24 +1353,21 @@ export const TemplateEditor: React.FC<TemplateEditorProps> = ({
         <span className="absolute -top-5 left-0 rounded bg-slate-900 px-1.5 py-0.5 text-[9px] font-bold text-white">
           {slot.slotName}
         </span>
-      </button>
+      </div>
     );
   };
 
   const renderTextField = (textField: TextField) => {
     const isSelected = selectedTextFieldId === textField.id;
     return (
-      <button
+      <div
         key={textField.id}
-        type="button"
-        onClick={() => {
-          setActivePanel("layers");
-          setSelectedTextFieldId(textField.id);
-          setSelectedSlotId(null);
-          setSelectedComponentId(null);
+        onMouseDown={(e) => {
+          e.stopPropagation();
+          setSelectedTextFieldId(textField.id); setSelectedSlotId(null); setSelectedComponentId(null);
         }}
-        className={`absolute max-w-[80%] rounded px-1.5 py-1 text-left ${
-          isSelected ? "ring-2 ring-sky-500 ring-offset-2" : "hover:ring-1"
+        className={`absolute max-w-[80%] rounded px-1.5 py-1 text-left cursor-move ${
+          isSelected ? "ring-2 ring-sky-500" : "hover:ring-1"
         }`}
         style={{
           left: `${textField.x}%`,
@@ -1284,7 +1381,7 @@ export const TemplateEditor: React.FC<TemplateEditorProps> = ({
         }}
       >
         {getRenderedContent(textField, activeProduct)}
-      </button>
+      </div>
     );
   };
 
