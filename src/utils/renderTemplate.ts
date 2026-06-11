@@ -117,39 +117,30 @@ export async function renderTemplateToCanvas(
     );
   } else {
     // Standard rendering path (supports all / base_only / overlays_only)
-    if (template.components && template.components.length > 0) {
-      // Render from components (modern path) — avoids double-rendering with slots
-      if (renderMode === "all" || renderMode === "base_only") {
-        const baseComps = template.components
-          .filter(
-            (c) =>
-              c.visible !== false && (c.type === "scene_base" || c.type === "product_slot"),
-          )
+    // Determine which layers have modern components vs legacy fallback
+    const visibleComps = (template.components || []).filter((c) => c.visible !== false);
+    const hasModernBase = visibleComps.some(
+      (c) => c.type === "scene_base" || c.type === "product_slot",
+    );
+    const hasModernOverlay = visibleComps.some(
+      (c) => c.type === "text_overlay" || c.type === "decor_overlay" || c.type === "logo_overlay",
+    );
+    // Only count text_overlay with actual imageUrl as renderable
+    const hasRenderableTextOverlay = visibleComps.some(
+      (c) => c.type === "text_overlay" && Boolean(c.imageUrl),
+    );
+
+    if (renderMode === "all" || renderMode === "base_only") {
+      if (hasModernBase) {
+        // Render from components — skips legacy background+slots to avoid double
+        const baseComps = visibleComps
+          .filter((c) => c.type === "scene_base" || c.type === "product_slot")
           .sort((a, b) => a.zIndex - b.zIndex);
         for (const comp of baseComps) {
           await drawComponent(ctx, comp, product, template, canvas.width, canvas.height, offsets, renderMode !== "base_only");
         }
-      }
-      if (renderMode === "all" || renderMode === "overlays_only") {
-        const overlayComps = template.components
-          .filter(
-            (c) =>
-              c.visible !== false &&
-              (c.type === "text_overlay" || c.type === "decor_overlay" || c.type === "logo_overlay"),
-          )
-          .sort((a, b) => a.zIndex - b.zIndex);
-        for (const comp of overlayComps) {
-          await drawComponent(ctx, comp, product, template, canvas.width, canvas.height, offsets, false);
-        }
-        const hasTextOverlay = template.components.some((c) => c.visible !== false && c.type === "text_overlay");
-        if (!hasTextOverlay) {
-          drawTextFields(ctx, product, template, canvas.width, canvas.height);
-        }
-        drawDecorAndLogoOverlays(ctx, template, product, canvas.width, canvas.height);
-      }
-    } else {
-      // Legacy path — no components, fall back to slots/textFields
-      if (renderMode === "all" || renderMode === "base_only") {
+      } else {
+        // Legacy fallback when no modern base components
         drawBackground(ctx, template, canvas.width, canvas.height);
         const sortedSlots = [...template.slots].sort(
           (a, b) => (a.layer || 0) - (b.layer || 0),
@@ -158,10 +149,26 @@ export async function renderTemplateToCanvas(
           await drawSlot(ctx, product, slot, canvas.width, canvas.height, offsets, renderMode);
         }
       }
-      if (renderMode === "all" || renderMode === "overlays_only") {
-        drawTextFields(ctx, product, template, canvas.width, canvas.height);
-        drawDecorAndLogoOverlays(ctx, template, product, canvas.width, canvas.height);
+    }
+
+    if (renderMode === "all" || renderMode === "overlays_only") {
+      if (hasModernOverlay) {
+        const overlayComps = visibleComps
+          .filter(
+            (c) =>
+              c.type === "text_overlay" || c.type === "decor_overlay" || c.type === "logo_overlay",
+          )
+          .sort((a, b) => a.zIndex - b.zIndex);
+        for (const comp of overlayComps) {
+          await drawComponent(ctx, comp, product, template, canvas.width, canvas.height, offsets, false);
+        }
       }
+      // Fallback textFields if no renderable text_overlay exists
+      if (!hasRenderableTextOverlay) {
+        drawTextFields(ctx, product, template, canvas.width, canvas.height);
+      }
+      // Always draw traditional decor/logo overlays as supplement
+      drawDecorAndLogoOverlays(ctx, template, product, canvas.width, canvas.height);
     }
   }
 
@@ -1464,7 +1471,12 @@ export async function renderFusionBaseImage(
   ctx.imageSmoothingEnabled = true;
   ctx.imageSmoothingQuality = "high";
 
-  if (template.components && template.components.length > 0) {
+  const hasModernBaseComps =
+    template.components &&
+    template.components.some(
+      (c) => c.visible !== false && (c.type === "scene_base" || c.type === "product_slot"),
+    );
+  if (hasModernBaseComps) {
     // Filter and render components: scene_base and product_slots only.
     const eligibleComps = template.components
       .filter(
@@ -1568,8 +1580,13 @@ export async function renderFinalCompositeImage(
     }
   } else {
     // If runninghub output is not completed, we draw standard base preview background
-    if (template.components && template.components.length > 0) {
-      const baseComps = template.components
+    const hasBaseComps =
+      template.components &&
+      template.components.some(
+        (c) => c.visible !== false && (c.type === "scene_base" || c.type === "product_slot"),
+      );
+    if (hasBaseComps) {
+      const baseComps = template.components!
         .filter(
           (c) =>
             c.visible !== false && (c.type === "scene_base" || c.type === "product_slot"),
@@ -1633,10 +1650,12 @@ export async function renderFinalCompositeImage(
   }
 
   // Draw any traditional typography / placeholders to protect layout compatibility
-  const hasTextOverlay =
+  const hasRenderableTextOverlay =
     template.components &&
-    template.components.some((c) => c.visible !== false && c.type === "text_overlay");
-  if (!hasTextOverlay) {
+    template.components.some(
+      (c) => c.visible !== false && c.type === "text_overlay" && Boolean(c.imageUrl),
+    );
+  if (!hasRenderableTextOverlay) {
     drawTextFields(ctx, dummyProduct, template, canvas.width, canvas.height);
   }
   if (!template.components || template.components.length === 0) {
@@ -1690,11 +1709,11 @@ export async function renderFullPreviewImage(
       );
     }
 
-    // Draw typography only if there is no text_overlay in components
-    const hasTextOverlay = template.components.some(
-      (c) => c.visible !== false && c.type === "text_overlay",
+    // Draw typography only if there is no renderable text_overlay (with imageUrl) in components
+    const hasRenderableTextOverlay = template.components.some(
+      (c) => c.visible !== false && c.type === "text_overlay" && Boolean(c.imageUrl),
     );
-    if (!hasTextOverlay) {
+    if (!hasRenderableTextOverlay) {
       drawTextFields(ctx, product, template, canvas.width, canvas.height);
     }
   } else {
@@ -1970,11 +1989,11 @@ export async function renderFinalCompositeFromLayers(
     await drawSingleLayer(ctx, oL, product, canvas.width, canvas.height, false);
   }
 
-  // 3. Optional classic dynamic text labels draw fallback if no text overlay exists in layers
-  const hasTextOverlay = layers.some(
-    (l) => l.visible !== false && l.layerType === "text_overlay",
+  // 3. Optional classic dynamic text labels draw fallback if no renderable text overlay
+  const hasRenderableTextOverlay = layers.some(
+    (l) => l.visible !== false && l.layerType === "text_overlay" && Boolean(l.imageUrl),
   );
-  if (!hasTextOverlay) {
+  if (!hasRenderableTextOverlay) {
     drawTextFields(ctx, product, template, canvas.width, canvas.height);
   }
 
