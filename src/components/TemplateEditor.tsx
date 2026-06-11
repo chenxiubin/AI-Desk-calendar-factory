@@ -544,17 +544,31 @@ export const TemplateEditor: React.FC<TemplateEditorProps> = ({
   const [detailCount, setDetailCount] = useState(14);
   const [draggingLayerId, setDraggingLayerId] = useState<string | null>(null);
 
-  const reorderComponents = (sourceId: string, targetId: string) => {
-    const comps = [...(activeTemplate.components || [])];
-    const fromI = comps.findIndex((c) => c.id === sourceId);
-    const toI = comps.findIndex((c) => c.id === targetId);
-    if (fromI < 0 || toI < 0 || fromI === toI) return;
-    const src = comps[fromI], tgt = comps[toI];
-    if (src.type === "scene_base" || tgt.type === "scene_base") return;
-    const [moved] = comps.splice(fromI, 1);
-    comps.splice(toI, 0, moved);
-    const reindexed = comps.map((c, i) => ({ ...c, zIndex: c.type === "scene_base" ? 0 : i + 1 }));
-    handleUpdateTemplate({ ...activeTemplate, components: reindexed });
+  const getComponentLayerItems = () => {
+    return [...(activeTemplate.components || [])].sort((a, b) => {
+      if (a.type === "scene_base") return 1;
+      if (b.type === "scene_base") return -1;
+      return (b.zIndex ?? 0) - (a.zIndex ?? 0);
+    });
+  };
+
+  const reorderComponentLayer = (sourceId: string, targetId: string) => {
+    const visibleOrder = getComponentLayerItems();
+    const fromIndex = visibleOrder.findIndex((item) => item.id === sourceId);
+    const toIndex = visibleOrder.findIndex((item) => item.id === targetId);
+    if (fromIndex < 0 || toIndex < 0 || fromIndex === toIndex) return;
+    const source = visibleOrder[fromIndex];
+    const target = visibleOrder[toIndex];
+    if (source.type === "scene_base" || target.type === "scene_base") return;
+    const nextVisibleOrder = [...visibleOrder];
+    const [moved] = nextVisibleOrder.splice(fromIndex, 1);
+    nextVisibleOrder.splice(toIndex, 0, moved);
+    const normalLayers = nextVisibleOrder.filter((item) => item.type !== "scene_base");
+    const sceneLayers = nextVisibleOrder.filter((item) => item.type === "scene_base");
+    const updatedNormalLayers = normalLayers.map((item, index) => ({ ...item, zIndex: normalLayers.length - index }));
+    const updatedSceneLayers = sceneLayers.map((item) => ({ ...item, zIndex: 0 }));
+    const nextComponents = [...updatedSceneLayers, ...updatedNormalLayers];
+    handleUpdateTemplate({ ...activeTemplate, components: nextComponents });
   };
 
   // --- Drag & Resize State ---
@@ -1350,7 +1364,7 @@ export const TemplateEditor: React.FC<TemplateEditorProps> = ({
               {items.map((c) => (
                 <div key={c.id}
                   onDragOver={(e) => { if (c.type !== "scene_base") e.preventDefault(); }}
-                  onDrop={(e) => { e.preventDefault(); if (draggingLayerId && draggingLayerId !== c.id) reorderComponents(draggingLayerId, c.id); setDraggingLayerId(null); }}
+                  onDrop={(e) => { e.preventDefault(); if (draggingLayerId && draggingLayerId !== c.id) reorderComponentLayer(draggingLayerId, c.id); setDraggingLayerId(null); }}
                   className={`flex items-center gap-1.5 rounded px-1.5 py-1 text-[10px] cursor-pointer ${
                     draggingLayerId === c.id ? "bg-blue-100/50" : ""
                   } ${selectedComponentId === c.id ? "bg-blue-50 text-blue-700 ring-1 ring-blue-200" : "text-slate-600 hover:bg-slate-50"}`}
@@ -1661,7 +1675,7 @@ export const TemplateEditor: React.FC<TemplateEditorProps> = ({
                         {items.map((c) => (
                           <div key={c.id}
                             onDragOver={(e) => { if (c.type !== "scene_base") e.preventDefault(); }}
-                            onDrop={(e) => { e.preventDefault(); if (draggingLayerId && draggingLayerId !== c.id) reorderComponents(draggingLayerId, c.id); setDraggingLayerId(null); }}
+                            onDrop={(e) => { e.preventDefault(); if (draggingLayerId && draggingLayerId !== c.id) reorderComponentLayer(draggingLayerId, c.id); setDraggingLayerId(null); }}
                             className={`flex items-center gap-1.5 rounded px-1.5 py-1 text-[10px] cursor-pointer ${
                               draggingLayerId === c.id ? "bg-blue-100/50" : ""
                             } ${selectedComponentId === c.id ? "bg-blue-50 text-blue-700 ring-1 ring-blue-200" : "text-slate-600 hover:bg-slate-50"}`}
