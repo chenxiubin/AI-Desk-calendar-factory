@@ -542,6 +542,20 @@ export const TemplateEditor: React.FC<TemplateEditorProps> = ({
   const [mainThemeCount, setMainThemeCount] = useState(8);
   const [skuCount, setSkuCount] = useState(4);
   const [detailCount, setDetailCount] = useState(14);
+  const [draggingLayerId, setDraggingLayerId] = useState<string | null>(null);
+
+  const reorderComponents = (sourceId: string, targetId: string) => {
+    const comps = [...(activeTemplate.components || [])];
+    const fromI = comps.findIndex((c) => c.id === sourceId);
+    const toI = comps.findIndex((c) => c.id === targetId);
+    if (fromI < 0 || toI < 0 || fromI === toI) return;
+    const src = comps[fromI], tgt = comps[toI];
+    if (src.type === "scene_base" || tgt.type === "scene_base") return;
+    const [moved] = comps.splice(fromI, 1);
+    comps.splice(toI, 0, moved);
+    const reindexed = comps.map((c, i) => ({ ...c, zIndex: c.type === "scene_base" ? 0 : i + 1 }));
+    handleUpdateTemplate({ ...activeTemplate, components: reindexed });
+  };
 
   // --- Drag & Resize State ---
   const dragRef = useRef<{
@@ -2204,95 +2218,6 @@ const LayersPanel: React.FC<{
           </div>
         </div>
       ))}
-
-      {selectedComponent && (
-      <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-        <div className="mb-3 text-sm font-bold text-slate-900">图层属性</div>
-        <input
-          value={selectedComponent.name}
-          onChange={(event) =>
-            onComponentUpdate(selectedComponent.id, { name: event.target.value })
-          }
-          className="mb-3 w-full rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-xs font-bold"
-        />
-        <SelectField
-          label="图层类型"
-          value={selectedComponent.type}
-          options={Object.entries(COMPONENT_TYPE_LABEL).map(([value, label]) => ({
-            value,
-            label,
-          }))}
-          onChange={(value) =>
-            onComponentUpdate(selectedComponent.id, {
-              type: value as TemplateComponentType,
-              sendToRunningHub:
-                value === "scene_base" || value === "product_slot",
-            })
-          }
-        />
-        <div className="mt-3 grid grid-cols-2 gap-2">
-          <NumberInput
-            label="X"
-            value={selectedComponent.x}
-            onChange={(value) => onComponentUpdate(selectedComponent.id, { x: value })}
-          />
-          <NumberInput
-            label="Y"
-            value={selectedComponent.y}
-            onChange={(value) => onComponentUpdate(selectedComponent.id, { y: value })}
-          />
-          <NumberInput
-            label="宽度"
-            value={selectedComponent.width}
-            onChange={(value) =>
-              onComponentUpdate(selectedComponent.id, { width: value })
-            }
-          />
-          <NumberInput
-            label="高度"
-            value={selectedComponent.height}
-            onChange={(value) =>
-              onComponentUpdate(selectedComponent.id, { height: value })
-            }
-          />
-        </div>
-        <label className="mt-3 flex items-center gap-2 rounded-lg bg-white px-3 py-2 text-xs font-bold text-slate-700">
-          <input
-            type="checkbox"
-            checked={selectedComponent.sendToRunningHub}
-            onChange={(event) =>
-              onComponentUpdate(selectedComponent.id, {
-                sendToRunningHub: event.target.checked,
-              })
-            }
-          />
-          杩涘叆 RunningHub
-        </label>
-        <button
-          type="button"
-          onClick={() => onComponentDelete(selectedComponent.id)}
-          className="mt-3 flex w-full items-center justify-center gap-1 rounded-lg bg-rose-50 py-2 text-xs font-bold text-rose-600"
-        >
-          <Trash className="h-4 w-4" />
-          删除图层
-        </button>
-      </div>
-    )}
-    {selectedTextField && (
-      <div className="rounded-xl border border-sky-100 bg-sky-50 p-4">
-        <div className="mb-3 flex items-center gap-2 font-bold text-slate-900">
-          <Type className="h-4 w-4 text-sky-600" />
-          文案层
-        </div>
-        <textarea
-          value={selectedTextField.content}
-          onChange={(event) =>
-            onTextFieldUpdate(selectedTextField.id, "content", event.target.value)
-          }
-          className="min-h-24 w-full rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-xs font-bold"
-        />
-      </div>
-    )}
     </div>
   );
 };
