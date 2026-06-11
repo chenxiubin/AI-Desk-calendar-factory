@@ -1664,10 +1664,9 @@ export const TemplateEditor: React.FC<TemplateEditorProps> = ({
                   {renderTransformBox()}
                   {showSafetyRegion && (<div className="pointer-events-none absolute inset-[6%] border-2 border-dashed border-rose-400/70" />)}
                 </div>
-                <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-50 flex flex-col items-center gap-2">
-                  {/* Toggle button */}
+                <div className="absolute bottom-3 left-3 z-50">
                   <button type="button" onClick={() => setIsLayerPanelOpen(v => !v)}
-                    className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white/95 text-slate-600 shadow-lg hover:bg-slate-50 hover:text-slate-800 transition-colors"
+                    className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white/95 text-slate-600 shadow-lg hover:bg-slate-50 hover:text-slate-800 transition-colors"
                     title={isLayerPanelOpen ? "收起图层列表" : "展开图层列表"}>
                     <Layers className="h-4 w-4" />
                   </button>
