@@ -1413,7 +1413,7 @@ export const TemplateEditor: React.FC<TemplateEditorProps> = ({
   };
 
   const renderFloatingLayerList = () => (
-    <div className="w-[260px] max-h-[48vh] overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl">
+    <div className="w-[340px] max-h-[56vh] overflow-hidden rounded-2xl border border-slate-200 bg-white/95 shadow-2xl">
       <div className="flex items-center justify-between border-b border-slate-100 px-3 py-2">
         <span className="text-[11px] font-black text-slate-700">图层列表</span>
         <div className="flex gap-1">
@@ -1627,23 +1627,25 @@ export const TemplateEditor: React.FC<TemplateEditorProps> = ({
           </div>
           <div className="min-h-0 flex-1 overflow-auto p-4">
             <div className="flex min-h-full items-center justify-center">
-              <div
-                ref={canvasAreaRef}
-                onMouseDown={(e) => { if (e.target === e.currentTarget) { setSelectedComponentId(null); setSelectedSlotId(null); setSelectedTextFieldId(null); } }}
-                className={`relative overflow-hidden border border-slate-300 shadow-2xl ${activeTemplate.background.type === "scene" ? getCanvasBackgroundClass(activeTemplate.background.sceneStyle) : "bg-white"}`}
-                onDragOver={handleCanvasDragOver}
-                onDrop={handleCanvasDrop}
-                style={{ width: canvasSize.width, height: canvasSize.height }}
-              >
-                {showGrid && (<div className="absolute inset-0 opacity-40" style={{backgroundImage:"linear-gradient(to right, rgba(15,23,42,0.08) 1px, transparent 1px), linear-gradient(to bottom, rgba(15,23,42,0.08) 1px, transparent 1px)",backgroundSize:"20px 20px"}} />)}
-                {sortedComponents.map(renderComponentOnCanvas)}
-                {!hasLayerComponents && activeTemplate.slots.map(renderLegacySlot)}
-                {activeTemplate.textFields.map(renderTextField)}
-                {renderTransformBox()}
-                {showSafetyRegion && (<div className="pointer-events-none absolute inset-[6%] border-2 border-dashed border-rose-400/70" />)}
+              <div className="relative inline-block">
+                <div
+                  ref={canvasAreaRef}
+                  onMouseDown={(e) => { if (e.target === e.currentTarget) { setSelectedComponentId(null); setSelectedSlotId(null); setSelectedTextFieldId(null); } }}
+                  className={`relative overflow-hidden border border-slate-300 shadow-2xl ${activeTemplate.background.type === "scene" ? getCanvasBackgroundClass(activeTemplate.background.sceneStyle) : "bg-white"}`}
+                  onDragOver={handleCanvasDragOver}
+                  onDrop={handleCanvasDrop}
+                  style={{ width: canvasSize.width, height: canvasSize.height }}
+                >
+                  {showGrid && (<div className="absolute inset-0 opacity-40" style={{backgroundImage:"linear-gradient(to right, rgba(15,23,42,0.08) 1px, transparent 1px), linear-gradient(to bottom, rgba(15,23,42,0.08) 1px, transparent 1px)",backgroundSize:"20px 20px"}} />)}
+                  {sortedComponents.map(renderComponentOnCanvas)}
+                  {!hasLayerComponents && activeTemplate.slots.map(renderLegacySlot)}
+                  {activeTemplate.textFields.map(renderTextField)}
+                  {renderTransformBox()}
+                  {showSafetyRegion && (<div className="pointer-events-none absolute inset-[6%] border-2 border-dashed border-rose-400/70" />)}
+                </div>
+                <div className="absolute bottom-3 left-3 z-50">{renderFloatingLayerList()}</div>
               </div>
             </div>
-            {renderFloatingLayerList()}
           </div>
         </div>
 
