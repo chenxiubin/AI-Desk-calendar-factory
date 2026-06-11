@@ -1,4 +1,4 @@
-﻿import React, { useMemo, useRef, useState } from "react";
+﻿import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   Product,
   Template,
@@ -543,6 +543,87 @@ export const TemplateEditor: React.FC<TemplateEditorProps> = ({
   const [skuCount, setSkuCount] = useState(4);
   const [detailCount, setDetailCount] = useState(14);
 
+  // --- Drag & Resize State ---
+  const dragRef = useRef<{
+    active: boolean;
+    type: "move" | "resize";
+    handle?: "tl" | "tr" | "bl" | "br";
+    targetId: string;
+    startX: number;
+    startY: number;
+    startCompX: number;
+    startCompY: number;
+    startCompW: number;
+    startCompH: number;
+  } | null>(null);
+  const canvasAreaRef = useRef<HTMLDivElement | null>(null);
+  const [, setDragTick] = useState(0); // force re-render during drag
+
+  // --- Drag Handlers ---
+  const handleElementMouseDown = (
+    e: React.MouseEvent,
+    compId: string,
+    compX: number,
+    compY: number,
+    compW: number,
+    compH: number,
+  ) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setSelectedComponentId(compId);
+    setSelectedSlotId(null);
+    setSelectedTextFieldId(null);
+
+    const rect = canvasAreaRef.current?.getBoundingClientRect();
+    if (!rect) return;
+
+    dragRef.current = {
+      active: true,
+      type: "move",
+      targetId: compId,
+      startX: e.clientX,
+      startY: e.clientY,
+      startCompX: compX,
+      startCompY: compY,
+      startCompW: compW,
+      startCompH: compH,
+    };
+  };
+
+  const handleHandleMouseDown = (
+    e: React.MouseEvent,
+    compId: string,
+    handle: "tl" | "tr" | "bl" | "br",
+    compX: number,
+    compY: number,
+    compW: number,
+    compH: number,
+  ) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setSelectedComponentId(compId);
+
+    const rect = canvasAreaRef.current?.getBoundingClientRect();
+    if (!rect) return;
+
+    dragRef.current = {
+      active: true,
+      type: "resize",
+      handle,
+      targetId: compId,
+      startX: e.clientX,
+      startY: e.clientY,
+      startCompX: compX,
+      startCompY: compY,
+      startCompW: compW,
+      startCompH: compH,
+    };
+  };
+
+  const isDragging = dragRef.current?.active;
+  const dragTargetId = dragRef.current?.targetId;
+  const dragType = dragRef.current?.type;
+
   // Per-thumbnail independent template store (ref avoids closure issues)
   const thumbTemplatesRef = useRef<Record<string, Template>>({});
   const [storeVersion, setStoreVersion] = useState(0);
@@ -773,6 +854,60 @@ export const TemplateEditor: React.FC<TemplateEditorProps> = ({
       ),
     });
   };
+
+  // Drag-to-move and resize effect (must be after updateComponent is defined)
+  useEffect(() => {
+    const onMove = (e: MouseEvent) => {
+      const drag = dragRef.current;
+      if (!drag?.active) return;
+      e.preventDefault();
+
+      const rect = canvasAreaRef.current?.getBoundingClientRect();
+      if (!rect) return;
+
+      const dxPct = ((e.clientX - drag.startX) / rect.width) * 100;
+      const dyPct = ((e.clientY - drag.startY) / rect.height) * 100;
+
+      const comp = activeTemplate.components?.find((c) => c.id === drag.targetId);
+      if (!comp) return;
+
+      if (drag.type === "move") {
+        const nextX = Math.max(0, Math.min(100 - comp.width, drag.startCompX + dxPct));
+        const nextY = Math.max(0, Math.min(100 - comp.height, drag.startCompY + dyPct));
+        updateComponent(drag.targetId, { x: nextX, y: nextY });
+      } else if (drag.type === "resize") {
+        let nextX = drag.startCompX, nextY = drag.startCompY,
+            nextW = drag.startCompW, nextH = drag.startCompH;
+        const min = 2;
+        if (drag.handle === "tl") {
+          nextX = drag.startCompX + dxPct; nextY = drag.startCompY + dyPct;
+          nextW = drag.startCompW - dxPct; nextH = drag.startCompH - dyPct;
+        } else if (drag.handle === "tr") {
+          nextY = drag.startCompY + dyPct;
+          nextW = drag.startCompW + dxPct; nextH = drag.startCompH - dyPct;
+        } else if (drag.handle === "bl") {
+          nextX = drag.startCompX + dxPct;
+          nextW = drag.startCompW - dxPct; nextH = drag.startCompH + dyPct;
+        } else if (drag.handle === "br") {
+          nextW = drag.startCompW + dxPct; nextH = drag.startCompH + dyPct;
+        }
+        if (nextW < min) nextW = min; if (nextH < min) nextH = min;
+        if (nextX < 0) nextX = 0; if (nextY < 0) nextY = 0;
+        if (nextX + nextW > 100) nextW = 100 - nextX;
+        if (nextY + nextH > 100) nextH = 100 - nextY;
+        updateComponent(drag.targetId, { x: nextX, y: nextY, width: nextW, height: nextH });
+      }
+      setDragTick((t) => t + 1);
+    };
+
+    const onUp = () => {
+      if (dragRef.current?.active) { dragRef.current = null; setDragTick((t) => t + 1); }
+    };
+
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
+    return () => { window.removeEventListener("mousemove", onMove); window.removeEventListener("mouseup", onUp); };
+  }, [activeTemplate, updateComponent]);
 
   const updateSlotGeometry = (
     slotId: string,
@@ -1012,8 +1147,14 @@ export const TemplateEditor: React.FC<TemplateEditorProps> = ({
 
   const renderComponentOnCanvas = (component: TemplateComponent) => {
     if (component.visible === false) return null;
-    const isSelected = selectedComponentId === component.id;
+    const isSelected = selectedComponentId === component.id && dragRef.current?.targetId !== component.id;
+    const isDragTarget = dragRef.current?.active && dragRef.current.targetId === component.id;
     const isScene = component.type === "scene_base";
+    const isLocked = component.type === "scene_base";
+    const compX = isScene ? 0 : (component.x ?? 50);
+    const compY = isScene ? 0 : (component.y ?? 50);
+    const compW = isScene ? 100 : (component.width ?? 30);
+    const compH = isScene ? 100 : (component.height ?? 30);
     const style: React.CSSProperties = isScene
       ? {
           left: 0,
@@ -1032,44 +1173,35 @@ export const TemplateEditor: React.FC<TemplateEditorProps> = ({
 
     if (isScene) {
       return (
-        <button
+        <div
           key={component.id}
-          type="button"
-          onClick={() => setSelectedComponentId(component.id)}
-          className="absolute inset-0 text-left"
+          className={`absolute inset-0 text-left ${isLocked ? "" : "cursor-move"}`}
           style={style}
+          onMouseDown={(e) => {
+            if (isLocked) return;
+            handleElementMouseDown(e, component.id, compX, compY, compW, compH);
+          }}
         >
           {component.imageUrl ? (
-            <img
-              src={component.imageUrl}
-              alt={component.name}
-              className="h-full w-full object-cover"
-            />
+            <img src={component.imageUrl} alt={component.name} className="h-full w-full object-cover" />
           ) : null}
-        </button>
+        </div>
       );
     }
 
     return (
-      <button
+      <div
         key={component.id}
-        type="button"
-        onClick={() => {
-          setActivePanel("layers");
-          setSelectedComponentId(component.id);
-          setSelectedSlotId(null);
-          setSelectedTextFieldId(null);
-        }}
-        className={`absolute rounded-md text-left transition-all ${
-          isSelected
-            ? "ring-2 ring-blue-500 ring-offset-2"
-            : "ring-1 ring-white/70 hover:ring-blue-300"
-        } ${
-          component.type === "product_slot"
-            ? "border border-blue-500 bg-blue-500/10"
-            : "border border-white/70 bg-white/10"
+        className={`absolute rounded-md text-left ${
+          isSelected ? "ring-2 ring-blue-500" : "ring-1 ring-white/40 hover:ring-blue-300/70"
+        } ${component.type === "product_slot" ? "border border-blue-500/50 bg-blue-500/10" : "bg-white/10"} ${
+          isLocked ? "" : "cursor-move"
         }`}
         style={style}
+        onMouseDown={(e) => {
+          if (isLocked) return;
+          handleElementMouseDown(e, component.id, compX, compY, compW, compH);
+        }}
       >
         {component.imageUrl ? (
           <img
@@ -1087,7 +1219,7 @@ export const TemplateEditor: React.FC<TemplateEditorProps> = ({
         <span className="absolute -top-5 left-0 rounded bg-slate-900 px-1.5 py-0.5 text-[9px] font-bold text-white">
           {component.name}
         </span>
-      </button>
+      </div>
     );
   };
 
@@ -1307,6 +1439,8 @@ export const TemplateEditor: React.FC<TemplateEditorProps> = ({
           <div className="min-h-0 flex-1 overflow-auto p-8">
             <div className="flex min-h-full items-center justify-center">
               <div
+                ref={canvasAreaRef}
+                onClick={() => { setSelectedComponentId(null); setSelectedSlotId(null); setSelectedTextFieldId(null); }}
                 className={`relative overflow-hidden border border-slate-300 shadow-2xl ${
                   activeTemplate.background.type === "scene"
                     ? getCanvasBackgroundClass(activeTemplate.background.sceneStyle)
@@ -1329,6 +1463,50 @@ export const TemplateEditor: React.FC<TemplateEditorProps> = ({
                 {sortedComponents.map(renderComponentOnCanvas)}
                 {!hasLayerComponents && activeTemplate.slots.map(renderLegacySlot)}
                 {activeTemplate.textFields.map(renderTextField)}
+
+                {/* TransformBox: selection handles for selected component */}
+                {selectedComponentId && activeTemplate.components && (() => {
+                  const sel = activeTemplate.components.find((c) => c.id === selectedComponentId);
+                  if (!sel || sel.visible === false || sel.type === "scene_base") return null;
+                  const isDragActive = dragTargetId === sel.id && isDragging;
+                  const handles = ["tl", "tr", "bl", "br"] as const;
+                  const handleStyle = "absolute w-2.5 h-2.5 bg-white border-2 border-blue-500 rounded-sm z-[9999]";
+                  const handleCursorMap: Record<string, string> = { tl: "nwse-resize", tr: "nesw-resize", bl: "nesw-resize", br: "nwse-resize" };
+                  return (
+                    <div
+                      className="pointer-events-none absolute z-[5000]"
+                      style={{
+                        left: `${sel.x}%`,
+                        top: `${sel.y}%`,
+                        width: `${sel.width}%`,
+                        height: `${sel.height}%`,
+                      }}
+                    >
+                      <div className="absolute inset-0 border-2 border-blue-500" />
+                      {handles.map((h) => (
+                        <div
+                          key={h}
+                          className={`${handleStyle} pointer-events-auto`}
+                          style={{
+                            cursor: handleCursorMap[h],
+                            ...(h === "tl" ? { left: -5, top: -5 } :
+                               h === "tr" ? { right: -5, top: -5 } :
+                               h === "bl" ? { left: -5, bottom: -5 } :
+                               { right: -5, bottom: -5 }),
+                          }}
+                          onMouseDown={(e) => {
+                            e.stopPropagation();
+                            handleHandleMouseDown(e, sel.id, h, sel.x ?? 50, sel.y ?? 50, sel.width ?? 30, sel.height ?? 30);
+                          }}
+                        />
+                      ))}
+                      <div className="absolute -top-6 left-1/2 -translate-x-1/2 whitespace-nowrap rounded bg-slate-900 px-2 py-0.5 text-[10px] font-bold text-white">
+                        {sel.name} · {Math.round(sel.x ?? 0)},{Math.round(sel.y ?? 0)} · {Math.round(sel.width ?? 0)}×{Math.round(sel.height ?? 0)}
+                      </div>
+                    </div>
+                  );
+                })()}
+
                 {showSafetyRegion && (
                   <div className="pointer-events-none absolute inset-[6%] border-2 border-dashed border-rose-400/70" />
                 )}
