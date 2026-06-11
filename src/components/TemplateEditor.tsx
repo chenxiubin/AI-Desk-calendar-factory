@@ -558,64 +558,33 @@ export const TemplateEditor: React.FC<TemplateEditorProps> = ({
   const [, setDragTick] = useState(0); // force re-render during drag
 
   // --- Drag Handlers ---
-  const handleElementMouseDown = (
+  const selectComp = (id: string) => { setSelectedComponentId(id); setSelectedSlotId(null); setSelectedTextFieldId(null); };
+  const selectSlotFn = (id: string) => { setSelectedSlotId(id); setSelectedComponentId(null); setSelectedTextFieldId(null); };
+  const selectTf = (id: string) => { setSelectedTextFieldId(id); setSelectedComponentId(null); setSelectedSlotId(null); };
+
+  const startDrag = (
     e: React.MouseEvent,
-    compId: string,
-    compX: number,
-    compY: number,
-    compW: number,
-    compH: number,
+    type: "move" | "resize",
+    targetType: "component" | "slot" | "textField",
+    targetId: string,
+    box: { x: number; y: number; w: number; h: number },
+    handle?: "tl" | "tr" | "bl" | "br",
   ) => {
     e.preventDefault();
     e.stopPropagation();
-    setSelectedComponentId(compId);
-    setSelectedSlotId(null);
-    setSelectedTextFieldId(null);
-
-    const rect = canvasAreaRef.current?.getBoundingClientRect();
-    if (!rect) return;
+    if (targetType === "component") selectComp(targetId);
+    else if (targetType === "slot") selectSlotFn(targetId);
+    else selectTf(targetId);
 
     dragRef.current = {
       active: true,
-      moveOrResize: "move",
-      targetId: compId,
-      startX: e.clientX,
-      startY: e.clientY,
-      startTargetX:compX,
-      startTargetY: compY,
-      startTargetW: compW,
-      startTargetH: compH,
-    };
-  };
-
-  const handleHandleMouseDown = (
-    e: React.MouseEvent,
-    compId: string,
-    handle: "tl" | "tr" | "bl" | "br",
-    compX: number,
-    compY: number,
-    compW: number,
-    compH: number,
-  ) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setSelectedComponentId(compId);
-
-    const rect = canvasAreaRef.current?.getBoundingClientRect();
-    if (!rect) return;
-
-    dragRef.current = {
-      active: true,
-      moveOrResize: "resize",
-      targetType: "component",
+      moveOrResize: type,
+      targetType,
       handle,
-      targetId: compId,
-      startX: e.clientX,
-      startY: e.clientY,
-      startTargetX:compX,
-      startTargetY: compY,
-      startTargetW: compW,
-      startTargetH: compH,
+      targetId,
+      startX: e.clientX, startY: e.clientY,
+      startTargetX: box.x, startTargetY: box.y,
+      startTargetW: box.w, startTargetH: box.h,
     };
   };
 
@@ -1190,7 +1159,7 @@ export const TemplateEditor: React.FC<TemplateEditorProps> = ({
           style={style}
           onMouseDown={(e) => {
             if (isLocked) return;
-            handleElementMouseDown(e, component.id, compX, compY, compW, compH);
+            startDrag(e, "move", "component", component.id, { x: compX, y: compY, w: compW, h: compH });
           }}
         >
           {component.imageUrl ? (
@@ -1211,7 +1180,7 @@ export const TemplateEditor: React.FC<TemplateEditorProps> = ({
         style={style}
         onMouseDown={(e) => {
           if (isLocked) return;
-          handleElementMouseDown(e, component.id, compX, compY, compW, compH);
+          startDrag(e, "move", "component", component.id, { x: compX, y: compY, w: compW, h: compH });
         }}
       >
         {component.imageUrl ? (
@@ -1264,7 +1233,8 @@ export const TemplateEditor: React.FC<TemplateEditorProps> = ({
         {!tLocked && handles.map((h) => (
           <div key={h} className={hStyle} style={{cursor:hCur[h],...(h==="tl"?{left:-5,top:-5}:h==="tr"?{right:-5,top:-5}:h==="bl"?{left:-5,bottom:-5}:{right:-5,bottom:-5})}}
             onMouseDown={(e) => { e.stopPropagation();
-              if (selectedComponentId) handleHandleMouseDown(e, selectedComponentId, h, tx, ty, tw, th);
+              if (selectedComponentId) startDrag(e, "resize", "component", selectedComponentId, { x: tx, y: ty, w: tw, h: th }, h);
+              else if (selectedSlotId) startDrag(e, "resize", "slot", selectedSlotId, { x: tx, y: ty, w: tw, h: th }, h);
             }}
           />
         ))}
@@ -1345,10 +1315,9 @@ export const TemplateEditor: React.FC<TemplateEditorProps> = ({
       <div
         key={slot.id}
         onMouseDown={(e) => {
-          e.stopPropagation();
-          setSelectedSlotId(slot.id); setSelectedComponentId(null); setSelectedTextFieldId(null);
+          startDrag(e, "move", "slot", slot.id, { x: slot.x, y: slot.y, w: slot.maxWidth, h: slot.maxHeight });
         }}
-        className={`absolute rounded-md border bg-blue-500/10 text-left cursor-move ${
+        className={`absolute rounded-md border bg-blue-500/10 cursor-move text-left ${
           isSelected
             ? "border-blue-500 ring-2 ring-blue-500"
             : "border-blue-400"
@@ -1376,10 +1345,9 @@ export const TemplateEditor: React.FC<TemplateEditorProps> = ({
       <div
         key={textField.id}
         onMouseDown={(e) => {
-          e.stopPropagation();
-          setSelectedTextFieldId(textField.id); setSelectedSlotId(null); setSelectedComponentId(null);
+          startDrag(e, "move", "textField", textField.id, { x: textField.x, y: textField.y, w: 24, h: 8 });
         }}
-        className={`absolute max-w-[80%] rounded px-1.5 py-1 text-left cursor-move ${
+        className={`absolute max-w-[80%] cursor-move rounded px-1.5 py-1 text-left ${
           isSelected ? "ring-2 ring-sky-500" : "hover:ring-1"
         }`}
         style={{
