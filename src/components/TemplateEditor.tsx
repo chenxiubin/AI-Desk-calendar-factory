@@ -544,6 +544,9 @@ export const TemplateEditor: React.FC<TemplateEditorProps> = ({
   const [detailCount, setDetailCount] = useState(14);
   const [draggingLayerId, setDraggingLayerId] = useState<string | null>(null);
   const [isLayerPanelOpen, setIsLayerPanelOpen] = useState(false);
+  const [panelPos, setPanelPos] = useState({ x: 12, y: 12 }); // draggable panel position (px from bottom-left)
+  const panelDragging = useRef(false);
+  const panelDragStart = useRef({ x: 0, y: 0, px: 0, py: 0 });
 
   const getComponentLayerItems = () => {
     return [...(activeTemplate.components || [])].sort((a, b) => {
@@ -855,6 +858,10 @@ export const TemplateEditor: React.FC<TemplateEditorProps> = ({
   // Drag-to-move and resize effect (must be after updateComponent is defined)
   useEffect(() => {
     const onMove = (e: MouseEvent) => {
+      if (panelDragging.current) {
+        setPanelPos({ x: Math.max(0, panelDragStart.current.px + (e.clientX - panelDragStart.current.x)), y: Math.max(0, panelDragStart.current.py - (e.clientY - panelDragStart.current.y)) });
+        return;
+      }
       const drag = dragRef.current;
       if (!drag?.active) return;
       e.preventDefault();
@@ -928,6 +935,7 @@ export const TemplateEditor: React.FC<TemplateEditorProps> = ({
     };
 
     const onUp = () => {
+      panelDragging.current = false;
       if (dragRef.current?.active) { dragRef.current = null; setDragTick((t) => t + 1); }
     };
 
@@ -1325,6 +1333,10 @@ export const TemplateEditor: React.FC<TemplateEditorProps> = ({
               <Field l="高度"><NInp v={sel.height??30} onCh={(n) => updateComponent(sel.id,{height:n})} min={2} /></Field>
             </div>
             <Field l="zIndex"><NInp v={sel.zIndex??0} onCh={(n) => updateComponent(sel.id,{zIndex:n})} min={0} max={999} /></Field>
+            <Field l="图层类型"><select value={sel.type} onChange={(e) => updateComponent(sel.id, {type: e.target.value as TemplateComponentType})}
+              className="w-full rounded border border-slate-200 px-2 py-1 text-[10px] font-bold">
+              {Object.entries(COMPONENT_TYPE_LABEL).map(([v,label]) => (<option key={v} value={v}>{label}</option>))}
+            </select></Field>
             <div className="flex items-center gap-3">
               <label className="flex items-center gap-1 text-[10px] cursor-pointer"><input type="checkbox" checked={sel.visible!==false} onChange={(e) => updateComponent(sel.id,{visible:e.target.checked})} /> 可见</label>
               <label className="flex items-center gap-1 text-[10px] cursor-pointer"><input type="checkbox" checked={sel.sendToRunningHub??false} onChange={(e) => updateComponent(sel.id,{sendToRunningHub:e.target.checked})} /> 发送RH</label>
@@ -1664,14 +1676,21 @@ export const TemplateEditor: React.FC<TemplateEditorProps> = ({
                   {renderTransformBox()}
                   {showSafetyRegion && (<div className="pointer-events-none absolute inset-[6%] border-2 border-dashed border-rose-400/70" />)}
                 </div>
-                <div className="absolute bottom-3 left-3 z-50">
-                  <button type="button" onClick={() => setIsLayerPanelOpen(v => !v)}
-                    className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white/95 text-slate-600 shadow-lg hover:bg-slate-50 hover:text-slate-800 transition-colors"
-                    title={isLayerPanelOpen ? "收起图层列表" : "展开图层列表"}>
+                <div className="absolute z-50" style={{ bottom: panelPos.y, left: panelPos.x }}>
+                  <button
+                    type="button"
+                    onClick={() => setIsLayerPanelOpen(v => !v)}
+                    onMouseDown={(e) => {
+                      panelDragging.current = true;
+                      panelDragStart.current = { x: e.clientX, y: e.clientY, px: panelPos.x, py: panelPos.y };
+                      e.preventDefault();
+                    }}
+                    className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white/95 text-slate-600 shadow-lg hover:bg-slate-50 hover:text-slate-800 transition-colors cursor-grab active:cursor-grabbing"
+                    title={isLayerPanelOpen ? "收起图层列表 (可拖拽移动)" : "展开图层列表 (可拖拽移动)"}>
                     <Layers className="h-4 w-4" />
                   </button>
                   {isLayerPanelOpen && (
-                    <div className="absolute bottom-12 left-0">
+                    <div className="absolute bottom-12">
                       {renderFloatingLayerList()}
                     </div>
                   )}
