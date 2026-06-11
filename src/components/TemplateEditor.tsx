@@ -859,7 +859,7 @@ export const TemplateEditor: React.FC<TemplateEditorProps> = ({
   useEffect(() => {
     const onMove = (e: MouseEvent) => {
       if (panelDragging.current) {
-        setPanelPos({ x: Math.max(0, panelDragStart.current.px + (e.clientX - panelDragStart.current.x)), y: Math.max(0, panelDragStart.current.py - (e.clientY - panelDragStart.current.y)) });
+        setPanelPos({ x: (panelDragStart.current.px + (e.clientX - panelDragStart.current.x)), y: Math.max(0, panelDragStart.current.py - (e.clientY - panelDragStart.current.y)) });
         return;
       }
       const drag = dragRef.current;
@@ -1228,7 +1228,7 @@ export const TemplateEditor: React.FC<TemplateEditorProps> = ({
       <div
         key={component.id}
         className={`absolute rounded-md text-left ${
-          isSelected ? "ring-2 ring-blue-500" : "ring-1 ring-white/40 hover:ring-blue-300/70"
+          isSelected ? "ring-2 ring-blue-500 ring-offset-0" : "ring-1 ring-white/40 hover:ring-blue-300/70"
         } ${component.type === "product_slot" ? "border border-dashed border-blue-500 bg-transparent" : "bg-transparent"} ${
           isLocked ? "" : "cursor-move"
         }`}
@@ -1470,7 +1470,7 @@ export const TemplateEditor: React.FC<TemplateEditorProps> = ({
         }}
         className={`absolute rounded-md border border-dashed border-blue-500 bg-transparent cursor-move text-left ${
           isSelected
-            ? "border-blue-500 ring-2 ring-blue-500"
+            ? "border-blue-500 ring-2 ring-blue-500 ring-offset-0"
             : "border-blue-400"
         }`}
         style={{
