@@ -1398,6 +1398,10 @@ export const TemplateEditor: React.FC<TemplateEditorProps> = ({
                   <span className="truncate font-medium flex-1">{c.name || c.type}</span>
                   <button type="button" onClick={(e) => { e.stopPropagation(); updateComponent(c.id, { visible: c.visible === false ? true : false }); }}
                     className="text-[9px] px-0.5 hover:bg-slate-200 rounded">{c.visible === false ? "⊘" : "◉"}</button>
+                  <button type="button" onClick={(e) => { e.stopPropagation(); deleteComponent(c.id); }}
+                    className="text-[9px] px-0.5 hover:bg-red-100 hover:text-red-500 rounded text-slate-400" title="删除图层">
+                    ✕
+                  </button>
                 </div>
               ))}
             </div>
@@ -1660,14 +1664,18 @@ export const TemplateEditor: React.FC<TemplateEditorProps> = ({
                   {renderTransformBox()}
                   {showSafetyRegion && (<div className="pointer-events-none absolute inset-[6%] border-2 border-dashed border-rose-400/70" />)}
                 </div>
-                <div className="absolute bottom-3 left-3 z-50">
+                <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-50 flex flex-col items-center gap-2">
                   {/* Toggle button */}
                   <button type="button" onClick={() => setIsLayerPanelOpen(v => !v)}
-                    className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white/95 text-slate-600 shadow-lg hover:bg-slate-50 hover:text-slate-800 transition-colors"
+                    className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white/95 text-slate-600 shadow-lg hover:bg-slate-50 hover:text-slate-800 transition-colors"
                     title={isLayerPanelOpen ? "收起图层列表" : "展开图层列表"}>
                     <Layers className="h-4 w-4" />
                   </button>
-                  {isLayerPanelOpen && renderFloatingLayerList()}
+                  {isLayerPanelOpen && (
+                    <div className="absolute bottom-12 left-0">
+                      {renderFloatingLayerList()}
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
