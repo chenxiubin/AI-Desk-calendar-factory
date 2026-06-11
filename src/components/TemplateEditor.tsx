@@ -560,7 +560,7 @@ export const TemplateEditor: React.FC<TemplateEditorProps> = ({
   // --- Drag & Resize State ---
   const dragRef = useRef<{
     active: boolean;
-    moveOrResize: "move" | "resize";
+    action: "move" | "resize";
     handle?: "tl" | "tr" | "bl" | "br";
     targetType: "component" | "slot" | "textField";
     targetId: string;
@@ -592,7 +592,7 @@ export const TemplateEditor: React.FC<TemplateEditorProps> = ({
 
     dragRef.current = {
       active: true,
-      moveOrResize: type,
+      action: type,
       targetType,
       handle,
       targetId,
@@ -604,7 +604,7 @@ export const TemplateEditor: React.FC<TemplateEditorProps> = ({
 
   const isDragging = dragRef.current?.active;
   const dragTargetId = dragRef.current?.targetId;
-  const dragType = dragRef.current?.moveOrResize;
+  const dragType = dragRef.current?.action;
 
   // Per-thumbnail independent template store (ref avoids closure issues)
   const thumbTemplatesRef = useRef<Record<string, Template>>({});
@@ -850,7 +850,7 @@ export const TemplateEditor: React.FC<TemplateEditorProps> = ({
       const dxPct = ((e.clientX - drag.startX) / rect.width) * 100;
       const dyPct = ((e.clientY - drag.startY) / rect.height) * 100;
 
-      const isMove = drag.moveOrResize === "move";
+      const isMove = drag.action === "move";
       const limit = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
       const nextX = limit(drag.startTargetX + dxPct, 0, 100 - (isMove ? drag.startTargetW : 0));
       const nextY = limit(drag.startTargetY + dyPct, 0, 100 - (isMove ? drag.startTargetH : 0));
@@ -1334,7 +1334,7 @@ export const TemplateEditor: React.FC<TemplateEditorProps> = ({
         onMouseDown={(e) => {
           startDrag(e, "move", "slot", slot.id, { x: slot.x - slot.maxWidth / 2, y: slot.y - slot.maxHeight / 2, w: slot.maxWidth, h: slot.maxHeight });
         }}
-        className={`absolute rounded-md border bg-blue-500/10 cursor-move text-left ${
+        className={`absolute rounded-md border border-dashed border-blue-500 bg-transparent cursor-move text-left ${
           isSelected
             ? "border-blue-500 ring-2 ring-blue-500"
             : "border-blue-400"
