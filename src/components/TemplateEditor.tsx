@@ -1460,174 +1460,144 @@ export const TemplateEditor: React.FC<TemplateEditorProps> = ({
         </div>
       </header>
 
-      <div className="relative flex min-h-0 flex-1 overflow-hidden">
-        <FloatingToolbar
+      {/* Non-layers floating panels (import, slots, test, save) */}
+      {activePanel && activePanel !== "layers" && (
+        <FloatingEditorPanel
           activePanel={activePanel}
-          onPanelChange={(panel) =>
-            setActivePanel((current) => (current === panel ? null : panel))
-          }
+          onClose={() => setActivePanel(null)}
+          activeTemplate={activeTemplate}
+          activeProduct={activeProduct}
+          products={products}
+          businessConfig={businessConfig}
+          selectedComponent={selectedComponent}
+          selectedSlot={selectedSlot}
+          selectedTextField={selectedTextField}
+          sortedComponents={sortedComponents}
+          mainThemeCount={mainThemeCount}
+          skuCount={skuCount}
+          detailCount={detailCount}
+          inspectionItems={inspectionItems}
+          onBusinessChange={updateBusinessConfig}
+          onTemplateChange={handleUpdateTemplate}
+          onBackgroundChange={updateBackground}
+          onBatchImport={handleBatchImport}
+          onActivateLayers={activatePSEngine}
+          onAddComponent={addComponent}
+          onComponentSelect={(id) => { setSelectedComponentId(id); setSelectedSlotId(null); setSelectedTextFieldId(null); }}
+          onComponentUpdate={(id, patch) => updateComponent(id, patch)}
+          onComponentDelete={deleteComponent}
+          onSlotUpdate={(id, field, value) => updateSlotGeometry(id, field, value)}
+          onTextFieldUpdate={(id, field, value) => updateTextFieldValue(id, field, value)}
+          onProductChange={setSelectedProductId}
+          onMainThemeCountChange={setMainThemeCount}
+          onSkuCountChange={setSkuCount}
+          onDetailCountChange={setDetailCount}
+          onSave={() => { onSaveTemplate(activeTemplate); setActivePanel(null); }}
         />
+      )}
 
-        {activePanel && (
-          <FloatingEditorPanel
-            activePanel={activePanel}
-            onClose={() => setActivePanel(null)}
-            activeTemplate={activeTemplate}
-            activeProduct={activeProduct}
-            products={products}
-            businessConfig={businessConfig}
-            selectedComponent={selectedComponent}
-            selectedSlot={selectedSlot}
-            selectedTextField={selectedTextField}
-            sortedComponents={sortedComponents}
-            mainThemeCount={mainThemeCount}
-            skuCount={skuCount}
-            detailCount={detailCount}
-            inspectionItems={inspectionItems}
-            onBusinessChange={updateBusinessConfig}
-            onTemplateChange={handleUpdateTemplate}
-            onBackgroundChange={updateBackground}
-            onBatchImport={handleBatchImport}
-            onActivateLayers={activatePSEngine}
-            onAddComponent={addComponent}
-            onComponentSelect={(id) => {
-              setActivePanel("layers");
-              setSelectedComponentId(id);
-              setSelectedSlotId(null);
-              setSelectedTextFieldId(null);
-            }}
-            onComponentUpdate={(componentId, patch) =>
-              updateComponent(componentId, patch)
-            }
-            onComponentDelete={deleteComponent}
-            onSlotUpdate={(slotId, field, value) =>
-              updateSlotGeometry(slotId, field, value)
-            }
-            onTextFieldUpdate={(fieldId, field, value) =>
-              updateTextFieldValue(fieldId, field, value)
-            }
-            onProductChange={setSelectedProductId}
-            onMainThemeCountChange={setMainThemeCount}
-            onSkuCountChange={setSkuCount}
-            onDetailCountChange={setDetailCount}
-            onSave={() => {
-              onSaveTemplate(activeTemplate);
-              setActivePanel(null);
-            }}
-          />
-        )}
-
-        <main className="flex min-w-0 flex-1 flex-col bg-slate-200 pl-20 pr-[22rem]">
-          <div className="flex items-center justify-between border-b border-slate-300 bg-white/70 px-5 py-2 text-xs text-slate-500">
-            <div className="flex items-center gap-2">
-              <span className="font-bold text-slate-700">模板画布</span>
-              <span>左侧调整，右侧切换整套图缩略图</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="rounded bg-white px-2 py-1 font-mono font-bold text-slate-600">
-                {activeTemplate.outputWidth} × {activeTemplate.outputHeight}
-              </span>
-              <span className="rounded bg-white px-2 py-1 font-bold text-slate-600">
-                {zoomRatio}%
-              </span>
+      {/* Three-column body: left layers | center canvas | right inspector */}
+      <div className="grid min-h-0 flex-1 grid-cols-[260px_minmax(0,1fr)_300px] gap-3 overflow-hidden p-3">
+        {/* LEFT: Layers sidebar — always visible */}
+        <aside className="flex min-h-0 flex-col overflow-hidden rounded-xl border border-slate-200 bg-white">
+          <div className="flex items-center justify-between border-b border-slate-100 px-3 py-2 shrink-0">
+            <span className="text-xs font-black text-slate-700">图层列表</span>
+            <div className="flex gap-1">
+              <button type="button" onClick={() => setActivePanel("import")} className="rounded bg-indigo-50 px-2 py-0.5 text-[10px] font-bold text-indigo-600 hover:bg-indigo-100">导入</button>
+              <button type="button" onClick={() => setActivePanel("slots")} className="rounded bg-blue-50 px-2 py-0.5 text-[10px] font-bold text-blue-600 hover:bg-blue-100">添加</button>
             </div>
           </div>
+          <div className="min-h-0 flex-1 overflow-y-auto p-2">
+            <LayersPanel
+              sortedComponents={sortedComponents}
+              selectedComponent={selectedComponent}
+              selectedTextField={selectedTextField}
+              onComponentSelect={(id) => { setSelectedComponentId(id); setSelectedSlotId(null); setSelectedTextFieldId(null); }}
+              onComponentUpdate={(id, patch) => updateComponent(id, patch)}
+              onComponentDelete={deleteComponent}
+              onTextFieldUpdate={(id, field, value) => updateTextFieldValue(id, field, value)}
+            />
+            {/* Legacy slots quick list */}
+            {!hasLayerComponents && activeTemplate.slots.length > 0 && (
+              <div className="mt-3">
+                <div className="mb-1 text-[10px] font-bold text-slate-400">旧版产品槽位</div>
+                {activeTemplate.slots.map((slot) => (
+                  <div key={slot.id} className={`flex items-center gap-2 rounded px-2 py-1.5 text-[10px] cursor-pointer ${selectedSlotId === slot.id ? "bg-blue-50 text-blue-700 border border-blue-200" : "text-slate-600 hover:bg-slate-50"}`}
+                    onClick={() => { setSelectedSlotId(slot.id); setSelectedComponentId(null); setSelectedTextFieldId(null); }}>
+                    <span className="h-2 w-2 shrink-0 rounded-full bg-blue-400" />
+                    <span className="truncate font-medium">{slot.slotName || "产品槽位"}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+            {/* Legacy textFields quick list */}
+            {!hasLayerComponents && activeTemplate.textFields.length > 0 && (
+              <div className="mt-3">
+                <div className="mb-1 text-[10px] font-bold text-slate-400">旧版文字字段</div>
+                {activeTemplate.textFields.map((tf) => (
+                  <div key={tf.id} className={`flex items-center gap-2 rounded px-2 py-1.5 text-[10px] cursor-pointer ${selectedTextFieldId === tf.id ? "bg-blue-50 text-blue-700 border border-blue-200" : "text-slate-600 hover:bg-slate-50"}`}
+                    onClick={() => { setSelectedTextFieldId(tf.id); setSelectedComponentId(null); setSelectedSlotId(null); }}>
+                    <span className="h-2 w-2 shrink-0 rounded-full bg-sky-400" />
+                    <span className="truncate font-medium">{tf.fieldName || "文字字段"}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </aside>
 
-          <div className="min-h-0 flex-1 overflow-auto p-8">
+        {/* CENTER: Canvas */}
+        <div className="flex min-h-0 flex-col overflow-hidden rounded-xl border border-slate-200 bg-white">
+          <div className="flex items-center justify-between border-b border-slate-100 px-3 py-1.5 text-xs text-slate-500 shrink-0">
+            <div className="flex items-center gap-2">
+              <span className="font-bold text-slate-700">模板画布</span>
+              <span className="rounded bg-slate-100 px-1.5 py-0.5 font-mono font-bold">{activeTemplate.outputWidth}×{activeTemplate.outputHeight}</span>
+              <span className="rounded bg-slate-100 px-1.5 py-0.5 font-bold">{zoomRatio}%</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <button type="button" onClick={() => setShowGrid(!showGrid)} className={`rounded px-2 py-0.5 text-[10px] font-bold ${showGrid ? "bg-blue-100 text-blue-700" : "bg-slate-100 text-slate-500"}`}>网格</button>
+              <button type="button" onClick={() => setShowSafetyRegion(!showSafetyRegion)} className={`rounded px-2 py-0.5 text-[10px] font-bold ${showSafetyRegion ? "bg-blue-100 text-blue-700" : "bg-slate-100 text-slate-500"}`}>安全区</button>
+              <select value={zoomRatio} onChange={(e) => setZoomRatio(Number(e.target.value))} className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-bold">
+                <option value={80}>80%</option><option value={100}>100%</option><option value={120}>120%</option>
+              </select>
+              <button type="button" onClick={() => setActivePanel("test")} className="rounded bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-700">试套检查</button>
+              <button type="button" onClick={() => onSaveTemplate(activeTemplate)} className="rounded bg-blue-600 px-2.5 py-0.5 text-[10px] font-bold text-white">保存</button>
+            </div>
+          </div>
+          <div className="min-h-0 flex-1 overflow-auto p-4">
             <div className="flex min-h-full items-center justify-center">
               <div
                 ref={canvasAreaRef}
-                onClick={() => { setSelectedComponentId(null); setSelectedSlotId(null); setSelectedTextFieldId(null); }}
-                className={`relative overflow-hidden border border-slate-300 shadow-2xl ${
-                  activeTemplate.background.type === "scene"
-                    ? getCanvasBackgroundClass(activeTemplate.background.sceneStyle)
-                    : "bg-white"
-                }`}
+                onMouseDown={(e) => { if (e.target === e.currentTarget) { setSelectedComponentId(null); setSelectedSlotId(null); setSelectedTextFieldId(null); } }}
+                className={`relative overflow-hidden border border-slate-300 shadow-2xl ${activeTemplate.background.type === "scene" ? getCanvasBackgroundClass(activeTemplate.background.sceneStyle) : "bg-white"}`}
                 onDragOver={handleCanvasDragOver}
                 onDrop={handleCanvasDrop}
                 style={{ width: canvasSize.width, height: canvasSize.height }}
               >
-                {showGrid && (
-                  <div
-                    className="absolute inset-0 opacity-40"
-                    style={{
-                      backgroundImage:
-                        "linear-gradient(to right, rgba(15,23,42,0.08) 1px, transparent 1px), linear-gradient(to bottom, rgba(15,23,42,0.08) 1px, transparent 1px)",
-                      backgroundSize: "40px 40px",
-                    }}
-                  />
-                )}
+                {showGrid && (<div className="absolute inset-0 opacity-40" style={{backgroundImage:"linear-gradient(to right, rgba(15,23,42,0.08) 1px, transparent 1px), linear-gradient(to bottom, rgba(15,23,42,0.08) 1px, transparent 1px)",backgroundSize:"20px 20px"}} />)}
                 {sortedComponents.map(renderComponentOnCanvas)}
                 {!hasLayerComponents && activeTemplate.slots.map(renderLegacySlot)}
                 {activeTemplate.textFields.map(renderTextField)}
-
-                {/* TransformBox: selection handles for selected component */}
-                {selectedComponentId && activeTemplate.components && (() => {
-                  const sel = activeTemplate.components.find((c) => c.id === selectedComponentId);
-                  if (!sel || sel.visible === false || sel.type === "scene_base") return null;
-                  const isDragActive = dragTargetId === sel.id && isDragging;
-                  const handles = ["tl", "tr", "bl", "br"] as const;
-                  const handleStyle = "absolute w-2.5 h-2.5 bg-white border-2 border-blue-500 rounded-sm z-[9999]";
-                  const handleCursorMap: Record<string, string> = { tl: "nwse-resize", tr: "nesw-resize", bl: "nesw-resize", br: "nwse-resize" };
-                  return (
-                    <div
-                      className="pointer-events-none absolute z-[5000]"
-                      style={{
-                        left: `${sel.x}%`,
-                        top: `${sel.y}%`,
-                        width: `${sel.width}%`,
-                        height: `${sel.height}%`,
-                      }}
-                    >
-                      <div className="absolute inset-0 border-2 border-blue-500" />
-                      {handles.map((h) => (
-                        <div
-                          key={h}
-                          className={`${handleStyle} pointer-events-auto`}
-                          style={{
-                            cursor: handleCursorMap[h],
-                            ...(h === "tl" ? { left: -5, top: -5 } :
-                               h === "tr" ? { right: -5, top: -5 } :
-                               h === "bl" ? { left: -5, bottom: -5 } :
-                               { right: -5, bottom: -5 }),
-                          }}
-                          onMouseDown={(e) => {
-                            e.stopPropagation();
-                            handleHandleMouseDown(e, sel.id, h, sel.x ?? 50, sel.y ?? 50, sel.width ?? 30, sel.height ?? 30);
-                          }}
-                        />
-                      ))}
-                      <div className="absolute -top-6 left-1/2 -translate-x-1/2 whitespace-nowrap rounded bg-slate-900 px-2 py-0.5 text-[10px] font-bold text-white">
-                        {sel.name} · {Math.round(sel.x ?? 0)},{Math.round(sel.y ?? 0)} · {Math.round(sel.width ?? 0)}×{Math.round(sel.height ?? 0)}
-                      </div>
-                    </div>
-                  );
-                })()}
-
-                {showSafetyRegion && (
-                  <div className="pointer-events-none absolute inset-[6%] border-2 border-dashed border-rose-400/70" />
-                )}
+                {renderTransformBox()}
+                {showSafetyRegion && (<div className="pointer-events-none absolute inset-[6%] border-2 border-dashed border-rose-400/70" />)}
               </div>
             </div>
           </div>
-        </main>
+        </div>
 
-        <button
-          type="button"
-          onClick={() =>
-            setActivePanel((current) => (current === "layers" ? null : "layers"))
-          }
-          className={`absolute bottom-5 left-24 z-30 flex items-center gap-2 rounded-full border px-4 py-2 text-xs font-black shadow-xl transition ${
-            activePanel === "layers"
-              ? "border-blue-500 bg-blue-600 text-white shadow-blue-900/20"
-              : "border-slate-200 bg-white text-slate-700 shadow-slate-900/15 hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700"
-          }`}
-          title="图层列表"
-        >
-          <Layers className="h-4 w-4" />
-          图层列表
-        </button>
+        {/* RIGHT: Inspector */}
+        <aside className="flex min-h-0 flex-col overflow-hidden rounded-xl border border-slate-200 bg-white">
+          <div className="border-b border-slate-100 px-3 py-2 shrink-0">
+            <span className="text-xs font-black text-slate-700">属性面板</span>
+          </div>
+          <div className="min-h-0 flex-1 overflow-y-auto p-3">
+            {buildInspector()}
+          </div>
+        </aside>
+      </div>
 
+      {/* BOTTOM: Thumbnail strip */}
+      <div className="shrink-0 overflow-x-auto border-t border-slate-200 bg-white px-3 py-2">
         <ThumbnailBoard
           thumbnails={TEMPLATE_THUMBNAILS}
           activeThumbId={activeThumbId}
