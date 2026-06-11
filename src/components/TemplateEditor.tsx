@@ -581,10 +581,10 @@ export const TemplateEditor: React.FC<TemplateEditorProps> = ({
       targetId: compId,
       startX: e.clientX,
       startY: e.clientY,
-      startCompX: compX,
-      startCompY: compY,
-      startCompW: compW,
-      startCompH: compH,
+      startTargetX:compX,
+      startTargetY: compY,
+      startTargetW: compW,
+      startTargetH: compH,
     };
   };
 
@@ -606,21 +606,22 @@ export const TemplateEditor: React.FC<TemplateEditorProps> = ({
 
     dragRef.current = {
       active: true,
-      type: "resize",
+      moveOrResize: "resize",
+      targetType: "component",
       handle,
       targetId: compId,
       startX: e.clientX,
       startY: e.clientY,
-      startCompX: compX,
-      startCompY: compY,
-      startCompW: compW,
-      startCompH: compH,
+      startTargetX:compX,
+      startTargetY: compY,
+      startTargetW: compW,
+      startTargetH: compH,
     };
   };
 
   const isDragging = dragRef.current?.active;
   const dragTargetId = dragRef.current?.targetId;
-  const dragType = dragRef.current?.type;
+  const dragType = dragRef.current?.moveOrResize;
 
   // Per-thumbnail independent template store (ref avoids closure issues)
   const thumbTemplatesRef = useRef<Record<string, Template>>({});
@@ -866,34 +867,46 @@ export const TemplateEditor: React.FC<TemplateEditorProps> = ({
       const dxPct = ((e.clientX - drag.startX) / rect.width) * 100;
       const dyPct = ((e.clientY - drag.startY) / rect.height) * 100;
 
-      const comp = activeTemplate.components?.find((c) => c.id === drag.targetId);
-      if (!comp) return;
+      const isMove = drag.moveOrResize === "move";
+      const limit = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
+      const nextX = limit(drag.startTargetX + dxPct, 0, 100 - (isMove ? drag.startTargetW : 0));
+      const nextY = limit(drag.startTargetY + dyPct, 0, 100 - (isMove ? drag.startTargetH : 0));
 
-      if (drag.moveOrResize === "move") {
-        const nextX = Math.max(0, Math.min(100 - comp.width, drag.startTargetX + dxPct));
-        const nextY = Math.max(0, Math.min(100 - comp.height, drag.startTargetY + dyPct));
-        updateComponent(drag.targetId, { x: nextX, y: nextY });
-      } else if (drag.moveOrResize === "resize") {
-        let nextX = drag.startTargetX, nextY = drag.startTargetY,
-            nextW = drag.startTargetW, nextH = drag.startTargetH;
-        const min = 2;
-        if (drag.handle === "tl") {
-          nextX = drag.startTargetX + dxPct; nextY = drag.startTargetY + dyPct;
-          nextW = drag.startTargetW - dxPct; nextH = drag.startTargetH - dyPct;
-        } else if (drag.handle === "tr") {
-          nextY = drag.startTargetY + dyPct;
-          nextW = drag.startTargetW + dxPct; nextH = drag.startTargetH - dyPct;
-        } else if (drag.handle === "bl") {
-          nextX = drag.startTargetX + dxPct;
-          nextW = drag.startTargetW - dxPct; nextH = drag.startTargetH + dyPct;
-        } else if (drag.handle === "br") {
-          nextW = drag.startTargetW + dxPct; nextH = drag.startTargetH + dyPct;
+      if (drag.targetType === "component") {
+        if (isMove) {
+          updateComponent(drag.targetId, { x: nextX, y: nextY });
+        } else {
+          let rx = drag.startTargetX, ry = drag.startTargetY, rw = drag.startTargetW, rh = drag.startTargetH;
+          if (drag.handle === "tl") { rx += dxPct; ry += dyPct; rw -= dxPct; rh -= dyPct; }
+          else if (drag.handle === "tr") { ry += dyPct; rw += dxPct; rh -= dyPct; }
+          else if (drag.handle === "bl") { rx += dxPct; rw -= dxPct; rh += dyPct; }
+          else if (drag.handle === "br") { rw += dxPct; rh += dyPct; }
+          rw = limit(rw, 2, 100); rh = limit(rh, 2, 100);
+          rx = limit(rx, 0, 100 - rw); ry = limit(ry, 0, 100 - rh);
+          updateComponent(drag.targetId, { x: rx, y: ry, width: rw, height: rh });
         }
-        if (nextW < min) nextW = min; if (nextH < min) nextH = min;
-        if (nextX < 0) nextX = 0; if (nextY < 0) nextY = 0;
-        if (nextX + nextW > 100) nextW = 100 - nextX;
-        if (nextY + nextH > 100) nextH = 100 - nextY;
-        updateComponent(drag.targetId, { x: nextX, y: nextY, width: nextW, height: nextH });
+      } else if (drag.targetType === "slot") {
+        if (isMove) {
+          updateSlotGeometry(drag.targetId, "x", nextX);
+          updateSlotGeometry(drag.targetId, "y", nextY);
+        } else {
+          let rx = drag.startTargetX, ry = drag.startTargetY, rw = drag.startTargetW, rh = drag.startTargetH;
+          if (drag.handle === "tl") { rx += dxPct; ry += dyPct; rw -= dxPct; rh -= dyPct; }
+          else if (drag.handle === "tr") { ry += dyPct; rw += dxPct; rh -= dyPct; }
+          else if (drag.handle === "bl") { rx += dxPct; rw -= dxPct; rh += dyPct; }
+          else if (drag.handle === "br") { rw += dxPct; rh += dyPct; }
+          rw = limit(rw, 2, 100); rh = limit(rh, 2, 100);
+          rx = limit(rx, 0, 100 - rw); ry = limit(ry, 0, 100 - rh);
+          updateSlotGeometry(drag.targetId, "x", rx);
+          updateSlotGeometry(drag.targetId, "y", ry);
+          updateSlotGeometry(drag.targetId, "maxWidth", rw);
+          updateSlotGeometry(drag.targetId, "maxHeight", rh);
+        }
+      } else if (drag.targetType === "textField") {
+        if (isMove) {
+          updateTextFieldValue(drag.targetId, "x", nextX);
+          updateTextFieldValue(drag.targetId, "y", nextY);
+        }
       }
       setDragTick((t) => t + 1);
     };
