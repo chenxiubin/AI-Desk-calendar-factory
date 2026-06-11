@@ -1190,7 +1190,7 @@ export const TemplateEditor: React.FC<TemplateEditorProps> = ({
         key={component.id}
         className={`absolute rounded-md text-left ${
           isSelected ? "ring-2 ring-blue-500" : "ring-1 ring-white/40 hover:ring-blue-300/70"
-        } ${component.type === "product_slot" ? "border border-blue-500/50 bg-blue-500/10" : "bg-white/10"} ${
+        } ${component.type === "product_slot" ? "border border-dashed border-blue-500 bg-transparent" : "bg-transparent"} ${
           isLocked ? "" : "cursor-move"
         }`}
         style={style}
@@ -1496,61 +1496,13 @@ export const TemplateEditor: React.FC<TemplateEditorProps> = ({
 
       {/* Three-column body: left(layers+props) | center(canvas) | right(ThumbnailBoard) */}
       <div className="grid min-h-0 flex-1 grid-cols-[300px_minmax(0,1fr)_360px] gap-3 overflow-hidden p-3">
-        {/* LEFT: split into layer list (top) + properties (bottom) */}
+        {/* LEFT: properties only */}
         <aside className="flex min-h-0 flex-col overflow-hidden rounded-xl border border-slate-200 bg-white">
-          {/* TOP: layer list */}
-          <div className="flex h-[45%] min-h-0 flex-col border-b border-slate-100">
-            <div className="flex items-center justify-between px-3 py-2 shrink-0">
-              <span className="text-xs font-black text-slate-700">图层列表</span>
-              <div className="flex gap-1">
-                <button type="button" onClick={() => setActivePanel("import")} className="rounded bg-indigo-50 px-2 py-0.5 text-[10px] font-bold text-indigo-600 hover:bg-indigo-100">导入</button>
-                <button type="button" onClick={() => setActivePanel("slots")} className="rounded bg-blue-50 px-2 py-0.5 text-[10px] font-bold text-blue-600 hover:bg-blue-100">添加</button>
-              </div>
-            </div>
-            <div className="min-h-0 flex-1 overflow-y-auto p-2">
-              <LayersPanel
-                sortedComponents={sortedComponents}
-                selectedComponent={selectedComponent}
-                selectedTextField={selectedTextField}
-                onComponentSelect={(id) => { setSelectedComponentId(id); setSelectedSlotId(null); setSelectedTextFieldId(null); }}
-                onComponentUpdate={(id, patch) => updateComponent(id, patch)}
-                onComponentDelete={deleteComponent}
-                onTextFieldUpdate={(id, field, value) => updateTextFieldValue(id, field, value)}
-              />
-              {!hasLayerComponents && activeTemplate.slots.length > 0 && (
-                <div className="mt-3">
-                  <div className="mb-1 text-[10px] font-bold text-slate-400">旧版产品槽位</div>
-                  {activeTemplate.slots.map((slot) => (
-                    <div key={slot.id} className={`flex items-center gap-2 rounded px-2 py-1.5 text-[10px] cursor-pointer ${selectedSlotId === slot.id ? "bg-blue-50 text-blue-700" : "text-slate-600 hover:bg-slate-50"}`}
-                      onClick={() => { setSelectedSlotId(slot.id); setSelectedComponentId(null); setSelectedTextFieldId(null); }}>
-                      <span className="h-2 w-2 shrink-0 rounded-full bg-blue-400" />
-                      <span className="truncate font-medium">{slot.slotName || "产品槽位"}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
-              {!hasLayerComponents && activeTemplate.textFields.length > 0 && (
-                <div className="mt-3">
-                  <div className="mb-1 text-[10px] font-bold text-slate-400">旧版文字字段</div>
-                  {activeTemplate.textFields.map((tf) => (
-                    <div key={tf.id} className={`flex items-center gap-2 rounded px-2 py-1.5 text-[10px] cursor-pointer ${selectedTextFieldId === tf.id ? "bg-blue-50 text-blue-700" : "text-slate-600 hover:bg-slate-50"}`}
-                      onClick={() => { setSelectedTextFieldId(tf.id); setSelectedComponentId(null); setSelectedSlotId(null); }}>
-                      <span className="h-2 w-2 shrink-0 rounded-full bg-sky-400" />
-                      <span className="truncate font-medium">{tf.fieldName || "文字字段"}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
+          <div className="px-3 py-2 shrink-0 border-b border-slate-100">
+            <span className="text-xs font-black text-slate-700">图层属性</span>
           </div>
-          {/* BOTTOM: layer properties */}
-          <div className="min-h-0 flex-1 flex-col flex">
-            <div className="px-3 py-2 shrink-0 border-b border-slate-100">
-              <span className="text-xs font-black text-slate-700">图层属性</span>
-            </div>
-            <div className="min-h-0 flex-1 overflow-y-auto p-3">
-              {buildInspector()}
-            </div>
+          <div className="min-h-0 flex-1 overflow-y-auto p-3">
+            {buildInspector()}
           </div>
         </aside>
 
@@ -1588,6 +1540,58 @@ export const TemplateEditor: React.FC<TemplateEditorProps> = ({
                 {activeTemplate.textFields.map(renderTextField)}
                 {renderTransformBox()}
                 {showSafetyRegion && (<div className="pointer-events-none absolute inset-[6%] border-2 border-dashed border-rose-400/70" />)}
+              </div>
+            </div>
+            {/* Floating layer list */}
+            <div className="pointer-events-auto absolute bottom-3 left-3 z-40 w-[240px] max-h-[48vh] overflow-hidden rounded-xl border border-slate-200 bg-white/95 shadow-xl backdrop-blur-sm">
+              <div className="flex items-center justify-between border-b border-slate-100 px-3 py-2">
+                <span className="text-[11px] font-black text-slate-700">图层</span>
+                <div className="flex gap-1">
+                  <button type="button" onClick={() => setActivePanel("import")} className="rounded bg-indigo-50 px-1.5 py-0.5 text-[9px] font-bold text-indigo-600">导入</button>
+                  <button type="button" onClick={() => setActivePanel("slots")} className="rounded bg-blue-50 px-1.5 py-0.5 text-[9px] font-bold text-blue-600">添加</button>
+                </div>
+              </div>
+              <div className="max-h-[44vh] overflow-y-auto p-2">
+                {(() => {
+                  const groups = [
+                    { type: "scene_base" as const, label: "场景", color: "bg-slate-400" },
+                    { type: "product_slot" as const, label: "产品槽", color: "bg-blue-400" },
+                    { type: "text_overlay" as const, label: "文案", color: "bg-sky-400" },
+                    { type: "logo_overlay" as const, label: "LOGO", color: "bg-teal-400" },
+                    { type: "decor_overlay" as const, label: "装饰", color: "bg-rose-400" },
+                  ];
+                  const allComps = [...(activeTemplate.components || [])].sort((a, b) => {
+                    if (a.type === "scene_base") return 1;
+                    if (b.type === "scene_base") return -1;
+                    return (b.zIndex ?? 0) - (a.zIndex ?? 0);
+                  });
+                  return groups.map((g) => {
+                    const items = allComps.filter((c) => c.type === g.type);
+                    if (items.length === 0) return null;
+                    return (
+                      <div key={g.type} className="mb-2">
+                        <div className="mb-1 text-[9px] font-bold text-slate-400">{g.label} · {items.length}</div>
+                        {items.map((c) => (
+                          <div key={c.id} draggable={c.type !== "scene_base"}
+                            onDragStart={(e) => { if (c.type !== "scene_base") { e.dataTransfer.effectAllowed = "move"; setDraggingLayerId(c.id); } }}
+                            onDragOver={(e) => { if (c.type !== "scene_base") e.preventDefault(); }}
+                            onDrop={(e) => { e.preventDefault(); if (draggingLayerId && draggingLayerId !== c.id) reorderComponents(draggingLayerId, c.id); setDraggingLayerId(null); }}
+                            onDragEnd={() => setDraggingLayerId(null)}
+                            className={`flex items-center gap-1.5 rounded px-1.5 py-1 text-[10px] cursor-pointer ${
+                              draggingLayerId === c.id ? "opacity-40 border-dashed border-blue-300 border" : ""
+                            } ${selectedComponentId === c.id ? "bg-blue-50 text-blue-700 ring-1 ring-blue-200" : "text-slate-600 hover:bg-slate-50"}`}
+                            onClick={() => { setSelectedComponentId(c.id); setSelectedSlotId(null); setSelectedTextFieldId(null); }}>
+                            <span className={`h-2 w-2 shrink-0 rounded-full ${g.color}`} />
+                            <span className="truncate font-medium flex-1">{c.name || c.type}</span>
+                            <button type="button" onClick={(e) => { e.stopPropagation(); updateComponent(c.id, { visible: c.visible === false ? true : false }); }} className="text-[9px] px-0.5 hover:bg-slate-200 rounded">{c.visible === false ? "⊘" : "◉"}</button>
+                          </div>
+                        ))}
+                      </div>
+                    );
+                  });
+                })()}
+                {activeTemplate.slots.length > 0 && (<div className="mt-2 pt-2 border-t border-slate-100"><div className="mb-1 text-[9px] font-bold text-slate-400">旧版槽位</div>{activeTemplate.slots.map((s) => (<div key={s.id} className={`flex items-center gap-1.5 rounded px-1.5 py-1 text-[10px] cursor-pointer ${selectedSlotId === s.id ? "bg-blue-50 text-blue-700" : "text-slate-600 hover:bg-slate-50"}`} onClick={() => { setSelectedSlotId(s.id); setSelectedComponentId(null); setSelectedTextFieldId(null); }}><span className="h-2 w-2 shrink-0 rounded-full bg-blue-400" /><span className="truncate font-medium">{s.slotName || "槽位"}</span></div>))}</div>)}
+                {activeTemplate.textFields.length > 0 && (<div className="mt-2 pt-2 border-t border-slate-100"><div className="mb-1 text-[9px] font-bold text-slate-400">文字</div>{activeTemplate.textFields.map((tf) => (<div key={tf.id} className={`flex items-center gap-1.5 rounded px-1.5 py-1 text-[10px] cursor-pointer ${selectedTextFieldId === tf.id ? "bg-blue-50 text-blue-700" : "text-slate-600 hover:bg-slate-50"}`} onClick={() => { setSelectedTextFieldId(tf.id); setSelectedComponentId(null); setSelectedSlotId(null); }}><span className="h-2 w-2 shrink-0 rounded-full bg-sky-400" /><span className="truncate font-medium">{tf.fieldName || "文字"}</span></div>))}</div>)}
               </div>
             </div>
           </div>
