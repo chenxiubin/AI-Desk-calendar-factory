@@ -117,41 +117,51 @@ export async function renderTemplateToCanvas(
     );
   } else {
     // Standard rendering path (supports all / base_only / overlays_only)
-    if (renderMode === "all" || renderMode === "base_only") {
-      // 1. Draw backdrop scenery layers
-      drawBackground(ctx, template, canvas.width, canvas.height);
-
-      // 2. Sort slots by layer index to enforce correct overlay order
-      const sortedSlots = [...template.slots].sort(
-        (a, b) => (a.layer || 0) - (b.layer || 0),
-      );
-
-      // 3. Draw product slots (shadow is disabled inside DrawSlot when renderMode is "base_only")
-      for (const slot of sortedSlots) {
-        await drawSlot(
-          ctx,
-          product,
-          slot,
-          canvas.width,
-          canvas.height,
-          offsets,
-          renderMode,
-        );
+    if (template.components && template.components.length > 0) {
+      // Render from components (modern path) — avoids double-rendering with slots
+      if (renderMode === "all" || renderMode === "base_only") {
+        const baseComps = template.components
+          .filter(
+            (c) =>
+              c.visible !== false && (c.type === "scene_base" || c.type === "product_slot"),
+          )
+          .sort((a, b) => a.zIndex - b.zIndex);
+        for (const comp of baseComps) {
+          await drawComponent(ctx, comp, product, template, canvas.width, canvas.height, offsets, renderMode !== "base_only");
+        }
       }
-    }
-
-    if (renderMode === "all" || renderMode === "overlays_only") {
-      // 4. Draw texts
-      drawTextFields(ctx, product, template, canvas.width, canvas.height);
-
-      // 5. Draw decorative layers and logo overlays
-      drawDecorAndLogoOverlays(
-        ctx,
-        template,
-        product,
-        canvas.width,
-        canvas.height,
-      );
+      if (renderMode === "all" || renderMode === "overlays_only") {
+        const overlayComps = template.components
+          .filter(
+            (c) =>
+              c.visible !== false &&
+              (c.type === "text_overlay" || c.type === "decor_overlay" || c.type === "logo_overlay"),
+          )
+          .sort((a, b) => a.zIndex - b.zIndex);
+        for (const comp of overlayComps) {
+          await drawComponent(ctx, comp, product, template, canvas.width, canvas.height, offsets, false);
+        }
+        const hasTextOverlay = template.components.some((c) => c.visible !== false && c.type === "text_overlay");
+        if (!hasTextOverlay) {
+          drawTextFields(ctx, product, template, canvas.width, canvas.height);
+        }
+        drawDecorAndLogoOverlays(ctx, template, product, canvas.width, canvas.height);
+      }
+    } else {
+      // Legacy path — no components, fall back to slots/textFields
+      if (renderMode === "all" || renderMode === "base_only") {
+        drawBackground(ctx, template, canvas.width, canvas.height);
+        const sortedSlots = [...template.slots].sort(
+          (a, b) => (a.layer || 0) - (b.layer || 0),
+        );
+        for (const slot of sortedSlots) {
+          await drawSlot(ctx, product, slot, canvas.width, canvas.height, offsets, renderMode);
+        }
+      }
+      if (renderMode === "all" || renderMode === "overlays_only") {
+        drawTextFields(ctx, product, template, canvas.width, canvas.height);
+        drawDecorAndLogoOverlays(ctx, template, product, canvas.width, canvas.height);
+      }
     }
   }
 
@@ -1850,7 +1860,7 @@ export async function renderFusionBaseFromLayers(
 
   // Renders standard background canvas color/fallback if no scene_base is drawn
   const hasSceneBase = layers.some(
-    (l) => l.visible && l.layerType === "scene_base" && l.sendToRunningHub,
+    (l) => l.visible !== false && l.layerType === "scene_base" && l.sendToRunningHub,
   );
   if (!hasSceneBase) {
     drawBackground(ctx, template, canvas.width, canvas.height);
@@ -1858,7 +1868,7 @@ export async function renderFusionBaseFromLayers(
 
   // Draw layers where sendToRunningHub is true, sorted by zIndex
   const eligibleLayers = [...layers]
-    .filter((l) => l.visible && l.sendToRunningHub)
+    .filter((l) => l.visible !== false && l.sendToRunningHub)
     .sort((a, b) => a.zIndex - b.zIndex);
 
   for (const layer of eligibleLayers) {
@@ -1907,11 +1917,11 @@ export async function renderFinalCompositeFromLayers(
       );
       // Fallback base render from layers
       const baseLayers = [...layers]
-        .filter((l) => l.visible && l.sendToRunningHub)
+        .filter((l) => l.visible !== false && l.sendToRunningHub)
         .sort((a, b) => a.zIndex - b.zIndex);
 
       const hasSceneBase = layers.some(
-        (l) => l.visible && l.layerType === "scene_base" && l.sendToRunningHub,
+        (l) => l.visible !== false && l.layerType === "scene_base" && l.sendToRunningHub,
       );
       if (!hasSceneBase) {
         drawBackground(ctx, template, canvas.width, canvas.height);
@@ -1930,11 +1940,11 @@ export async function renderFinalCompositeFromLayers(
   } else {
     // Standard drawing of scene_base and products
     const baseLayers = [...layers]
-      .filter((l) => l.visible && l.sendToRunningHub)
+      .filter((l) => l.visible !== false && l.sendToRunningHub)
       .sort((a, b) => a.zIndex - b.zIndex);
 
     const hasSceneBase = layers.some(
-      (l) => l.visible && l.layerType === "scene_base" && l.sendToRunningHub,
+      (l) => l.visible !== false && l.layerType === "scene_base" && l.sendToRunningHub,
     );
     if (!hasSceneBase) {
       drawBackground(ctx, template, canvas.width, canvas.height);
@@ -1953,7 +1963,7 @@ export async function renderFinalCompositeFromLayers(
 
   // 2. Draw non-RunningHub overlays on top, sorted by zIndex
   const overlayLayers = [...layers]
-    .filter((l) => l.visible && !l.sendToRunningHub)
+    .filter((l) => l.visible !== false && !l.sendToRunningHub)
     .sort((a, b) => a.zIndex - b.zIndex);
 
   for (const oL of overlayLayers) {
@@ -1962,7 +1972,7 @@ export async function renderFinalCompositeFromLayers(
 
   // 3. Optional classic dynamic text labels draw fallback if no text overlay exists in layers
   const hasTextOverlay = layers.some(
-    (l) => l.visible && l.layerType === "text_overlay",
+    (l) => l.visible !== false && l.layerType === "text_overlay",
   );
   if (!hasTextOverlay) {
     drawTextFields(ctx, product, template, canvas.width, canvas.height);
