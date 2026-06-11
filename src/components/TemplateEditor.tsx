@@ -1011,7 +1011,7 @@ export const TemplateEditor: React.FC<TemplateEditorProps> = ({
   );
 
   const renderComponentOnCanvas = (component: TemplateComponent) => {
-    if (!component.visible) return null;
+    if (component.visible === false) return null;
     const isSelected = selectedComponentId === component.id;
     const isScene = component.type === "scene_base";
     const style: React.CSSProperties = isScene
@@ -1965,7 +1965,7 @@ const LayersPanel: React.FC<{
                 <span className="rounded bg-slate-100 px-1 py-0.5 text-[8px] font-bold text-slate-400">
                   {component.sendToRunningHub ? "RH" : "CV"}
                 </span>
-                {component.visible ? (
+                {component.visible !== false ? (
                   <Eye className="h-3 w-3 text-blue-400" />
                 ) : (
                   <EyeOff className="h-3 w-3 text-slate-300" />

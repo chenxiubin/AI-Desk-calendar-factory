@@ -15,6 +15,20 @@ export function setDemoMode(value: boolean) {
   DEMO_MODE = value;
 }
 
+/**
+ * Map exportSettings.format to MIME type.
+ * Falls back to image/jpeg for unsupported formats or incompatible browsers.
+ */
+export function getExportMimeType(format?: string): "image/png" | "image/jpeg" | "image/webp" {
+  if (format === "PNG") return "image/png";
+  if (format === "WebP") return "image/webp";
+  return "image/jpeg";
+}
+
+/** visible === false is hidden; undefined or true is visible (safe for old templates) */
+export const isLayerVisible = (layer: { visible?: boolean } | undefined): boolean =>
+  layer?.visible !== false;
+
 export interface RenderOffsets {
   hOffset?: number; // slider percent offset -50 to 50
   vOffset?: number; // slider percent offset -50 to 50
@@ -143,7 +157,7 @@ export async function renderTemplateToCanvas(
 
   // Final quality output
   const format =
-    template.exportSettings?.format === "PNG" ? "image/png" : "image/jpeg";
+    getExportMimeType(template.exportSettings?.format);
   const quality = (template.exportSettings?.quality || 90) / 100;
 
   return canvas.toDataURL(format, quality);
@@ -1445,7 +1459,7 @@ export async function renderFusionBaseImage(
     const eligibleComps = template.components
       .filter(
         (c) =>
-          c.visible && (c.type === "scene_base" || c.type === "product_slot"),
+          c.visible !== false && (c.type === "scene_base" || c.type === "product_slot"),
       )
       .sort((a, b) => a.zIndex - b.zIndex);
 
@@ -1482,7 +1496,7 @@ export async function renderFusionBaseImage(
   }
 
   const format =
-    template.exportSettings?.format === "PNG" ? "image/png" : "image/jpeg";
+    getExportMimeType(template.exportSettings?.format);
   return canvas.toDataURL(format, 0.95);
 }
 
@@ -1548,7 +1562,7 @@ export async function renderFinalCompositeImage(
       const baseComps = template.components
         .filter(
           (c) =>
-            c.visible && (c.type === "scene_base" || c.type === "product_slot"),
+            c.visible !== false && (c.type === "scene_base" || c.type === "product_slot"),
         )
         .sort((a, b) => a.zIndex - b.zIndex);
       for (const comp of baseComps) {
@@ -1587,7 +1601,7 @@ export async function renderFinalCompositeImage(
     const overlays = template.components
       .filter(
         (c) =>
-          c.visible &&
+          c.visible !== false &&
           (c.type === "text_overlay" ||
             c.type === "decor_overlay" ||
             c.type === "logo_overlay"),
@@ -1611,7 +1625,7 @@ export async function renderFinalCompositeImage(
   // Draw any traditional typography / placeholders to protect layout compatibility
   const hasTextOverlay =
     template.components &&
-    template.components.some((c) => c.visible && c.type === "text_overlay");
+    template.components.some((c) => c.visible !== false && c.type === "text_overlay");
   if (!hasTextOverlay) {
     drawTextFields(ctx, dummyProduct, template, canvas.width, canvas.height);
   }
@@ -1626,7 +1640,7 @@ export async function renderFinalCompositeImage(
   }
 
   const format =
-    template.exportSettings?.format === "PNG" ? "image/png" : "image/jpeg";
+    getExportMimeType(template.exportSettings?.format);
   return canvas.toDataURL(format, 0.95);
 }
 
@@ -1650,7 +1664,7 @@ export async function renderFullPreviewImage(
   if (template.components && template.components.length > 0) {
     // Sort and draw ALL components
     const sortedComps = [...template.components]
-      .filter((c) => c.visible)
+      .filter((c) => c.visible !== false)
       .sort((a, b) => a.zIndex - b.zIndex);
 
     for (const comp of sortedComps) {
@@ -1668,7 +1682,7 @@ export async function renderFullPreviewImage(
 
     // Draw typography only if there is no text_overlay in components
     const hasTextOverlay = template.components.some(
-      (c) => c.visible && c.type === "text_overlay",
+      (c) => c.visible !== false && c.type === "text_overlay",
     );
     if (!hasTextOverlay) {
       drawTextFields(ctx, product, template, canvas.width, canvas.height);
@@ -1701,7 +1715,7 @@ export async function renderFullPreviewImage(
   }
 
   const format =
-    template.exportSettings?.format === "PNG" ? "image/png" : "image/jpeg";
+    getExportMimeType(template.exportSettings?.format);
   return canvas.toDataURL(format, 0.95);
 }
 
@@ -1717,7 +1731,7 @@ async function drawSingleLayer(
   ch: number,
   drawShadow: boolean = true,
 ) {
-  if (!layer.visible) return;
+  if (layer.visible === false) return;
 
   const x = cw * (layer.x / 100);
   const y = ch * (layer.y / 100);
@@ -1859,7 +1873,7 @@ export async function renderFusionBaseFromLayers(
   }
 
   const format =
-    template.exportSettings?.format === "PNG" ? "image/png" : "image/jpeg";
+    getExportMimeType(template.exportSettings?.format);
   return canvas.toDataURL(format, 0.95);
 }
 
@@ -1955,6 +1969,6 @@ export async function renderFinalCompositeFromLayers(
   }
 
   const format =
-    template.exportSettings?.format === "PNG" ? "image/png" : "image/jpeg";
+    getExportMimeType(template.exportSettings?.format);
   return canvas.toDataURL(format, 0.95);
 }
