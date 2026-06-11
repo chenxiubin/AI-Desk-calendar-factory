@@ -1507,7 +1507,7 @@ export const TemplateEditor: React.FC<TemplateEditorProps> = ({
         </aside>
 
         {/* CENTER: Canvas */}
-        <div className="flex min-h-0 flex-col overflow-hidden rounded-xl border border-slate-200 bg-white">
+        <div className="relative flex min-h-0 flex-col overflow-hidden rounded-xl border border-slate-200 bg-white">
           <div className="flex items-center justify-between border-b border-slate-100 px-3 py-1.5 text-xs text-slate-500 shrink-0">
             <div className="flex items-center gap-2">
               <span className="font-bold text-slate-700">模板画布</span>
@@ -1543,7 +1543,7 @@ export const TemplateEditor: React.FC<TemplateEditorProps> = ({
               </div>
             </div>
             {/* Floating layer list */}
-            <div className="pointer-events-auto absolute bottom-3 left-3 z-40 w-[240px] max-h-[48vh] overflow-hidden rounded-xl border border-slate-200 bg-white/95 shadow-xl backdrop-blur-sm">
+            <div className="pointer-events-auto absolute bottom-3 left-3 z-40 w-[260px] max-h-[48vh] overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl">
               <div className="flex items-center justify-between border-b border-slate-100 px-3 py-2">
                 <span className="text-[11px] font-black text-slate-700">图层</span>
                 <div className="flex gap-1">
@@ -1572,15 +1572,21 @@ export const TemplateEditor: React.FC<TemplateEditorProps> = ({
                       <div key={g.type} className="mb-2">
                         <div className="mb-1 text-[9px] font-bold text-slate-400">{g.label} · {items.length}</div>
                         {items.map((c) => (
-                          <div key={c.id} draggable={c.type !== "scene_base"}
-                            onDragStart={(e) => { if (c.type !== "scene_base") { e.dataTransfer.effectAllowed = "move"; setDraggingLayerId(c.id); } }}
+                          <div key={c.id}
                             onDragOver={(e) => { if (c.type !== "scene_base") e.preventDefault(); }}
                             onDrop={(e) => { e.preventDefault(); if (draggingLayerId && draggingLayerId !== c.id) reorderComponents(draggingLayerId, c.id); setDraggingLayerId(null); }}
-                            onDragEnd={() => setDraggingLayerId(null)}
                             className={`flex items-center gap-1.5 rounded px-1.5 py-1 text-[10px] cursor-pointer ${
-                              draggingLayerId === c.id ? "opacity-40 border-dashed border-blue-300 border" : ""
+                              draggingLayerId === c.id ? "bg-blue-100/50" : ""
                             } ${selectedComponentId === c.id ? "bg-blue-50 text-blue-700 ring-1 ring-blue-200" : "text-slate-600 hover:bg-slate-50"}`}
                             onClick={() => { setSelectedComponentId(c.id); setSelectedSlotId(null); setSelectedTextFieldId(null); }}>
+                            {c.type !== "scene_base" && (
+                              <button type="button" draggable
+                                onDragStart={(e) => { e.stopPropagation(); e.dataTransfer.effectAllowed = "move"; setDraggingLayerId(c.id); }}
+                                onDragEnd={() => setDraggingLayerId(null)}
+                                className="cursor-grab active:cursor-grabbing text-slate-300 hover:text-slate-500 px-0.5 shrink-0" title="拖动排序">
+                                ⠿
+                              </button>
+                            )}
                             <span className={`h-2 w-2 shrink-0 rounded-full ${g.color}`} />
                             <span className="truncate font-medium flex-1">{c.name || c.type}</span>
                             <button type="button" onClick={(e) => { e.stopPropagation(); updateComponent(c.id, { visible: c.visible === false ? true : false }); }} className="text-[9px] px-0.5 hover:bg-slate-200 rounded">{c.visible === false ? "⊘" : "◉"}</button>
