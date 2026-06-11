@@ -543,6 +543,7 @@ export const TemplateEditor: React.FC<TemplateEditorProps> = ({
   const [skuCount, setSkuCount] = useState(4);
   const [detailCount, setDetailCount] = useState(14);
   const [draggingLayerId, setDraggingLayerId] = useState<string | null>(null);
+  const [isLayerPanelOpen, setIsLayerPanelOpen] = useState(false);
 
   const getComponentLayerItems = () => {
     return [...(activeTemplate.components || [])].sort((a, b) => {
@@ -879,6 +880,14 @@ export const TemplateEditor: React.FC<TemplateEditorProps> = ({
           else if (drag.handle === "bl") { rx += dxPct; rw -= dxPct; rh += dyPct; }
           else if (drag.handle === "br") { rw += dxPct; rh += dyPct; }
           rw = limit(rw, 2, 100); rh = limit(rh, 2, 100);
+          // Proportional resize: lock aspect ratio
+          const aspect = drag.startTargetW / Math.max(0.01, drag.startTargetH);
+          const wDriven = Math.abs(rw - drag.startTargetW) >= Math.abs(rh - drag.startTargetH);
+          if (wDriven) { rh = rw / aspect; } else { rw = rh * aspect; }
+          rw = limit(rw, 2, 100); rh = limit(rh, 2, 100);
+          if (drag.handle === "tl") { rx = drag.startTargetX + drag.startTargetW - rw; ry = drag.startTargetY + drag.startTargetH - rh; }
+          else if (drag.handle === "tr") { ry = drag.startTargetY + drag.startTargetH - rh; }
+          else if (drag.handle === "bl") { rx = drag.startTargetX + drag.startTargetW - rw; }
           rx = limit(rx, 0, 100 - rw); ry = limit(ry, 0, 100 - rh);
           updateComponent(drag.targetId, { x: rx, y: ry, width: rw, height: rh });
         }
@@ -894,6 +903,14 @@ export const TemplateEditor: React.FC<TemplateEditorProps> = ({
           else if (drag.handle === "bl") { rx += dxPct; rw -= dxPct; rh += dyPct; }
           else if (drag.handle === "br") { rw += dxPct; rh += dyPct; }
           rw = limit(rw, 2, 100); rh = limit(rh, 2, 100);
+          // Proportional resize for slots too
+          const sAspect = drag.startTargetW / Math.max(0.01, drag.startTargetH);
+          const sWDriven = Math.abs(rw - drag.startTargetW) >= Math.abs(rh - drag.startTargetH);
+          if (sWDriven) { rh = rw / sAspect; } else { rw = rh * sAspect; }
+          rw = limit(rw, 2, 100); rh = limit(rh, 2, 100);
+          if (drag.handle === "tl") { rx = drag.startTargetX + drag.startTargetW - rw; ry = drag.startTargetY + drag.startTargetH - rh; }
+          else if (drag.handle === "tr") { ry = drag.startTargetY + drag.startTargetH - rh; }
+          else if (drag.handle === "bl") { rx = drag.startTargetX + drag.startTargetW - rw; }
           rx = limit(rx, 0, 100 - rw); ry = limit(ry, 0, 100 - rh);
           // convert top-left back to slot center coordinates
           updateSlotGeometry(drag.targetId, "x", rx + rw / 2);
@@ -1643,7 +1660,15 @@ export const TemplateEditor: React.FC<TemplateEditorProps> = ({
                   {renderTransformBox()}
                   {showSafetyRegion && (<div className="pointer-events-none absolute inset-[6%] border-2 border-dashed border-rose-400/70" />)}
                 </div>
-                <div className="absolute bottom-3 left-3 z-50">{renderFloatingLayerList()}</div>
+                <div className="absolute bottom-3 left-3 z-50">
+                  {/* Toggle button */}
+                  <button type="button" onClick={() => setIsLayerPanelOpen(v => !v)}
+                    className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white/95 text-slate-600 shadow-lg hover:bg-slate-50 hover:text-slate-800 transition-colors"
+                    title={isLayerPanelOpen ? "收起图层列表" : "展开图层列表"}>
+                    <Layers className="h-4 w-4" />
+                  </button>
+                  {isLayerPanelOpen && renderFloatingLayerList()}
+                </div>
               </div>
             </div>
           </div>
