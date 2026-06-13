@@ -26,6 +26,12 @@ if (!fs.existsSync(assetDir)) {
 }
 app.use("/assets", express.static(assetDir));
 
+const templateStoreDir = path.join(process.cwd(), "template-store");
+const templateStoreFile = path.join(templateStoreDir, "templates.json");
+if (!fs.existsSync(templateStoreDir)) {
+  fs.mkdirSync(templateStoreDir, { recursive: true });
+}
+
 // Retrieve system-wide keys secured silently
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY || "";
 const RUNNINGHUB_API_KEY = process.env.RUNNINGHUB_API_KEY || "RH_MOCK_KEY_2026_TEST";
@@ -58,6 +64,41 @@ const resolveRunningHubApiSettings = (body: any = {}) => {
       isRunningHubApiKeyMissingOrPlaceholder(apiKey),
   };
 };
+
+// --- Review Store Setup ---
+const reviewStoreDir = path.join(process.cwd(), "review-store");
+const reviewStoreFile = path.join(reviewStoreDir, "reviews.json");
+const reviewPreviewsDir = path.join(reviewStoreDir, "previews");
+if (!fs.existsSync(reviewStoreDir)) {
+  fs.mkdirSync(reviewStoreDir, { recursive: true });
+}
+if (!fs.existsSync(reviewPreviewsDir)) {
+  fs.mkdirSync(reviewPreviewsDir, { recursive: true });
+}
+function readReviews(): any[] {
+  try {
+    if (fs.existsSync(reviewStoreFile)) {
+      return JSON.parse(fs.readFileSync(reviewStoreFile, "utf-8"));
+    }
+  } catch { /* corrupted, fallback to empty */ }
+  return [];
+}
+function writeReviews(data: any[]) {
+  const tmp = reviewStoreFile + ".tmp";
+  fs.writeFileSync(tmp, JSON.stringify(data, null, 2), "utf-8");
+  fs.renameSync(tmp, reviewStoreFile);
+}
+// Multer for review preview uploads
+const reviewPreviewStorage = multer.diskStorage({
+  destination: reviewPreviewsDir,
+  filename: (_req, file, cb) => {
+    const ts = Date.now();
+    const safeName = file.originalname.replace(/[^a-zA-Z0-9._-]/g, "_");
+    cb(null, `${ts}_${safeName}`);
+  },
+});
+const uploadReviewPreview = multer({ storage: reviewPreviewStorage, limits: { fileSize: 20 * 1024 * 1024 } });
+app.use("/review-store/previews", express.static(reviewPreviewsDir));
 
 // Disk storage for asset library uploads — preserves original filename
 const assetStorage = multer.diskStorage({
@@ -103,6 +144,88 @@ app.post("/api/upload-canvas", upload.single("image"), async (req, res) => {
   } catch (err: any) {
     console.error("upload-canvas error:", err);
     res.status(500).json({ error: err.message || "Failed to save file" });
+  }
+});
+
+app.get("/api/templates", async (_req, res) => {
+  try {
+    if (!fs.existsSync(templateStoreFile)) {
+      res.json({ templates: [], hasSavedTemplates: false });
+      return;
+    }
+    const raw = await fs.promises.readFile(templateStoreFile, "utf-8");
+    const parsed = JSON.parse(raw);
+    res.json({
+      templates: Array.isArray(parsed.templates) ? parsed.templates : [],
+      hasSavedTemplates: true,
+      updatedAt: parsed.updatedAt || null,
+    });
+  } catch (err: any) {
+    console.error("load templates error:", err);
+    res.status(500).json({ error: err.message || "Failed to load templates" });
+  }
+});
+
+app.post("/api/templates", async (req, res) => {
+  try {
+    const incomingTemplates = req.body?.templates;
+    if (!Array.isArray(incomingTemplates)) {
+      res.status(400).json({ error: "templates must be an array" });
+      return;
+    }
+    let previousTemplates: any[] = [];
+    if (fs.existsSync(templateStoreFile)) {
+      try {
+        const previous = JSON.parse(
+          await fs.promises.readFile(templateStoreFile, "utf-8"),
+        );
+        previousTemplates = Array.isArray(previous.templates)
+          ? previous.templates
+          : [];
+      } catch {
+        previousTemplates = [];
+      }
+    }
+    const previousById = new Map(
+      previousTemplates.map((template: any) => [template.id, template]),
+    );
+    const templates = incomingTemplates.map((template: any) => {
+      const previous = previousById.get(template.id);
+      const incomingComponents = Array.isArray(template.components)
+        ? template.components
+        : [];
+      const previousComponents = Array.isArray(previous?.components)
+        ? previous.components
+        : [];
+      if (incomingComponents.length === 0 && previousComponents.length > 0) {
+        return {
+          ...template,
+          components: previousComponents,
+        };
+      }
+      return template;
+    });
+    const payload = {
+      updatedAt: new Date().toISOString(),
+      templates,
+    };
+    const tempFile = `${templateStoreFile}.tmp`;
+    await fs.promises.writeFile(tempFile, JSON.stringify(payload, null, 2), "utf-8");
+    await fs.promises.rename(tempFile, templateStoreFile);
+    const componentCount = templates.reduce(
+      (total: number, template: any) =>
+        total + (Array.isArray(template.components) ? template.components.length : 0),
+      0,
+    );
+    res.json({
+      success: true,
+      count: templates.length,
+      componentCount,
+      updatedAt: payload.updatedAt,
+    });
+  } catch (err: any) {
+    console.error("save templates error:", err);
+    res.status(500).json({ error: err.message || "Failed to save templates" });
   }
 });
 
@@ -677,6 +800,156 @@ app.post("/api/runninghub/scene-fusion", async (req, res) => {
   }
 });
 
+// --- Review API Endpoints ---
+
+// GET /api/reviews — list all review projects
+app.get("/api/reviews", (_req, res) => {
+  try {
+    res.json(readReviews());
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/reviews/submit — create or update review project
+app.post("/api/reviews/submit", async (req, res) => {
+  try {
+    const { projectWorkspaceId, projectName, productId, productName, suiteRootId, suiteName, pages } = req.body;
+    if (!projectWorkspaceId || !pages || !Array.isArray(pages) || pages.length === 0) {
+      res.status(400).json({ error: "Missing required fields: projectWorkspaceId, pages" });
+      return;
+    }
+    const reviews = readReviews();
+    const existingIdx = reviews.findIndex((r: any) => r.projectWorkspaceId === projectWorkspaceId);
+    const now = new Date().toISOString();
+    const projectId = `review_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+
+    const reviewPages = pages.map((p: any, i: number) => ({
+      id: `rp_${Date.now()}_${i}`,
+      reviewProjectId: projectId,
+      projectTemplateId: p.projectTemplateId || `tmpl_${i}`,
+      pageName: p.pageName || `page_${i + 1}`,
+      pageGroup: p.pageGroup || "main",
+      width: p.width || 0,
+      height: p.height || 0,
+      aspectRatio: p.aspectRatio || "1:1",
+      required: p.required !== false,
+      previewUrl: p.previewUrl || "",
+      templateSnapshot: p.templateSnapshot || {},
+      status: "pending",
+      issues: [],
+      version: 1,
+      submittedAt: now,
+      history: [{ id: `rh_${Date.now()}_${i}`, action: "submitted", createdAt: now }],
+    }));
+
+    const totalPages = reviewPages.length;
+
+    if (existingIdx >= 0) {
+      // Update existing: merge new pages over old ones matching by projectTemplateId
+      const existing = reviews[existingIdx] as any;
+      const existingPageMap = new Map(existing.pages.map((ep: any) => [ep.projectTemplateId, ep]));
+      for (const np of reviewPages) {
+        const ep = existingPageMap.get(np.projectTemplateId) as any;
+        if (ep) {
+          Object.assign(np, { id: ep.id, reviewProjectId: ep.reviewProjectId, status: ep.status !== "needs_adjustment" ? ep.status : np.status, history: [...(ep.history || []), ...(np.history || [])], version: (ep.version || 0) + 1 });
+        }
+      }
+      existing.projectName = projectName || existing.projectName;
+      existing.updatedAt = now;
+      existing.pages = reviewPages;
+      existing.status = reviewPages.every((p: any) => p.status === "approved") ? "approved" : reviewPages.some((p: any) => p.status === "needs_adjustment") ? "needs_adjustment" : "reviewing";
+      res.json(existing);
+    } else {
+      const project = {
+        id: projectId,
+        projectWorkspaceId,
+        projectName: projectName || "未命名项目",
+        productId: productId || "",
+        productName: productName || "",
+        suiteRootId: suiteRootId || "",
+        suiteName: suiteName || "",
+        status: "pending_review",
+        pages: reviewPages,
+        createdAt: now,
+        updatedAt: now,
+      };
+      reviews.push(project);
+      res.json(project);
+    }
+    writeReviews(reviews);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// PATCH /api/reviews/:reviewProjectId/pages/:pageId — update page status
+app.patch("/api/reviews/:reviewProjectId/pages/:pageId", (req, res) => {
+  try {
+    const { reviewProjectId, pageId } = req.params;
+    const { status, reviewNote, issueCodes } = req.body;
+    if (!reviewProjectId || !pageId || !status) {
+      res.status(400).json({ error: "Missing required fields" });
+      return;
+    }
+    const reviews = readReviews();
+    const project = reviews.find((r: any) => r.id === reviewProjectId);
+    if (!project) { res.status(404).json({ error: "Project not found" }); return; }
+    const page = (project as any).pages.find((p: any) => p.id === pageId);
+    if (!page) { res.status(404).json({ error: "Page not found" }); return; }
+    const now = new Date().toISOString();
+    const action = status === "approved" ? "approved" : status === "needs_adjustment" ? "returned" : "submitted";
+    page.status = status;
+    page.reviewNote = reviewNote || "";
+    if (issueCodes) page.issues = issueCodes.map((c: string) => ({ code: c, message: "", source: "manual" }));
+    page.reviewedAt = now;
+    page.history.push({ id: `rh_${Date.now()}`, action, note: reviewNote, issueCodes, createdAt: now });
+    (project as any).status = (project as any).pages.every((p: any) => p.status === "approved") ? "approved" : (project as any).pages.some((p: any) => p.status === "needs_adjustment") ? "needs_adjustment" : "reviewing";
+    (project as any).updatedAt = now;
+    writeReviews(reviews);
+    res.json(project);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/reviews/:reviewProjectId/pages/:pageId/resubmit
+app.post("/api/reviews/:reviewProjectId/pages/:pageId/resubmit", (req, res) => {
+  try {
+    const { reviewProjectId, pageId } = req.params;
+    const reviews = readReviews();
+    const project = reviews.find((r: any) => r.id === reviewProjectId);
+    if (!project) { res.status(404).json({ error: "Project not found" }); return; }
+    const page = (project as any).pages.find((p: any) => p.id === pageId);
+    if (!page) { res.status(404).json({ error: "Page not found" }); return; }
+    const now = new Date().toISOString();
+    page.status = "pending";
+    page.issues = [];
+    page.reviewNote = "";
+    page.version = (page.version || 1) + 1;
+    page.previewUrl = req.body.previewUrl || page.previewUrl;
+    page.history.push({ id: `rh_${Date.now()}`, action: "resubmitted", createdAt: now });
+    (project as any).status = "reviewing";
+    (project as any).updatedAt = now;
+    writeReviews(reviews);
+    res.json(project);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/review-assets — upload preview image
+app.post("/api/review-assets", uploadReviewPreview.single("file"), (req, res) => {
+  if (!req.file) {
+    res.status(400).json({ error: "No file uploaded" });
+    return;
+  }
+  res.json({
+    fileUrl: `/review-store/previews/${req.file.filename}`,
+    fileName: req.file.filename,
+  });
+});
+
 // Port and server initialization setup
 const isProduction = process.env.NODE_ENV === "production";
 const distPath = path.join(process.cwd(), "dist");
@@ -684,7 +957,12 @@ const distPath = path.join(process.cwd(), "dist");
 async function start() {
   if (!isProduction) {
     const vite = await createViteServer({
-      server: { middlewareMode: true },
+      server: {
+        middlewareMode: true,
+        watch: {
+          ignored: ["**/assets/**", "**/template-store/**"],
+        },
+      },
       appType: "spa"
     });
     app.use(vite.middlewares);

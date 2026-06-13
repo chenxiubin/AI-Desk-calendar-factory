@@ -155,6 +155,7 @@ export interface TemplateComponent {
   id: string;
   name: string;
   type: TemplateComponentType;
+  slotProductType?: "desk_calendar" | "wall_calendar";
   imageUrl?: string;
   x: number;
   y: number;
@@ -163,6 +164,7 @@ export interface TemplateComponent {
   zIndex: number;
   visible: boolean;
   sendToRunningHub: boolean;
+  positionLocked?: boolean;
   lockAspectRatio?: boolean;
   scaleMode?: "contain" | "cover";
   allowRotation?: boolean;
@@ -452,6 +454,72 @@ export interface GenerationProject {
     | "partially_rejected"
     | "approved"
     | "exported";
+  createdAt: string;
+  updatedAt: string;
+}
+
+// --- Review Module Types ---
+
+export type ReviewPageStatus = "pending" | "approved" | "needs_adjustment";
+
+export type ReviewProjectStatus = "pending_review" | "reviewing" | "needs_adjustment" | "approved";
+
+export type ReviewIssueCode =
+  | "product_position"
+  | "image_crop"
+  | "copywriting"
+  | "logo"
+  | "missing_asset"
+  | "wrong_size"
+  | "layer_error"
+  | "other";
+
+export interface ReviewIssue {
+  code: ReviewIssueCode;
+  message: string;
+  source: "automatic" | "manual";
+}
+
+export interface ReviewHistoryItem {
+  id: string;
+  action: "submitted" | "approved" | "returned" | "resubmitted";
+  note?: string;
+  issueCodes?: ReviewIssueCode[];
+  createdAt: string;
+}
+
+export interface ReviewPage {
+  id: string;
+  reviewProjectId: string;
+  projectTemplateId: string;
+  sourceTemplateId?: string;
+  pageName: string;
+  pageGroup: string;
+  width: number;
+  height: number;
+  aspectRatio: string;
+  required: boolean;
+  previewUrl?: string;
+  templateSnapshot: any;
+  status: ReviewPageStatus;
+  issues: ReviewIssue[];
+  reviewNote?: string;
+  version: number;
+  submittedAt: string;
+  reviewedAt?: string;
+  history: ReviewHistoryItem[];
+}
+
+export interface ReviewProject {
+  id: string;
+  projectWorkspaceId: string;
+  projectName: string;
+  productId: string;
+  productName: string;
+  suiteRootId: string;
+  suiteName: string;
+  status: ReviewProjectStatus;
+  pages: ReviewPage[];
   createdAt: string;
   updatedAt: string;
 }
