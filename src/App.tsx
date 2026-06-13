@@ -1,13 +1,13 @@
-// AI Studio Git Synchronization Force Update - src/App.tsx
+﻿// AI Studio Git Synchronization Force Update - src/App.tsx
 import React, { useState, useEffect } from "react";
 import { motion } from "motion/react";
 import { Sidebar } from "./components/Sidebar";
 import { Workspace } from "./components/Workspace";
-import { SuiteWorkbench } from "./components/SuiteWorkbench";
 import { AssetLibrary } from "./components/AssetLibrary";
 import { WhiteBgRefine } from "./components/WhiteBgRefine";
-import { TemplateLibrary } from "./components/TemplateLibrary";
+import { TemplateSuiteManager } from "./components/TemplateSuiteManager";
 import { TemplateEditor } from "./components/TemplateEditor";
+import { ProjectTemplateWorkbench } from "./components/ProjectTemplateWorkbench";
 import { BatchGenerator } from "./components/BatchGenerator";
 import { ReviewCenter } from "./components/ReviewCenter";
 import { ExportCenter } from "./components/ExportCenter";
@@ -23,18 +23,39 @@ import {
 } from "./types";
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState<string>("workspace");
+  const [activeTab, setActiveTab] = useState<string>(() => {
+    try {
+      return localStorage.getItem("calendar_app_active_tab") || "workspace";
+    } catch {
+      return "workspace";
+    }
+  });
   const [isNavigationOpen, setIsNavigationOpen] = useState(false);
-  const [pendingTemplateSuiteId, setPendingTemplateSuiteId] = useState<
-    string | null
-  >(null);
 
   const LS_KEY_PRODUCTS = "calendar_app_products";
   const LS_KEY_TEMPLATES = "calendar_app_templates";
   const LS_KEY_DATA_VER = "calendar_app_data_version";
-  const DATA_VERSION = 6; // bump this when seed data changes to invalidate old localStorage
+  const LS_KEY_ACTIVE_TAB = "calendar_app_active_tab";
+  const DATA_VERSION = 7; // bump this when seed data changes to invalidate old localStorage
 
-  // Core Global States — restore from localStorage, fallback to seed data
+  const persistTemplatesToDisk = async (nextTemplates: Template[]) => {
+    const response = await fetch("/api/templates", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ templates: nextTemplates }),
+    });
+    if (!response.ok) {
+      throw new Error("模板没有成功保存到本地文件");
+    }
+    return response.json() as Promise<{
+      success: boolean;
+      count: number;
+      componentCount: number;
+      updatedAt: string;
+    }>;
+  };
+
+  // Core global states: restore from localStorage, fallback to seed data
   const [products, setProducts] = useState<Product[]>(() => {
     try {
       const savedVer = localStorage.getItem(LS_KEY_DATA_VER);
@@ -67,6 +88,36 @@ export default function App() {
   useEffect(() => {
     try { localStorage.setItem(LS_KEY_TEMPLATES, JSON.stringify(templates)); } catch {}
   }, [templates]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(LS_KEY_ACTIVE_TAB, activeTab);
+    } catch {}
+  }, [activeTab]);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const response = await fetch("/api/templates");
+        if (!response.ok) return;
+        const result = await response.json();
+        if (
+          !cancelled &&
+          result?.hasSavedTemplates &&
+          Array.isArray(result.templates) &&
+          result.templates.length > 0
+        ) {
+          setTemplates(result.templates);
+        }
+      } catch {
+        // If the local template file is not available, keep the browser copy.
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   // Persist products and templates to localStorage on every change
   useEffect(() => {
@@ -212,22 +263,55 @@ export default function App() {
     );
   };
 
-  const handleSaveTemplate = (updatedTemp: Template) => {
-    setTemplates((prev) =>
-      prev.map((t) => (t.id === updatedTemp.id ? updatedTemp : t)),
+  const handleSaveTemplate = async (updatedTemp: Template | Template[]) => {
+    const nextTemplates = Array.isArray(updatedTemp) ? updatedTemp : [updatedTemp];
+    const templateMap = new Map<string, Template>(
+      templates.map((template) => [template.id, template]),
     );
+    nextTemplates.forEach((template) => {
+      templateMap.set(template.id, template);
+    });
+    const mergedTemplates = Array.from(templateMap.values());
+    const saveResult = await persistTemplatesToDisk(mergedTemplates);
+    setTemplates(mergedTemplates);
+    try {
+      localStorage.setItem(LS_KEY_DATA_VER, String(DATA_VERSION));
+      localStorage.setItem(LS_KEY_TEMPLATES, JSON.stringify(mergedTemplates));
+    } catch {
+      // Large imported design assets are saved to disk; browser cache is only a fallback.
+    }
+    return saveResult;
+  };
+
+  const handleDeleteTemplateSuite = async (templateIds: string[]) => {
+    const idsToDelete = new Set(templateIds);
+    const remainingTemplates = templates.filter(
+      (template) => !idsToDelete.has(template.id),
+    );
+    await persistTemplatesToDisk(remainingTemplates);
+    setTemplates(remainingTemplates);
+    setSelectedTemplateForEditor((selected) =>
+      selected && idsToDelete.has(selected.id) ? null : selected,
+    );
+    try {
+      localStorage.setItem(LS_KEY_DATA_VER, String(DATA_VERSION));
+      localStorage.setItem(
+        LS_KEY_TEMPLATES,
+        JSON.stringify(remainingTemplates),
+      );
+    } catch {
+      // The local template file remains the source of truth if browser storage is unavailable.
+    }
   };
 
   const handleCloneTemplate = (temp: Template) => {
     const cloned: Template = {
       ...temp,
       id: `TEMP_CLONE_${Date.now()}`,
-      templateName: `${temp.templateName} (副本)`,
+      templateName: `${temp.templateName}（副本）`,
     };
     setTemplates((prev) => [...prev, cloned]);
-    alert(
-      `【模板复制成功】已复制「${temp.templateName}」为「${cloned.templateName}」在模板库底部。`,
-    );
+    alert(`【模板复制成功】已复制“${temp.templateName}”为“${cloned.templateName}”，已添加到模板库底部。`);
   };
 
   // Launching generation wizard binds
@@ -275,6 +359,14 @@ export default function App() {
     setSelectedTemplateForEditor(temp);
   };
 
+  const getTemplatesForEditor = () => {
+    if (!selectedTemplateForEditor) return templates;
+    return [
+      selectedTemplateForEditor,
+      ...templates.filter((template) => template.id !== selectedTemplateForEditor.id),
+    ];
+  };
+
   // Switch pages layouts
   const renderPage = () => {
     switch (activeTab) {
@@ -291,11 +383,9 @@ export default function App() {
         );
       case "project_suite":
         return (
-          <SuiteWorkbench
+          <ProjectTemplateWorkbench
             products={products}
             templates={templates}
-            initialTemplateSuiteId={pendingTemplateSuiteId}
-            onClearInitialSuiteId={() => setPendingTemplateSuiteId(null)}
           />
         );
       case "assets":
@@ -317,23 +407,25 @@ export default function App() {
         );
       case "templates":
         return (
-          <TemplateLibrary
+          <TemplateSuiteManager
             templates={templates}
-            onSelectTemplateForEditor={handleSelectTemplateForEditor}
-            onNavigate={(id) => setActiveTab(id)}
-            onCloneTemplate={handleCloneTemplate}
-            onUseSuiteForNewProject={(suiteId) => {
-              setPendingTemplateSuiteId(suiteId);
-              setActiveTab("project_suite");
+            onEditSuite={(template) => {
+              handleSelectTemplateForEditor(template);
+              setActiveTab("editor");
             }}
+            onDuplicateSuite={async (nextTemplates) => {
+              await handleSaveTemplate(nextTemplates);
+            }}
+            onDeleteSuite={handleDeleteTemplateSuite}
           />
         );
       case "editor":
         return (
           <TemplateEditor
-            initialTemplates={templates}
+            initialTemplates={getTemplatesForEditor()}
             products={products}
             selectedTemplateFromLib={selectedTemplateForEditor}
+            onBackToSuiteLibrary={() => setActiveTab("templates")}
             onSaveTemplate={handleSaveTemplate}
           />
         );
@@ -419,14 +511,20 @@ export default function App() {
 
       {/* Main operation container page */}
       <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        <div className="p-6 md:p-8 flex-1 min-h-0 overflow-y-auto">
+        <div
+          className={
+            activeTab === "editor"
+              ? "flex-1 min-h-0 overflow-hidden"
+              : "p-6 md:p-8 flex-1 min-h-0 overflow-y-auto"
+          }
+        >
           <motion.div
             key={activeTab}
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -12 }}
             transition={{ duration: 0.2, ease: "easeOut" }}
-            className="h-full"
+            className="h-full min-h-0"
           >
             {renderPage()}
           </motion.div>
@@ -435,3 +533,4 @@ export default function App() {
     </div>
   );
 }
+

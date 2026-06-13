@@ -1,0 +1,1319 @@
+{
+  "updatedAt": "2026-06-13T07:04:20.886Z",
+  "templates": [
+    {
+      "id": "MAIN_001",
+      "templateName": "单本台历主图模板",
+      "templateType": "main",
+      "productType": "calendar",
+      "aspectRatio": "1:1",
+      "outputWidth": 800,
+      "outputHeight": 800,
+      "background": {
+        "type": "color",
+        "color": "#FFFFFF"
+      },
+      "status": "enabled",
+      "slots": [],
+      "textFields": [],
+      "exportSettings": {
+        "format": "JPG",
+        "quality": 95,
+        "width": 800,
+        "height": 800
+      }
+    },
+    {
+      "id": "MAIN_002",
+      "templateName": "单本台历高级场景主图",
+      "templateType": "main",
+      "productType": "calendar",
+      "aspectRatio": "1:1",
+      "outputWidth": 800,
+      "outputHeight": 800,
+      "background": {
+        "type": "color",
+        "color": "#FFFFFF"
+      },
+      "status": "enabled",
+      "slots": [],
+      "textFields": [],
+      "exportSettings": {
+        "format": "JPG",
+        "quality": 95,
+        "width": 800,
+        "height": 800
+      }
+    },
+    {
+      "id": "MAIN_003",
+      "templateName": "双本层叠场景主图",
+      "templateType": "main",
+      "productType": "calendar",
+      "aspectRatio": "1:1",
+      "outputWidth": 800,
+      "outputHeight": 800,
+      "background": {
+        "type": "color",
+        "color": "#FFFFFF"
+      },
+      "status": "enabled",
+      "slots": [],
+      "textFields": [],
+      "exportSettings": {
+        "format": "JPG",
+        "quality": 95,
+        "width": 800,
+        "height": 800
+      }
+    },
+    {
+      "id": "SKU_001",
+      "templateName": "SKU单款固定模板",
+      "templateType": "sku",
+      "productType": "calendar",
+      "aspectRatio": "1:1",
+      "outputWidth": 800,
+      "outputHeight": 800,
+      "background": {
+        "type": "color",
+        "color": "#FFFFFF"
+      },
+      "status": "enabled",
+      "slots": [],
+      "textFields": [],
+      "exportSettings": {
+        "format": "PNG",
+        "quality": 95,
+        "width": 800,
+        "height": 800
+      }
+    },
+    {
+      "id": "DETAIL_001",
+      "templateName": "材质结构详情解析图",
+      "templateType": "detail",
+      "productType": "calendar",
+      "aspectRatio": "3:4",
+      "outputWidth": 750,
+      "outputHeight": 1000,
+      "background": {
+        "type": "color",
+        "color": "#FFFFFF"
+      },
+      "status": "enabled",
+      "slots": [],
+      "textFields": [],
+      "exportSettings": {
+        "format": "JPG",
+        "quality": 92,
+        "width": 750,
+        "height": 1000
+      }
+    },
+    {
+      "id": "DETAIL_002",
+      "templateName": "工艺细节品质四宫格",
+      "templateType": "detail",
+      "productType": "calendar",
+      "aspectRatio": "3:4",
+      "outputWidth": 750,
+      "outputHeight": 1000,
+      "background": {
+        "type": "color",
+        "color": "#FFFFFF"
+      },
+      "status": "enabled",
+      "slots": [],
+      "textFields": [],
+      "exportSettings": {
+        "format": "JPG",
+        "quality": 90,
+        "width": 750,
+        "height": 1000
+      }
+    },
+    {
+      "id": "MAIN_001_main_01_square_slot_1",
+      "templateName": "单本台历主图模板 - 产品展示",
+      "templateType": "main",
+      "productType": "calendar",
+      "aspectRatio": "1:1",
+      "outputWidth": 800,
+      "outputHeight": 800,
+      "background": {
+        "type": "color",
+        "color": "#FFFFFF"
+      },
+      "status": "enabled",
+      "slots": [],
+      "textFields": [],
+      "exportSettings": {
+        "format": "JPG",
+        "quality": 95,
+        "width": 800,
+        "height": 800
+      },
+      "components": []
+    },
+    {
+      "id": "MAIN_001_main_01_vertical_slot_2",
+      "templateName": "单本台历主图模板 - 产品展示",
+      "templateType": "main",
+      "productType": "calendar",
+      "aspectRatio": "3:4",
+      "outputWidth": 750,
+      "outputHeight": 1000,
+      "background": {
+        "type": "color",
+        "color": "#FFFFFF"
+      },
+      "status": "enabled",
+      "slots": [],
+      "textFields": [],
+      "exportSettings": {
+        "format": "JPG",
+        "quality": 95,
+        "width": 800,
+        "height": 800
+      },
+      "components": []
+    },
+    {
+      "id": "MAIN_001_main_02_square_slot_3",
+      "templateName": "单本台历主图模板 - 产品包装",
+      "templateType": "main",
+      "productType": "calendar",
+      "aspectRatio": "1:1",
+      "outputWidth": 800,
+      "outputHeight": 800,
+      "background": {
+        "type": "color",
+        "color": "#FFFFFF"
+      },
+      "status": "enabled",
+      "slots": [],
+      "textFields": [],
+      "exportSettings": {
+        "format": "JPG",
+        "quality": 95,
+        "width": 800,
+        "height": 800
+      },
+      "components": []
+    },
+    {
+      "id": "MAIN_001_main_02_vertical_slot_4",
+      "templateName": "单本台历主图模板 - 产品包装",
+      "templateType": "main",
+      "productType": "calendar",
+      "aspectRatio": "3:4",
+      "outputWidth": 750,
+      "outputHeight": 1000,
+      "background": {
+        "type": "color",
+        "color": "#FFFFFF"
+      },
+      "status": "enabled",
+      "slots": [],
+      "textFields": [],
+      "exportSettings": {
+        "format": "JPG",
+        "quality": 95,
+        "width": 800,
+        "height": 800
+      },
+      "components": [
+        {
+          "id": "comp_1781255245508_dbuwf",
+          "name": "ChatGPT Image 2026年6月10日 03_03_36 (8) (装饰层)",
+          "type": "scene_base",
+          "imageUrl": "/assets/1781255245505_41e0a149.png",
+          "x": 0,
+          "y": 0,
+          "width": 100,
+          "height": 100,
+          "zIndex": 30,
+          "visible": true,
+          "sendToRunningHub": true,
+          "positionLocked": true,
+          "lockAspectRatio": true,
+          "scaleMode": "contain",
+          "anchor": "center"
+        },
+        {
+          "id": "comp_1781255775033_cpe4g",
+          "name": "BiRefNet-UltraV2_00001_idjtp_1780994885 (装饰层)",
+          "type": "product_slot",
+          "imageUrl": "/assets/1781255775026_f82cc912.png",
+          "x": -25.14839920343137,
+          "y": 14.160017161084413,
+          "width": 96.15552200244102,
+          "height": 52.45491936009147,
+          "zIndex": 30,
+          "visible": true,
+          "sendToRunningHub": true,
+          "positionLocked": true,
+          "lockAspectRatio": true,
+          "scaleMode": "contain",
+          "anchor": "center"
+        },
+        {
+          "id": "comp_1781255799975_pzg8a",
+          "name": "65-瑞马迎祥_05 (装饰层)",
+          "type": "product_slot",
+          "imageUrl": "/assets/1781255799965_a18b29e6.png",
+          "x": 11.702422145328718,
+          "y": 37.04273897058822,
+          "width": 76.59515570934256,
+          "height": 57.22196691176472,
+          "zIndex": 30,
+          "visible": true,
+          "sendToRunningHub": true,
+          "positionLocked": true,
+          "lockAspectRatio": true,
+          "scaleMode": "contain",
+          "anchor": "center"
+        }
+      ]
+    },
+    {
+      "id": "MAIN_001_scene_800_slot_5",
+      "templateName": "单本台历主图模板 - 800 产品场景",
+      "templateType": "main",
+      "productType": "calendar",
+      "aspectRatio": "1:1",
+      "outputWidth": 800,
+      "outputHeight": 800,
+      "background": {
+        "type": "color",
+        "color": "#FFFFFF"
+      },
+      "status": "enabled",
+      "slots": [],
+      "textFields": [],
+      "exportSettings": {
+        "format": "JPG",
+        "quality": 95,
+        "width": 800,
+        "height": 800
+      },
+      "components": []
+    },
+    {
+      "id": "MAIN_001_scene_1200_slot_6",
+      "templateName": "单本台历主图模板 - 1200 产品场景",
+      "templateType": "main",
+      "productType": "calendar",
+      "aspectRatio": "1:1",
+      "outputWidth": 800,
+      "outputHeight": 1200,
+      "background": {
+        "type": "color",
+        "color": "#FFFFFF"
+      },
+      "status": "enabled",
+      "slots": [],
+      "textFields": [],
+      "exportSettings": {
+        "format": "JPG",
+        "quality": 95,
+        "width": 800,
+        "height": 800
+      },
+      "components": []
+    },
+    {
+      "id": "MAIN_001_main_01_square_slot_7",
+      "templateName": "单本台历主图模板 - 主图页面7",
+      "templateType": "main",
+      "productType": "calendar",
+      "aspectRatio": "1:1",
+      "outputWidth": 800,
+      "outputHeight": 800,
+      "background": {
+        "type": "color",
+        "color": "#FFFFFF"
+      },
+      "status": "enabled",
+      "slots": [],
+      "textFields": [],
+      "exportSettings": {
+        "format": "JPG",
+        "quality": 95,
+        "width": 800,
+        "height": 800
+      },
+      "components": []
+    },
+    {
+      "id": "MAIN_001_main_01_vertical_slot_8",
+      "templateName": "单本台历主图模板 - 主图页面8",
+      "templateType": "main",
+      "productType": "calendar",
+      "aspectRatio": "3:4",
+      "outputWidth": 750,
+      "outputHeight": 1000,
+      "background": {
+        "type": "color",
+        "color": "#FFFFFF"
+      },
+      "status": "enabled",
+      "slots": [],
+      "textFields": [],
+      "exportSettings": {
+        "format": "JPG",
+        "quality": 95,
+        "width": 800,
+        "height": 800
+      },
+      "components": []
+    },
+    {
+      "id": "MAIN_001_sku_01_slot_1",
+      "templateName": "单本台历主图模板 - 单款 SKU",
+      "templateType": "sku",
+      "productType": "calendar",
+      "aspectRatio": "1:1",
+      "outputWidth": 800,
+      "outputHeight": 800,
+      "background": {
+        "type": "color",
+        "color": "#FFFFFF"
+      },
+      "status": "enabled",
+      "slots": [],
+      "textFields": [],
+      "exportSettings": {
+        "format": "JPG",
+        "quality": 95,
+        "width": 800,
+        "height": 800
+      },
+      "components": []
+    },
+    {
+      "id": "MAIN_001_sku_grid_slot_2",
+      "templateName": "单本台历主图模板 - SKU 宫格",
+      "templateType": "sku",
+      "productType": "calendar",
+      "aspectRatio": "1:1",
+      "outputWidth": 800,
+      "outputHeight": 800,
+      "background": {
+        "type": "color",
+        "color": "#FFFFFF"
+      },
+      "status": "enabled",
+      "slots": [],
+      "textFields": [],
+      "exportSettings": {
+        "format": "JPG",
+        "quality": 95,
+        "width": 800,
+        "height": 800
+      },
+      "components": []
+    },
+    {
+      "id": "MAIN_001_sku_01_slot_3",
+      "templateName": "单本台历主图模板 - SKU页面3",
+      "templateType": "sku",
+      "productType": "calendar",
+      "aspectRatio": "1:1",
+      "outputWidth": 800,
+      "outputHeight": 800,
+      "background": {
+        "type": "color",
+        "color": "#FFFFFF"
+      },
+      "status": "enabled",
+      "slots": [],
+      "textFields": [],
+      "exportSettings": {
+        "format": "JPG",
+        "quality": 95,
+        "width": 800,
+        "height": 800
+      },
+      "components": []
+    },
+    {
+      "id": "MAIN_001_sku_grid_slot_4",
+      "templateName": "单本台历主图模板 - SKU页面4",
+      "templateType": "sku",
+      "productType": "calendar",
+      "aspectRatio": "1:1",
+      "outputWidth": 800,
+      "outputHeight": 800,
+      "background": {
+        "type": "color",
+        "color": "#FFFFFF"
+      },
+      "status": "enabled",
+      "slots": [],
+      "textFields": [],
+      "exportSettings": {
+        "format": "JPG",
+        "quality": 95,
+        "width": 800,
+        "height": 800
+      },
+      "components": []
+    },
+    {
+      "id": "MAIN_001_detail_core_slot_1",
+      "templateName": "单本台历主图模板 - 核心卖点",
+      "templateType": "detail",
+      "productType": "calendar",
+      "aspectRatio": "1:1",
+      "outputWidth": 790,
+      "outputHeight": 1200,
+      "background": {
+        "type": "color",
+        "color": "#FFFFFF"
+      },
+      "status": "enabled",
+      "slots": [],
+      "textFields": [],
+      "exportSettings": {
+        "format": "JPG",
+        "quality": 95,
+        "width": 800,
+        "height": 800
+      },
+      "components": []
+    },
+    {
+      "id": "MAIN_001_detail_size_slot_2",
+      "templateName": "单本台历主图模板 - 尺寸材质",
+      "templateType": "detail",
+      "productType": "calendar",
+      "aspectRatio": "1:1",
+      "outputWidth": 790,
+      "outputHeight": 1200,
+      "background": {
+        "type": "color",
+        "color": "#FFFFFF"
+      },
+      "status": "enabled",
+      "slots": [],
+      "textFields": [],
+      "exportSettings": {
+        "format": "JPG",
+        "quality": 95,
+        "width": 800,
+        "height": 800
+      },
+      "components": []
+    },
+    {
+      "id": "MAIN_001_detail_inner_slot_3",
+      "templateName": "单本台历主图模板 - 内页展示",
+      "templateType": "detail",
+      "productType": "calendar",
+      "aspectRatio": "1:1",
+      "outputWidth": 790,
+      "outputHeight": 1200,
+      "background": {
+        "type": "color",
+        "color": "#FFFFFF"
+      },
+      "status": "enabled",
+      "slots": [],
+      "textFields": [],
+      "exportSettings": {
+        "format": "JPG",
+        "quality": 95,
+        "width": 800,
+        "height": 800
+      },
+      "components": []
+    },
+    {
+      "id": "MAIN_001_detail_core_slot_4",
+      "templateName": "单本台历主图模板 - 详情页面4",
+      "templateType": "detail",
+      "productType": "calendar",
+      "aspectRatio": "1:1",
+      "outputWidth": 790,
+      "outputHeight": 1200,
+      "background": {
+        "type": "color",
+        "color": "#FFFFFF"
+      },
+      "status": "enabled",
+      "slots": [],
+      "textFields": [],
+      "exportSettings": {
+        "format": "JPG",
+        "quality": 95,
+        "width": 800,
+        "height": 800
+      },
+      "components": []
+    },
+    {
+      "id": "MAIN_001_detail_size_slot_5",
+      "templateName": "单本台历主图模板 - 详情页面5",
+      "templateType": "detail",
+      "productType": "calendar",
+      "aspectRatio": "1:1",
+      "outputWidth": 790,
+      "outputHeight": 1200,
+      "background": {
+        "type": "color",
+        "color": "#FFFFFF"
+      },
+      "status": "enabled",
+      "slots": [],
+      "textFields": [],
+      "exportSettings": {
+        "format": "JPG",
+        "quality": 95,
+        "width": 800,
+        "height": 800
+      },
+      "components": []
+    },
+    {
+      "id": "MAIN_001_detail_inner_slot_6",
+      "templateName": "单本台历主图模板 - 详情页面6",
+      "templateType": "detail",
+      "productType": "calendar",
+      "aspectRatio": "1:1",
+      "outputWidth": 790,
+      "outputHeight": 1200,
+      "background": {
+        "type": "color",
+        "color": "#FFFFFF"
+      },
+      "status": "enabled",
+      "slots": [],
+      "textFields": [],
+      "exportSettings": {
+        "format": "JPG",
+        "quality": 95,
+        "width": 800,
+        "height": 800
+      },
+      "components": []
+    },
+    {
+      "id": "MAIN_001_detail_core_slot_7",
+      "templateName": "单本台历主图模板 - 详情页面7",
+      "templateType": "detail",
+      "productType": "calendar",
+      "aspectRatio": "1:1",
+      "outputWidth": 790,
+      "outputHeight": 1200,
+      "background": {
+        "type": "color",
+        "color": "#FFFFFF"
+      },
+      "status": "enabled",
+      "slots": [],
+      "textFields": [],
+      "exportSettings": {
+        "format": "JPG",
+        "quality": 95,
+        "width": 800,
+        "height": 800
+      },
+      "components": []
+    },
+    {
+      "id": "MAIN_001_detail_size_slot_8",
+      "templateName": "单本台历主图模板 - 详情页面8",
+      "templateType": "detail",
+      "productType": "calendar",
+      "aspectRatio": "1:1",
+      "outputWidth": 790,
+      "outputHeight": 1200,
+      "background": {
+        "type": "color",
+        "color": "#FFFFFF"
+      },
+      "status": "enabled",
+      "slots": [],
+      "textFields": [],
+      "exportSettings": {
+        "format": "JPG",
+        "quality": 95,
+        "width": 800,
+        "height": 800
+      },
+      "components": []
+    },
+    {
+      "id": "MAIN_001_detail_inner_slot_9",
+      "templateName": "单本台历主图模板 - 详情页面9",
+      "templateType": "detail",
+      "productType": "calendar",
+      "aspectRatio": "1:1",
+      "outputWidth": 790,
+      "outputHeight": 1200,
+      "background": {
+        "type": "color",
+        "color": "#FFFFFF"
+      },
+      "status": "enabled",
+      "slots": [],
+      "textFields": [],
+      "exportSettings": {
+        "format": "JPG",
+        "quality": 95,
+        "width": 800,
+        "height": 800
+      },
+      "components": []
+    },
+    {
+      "id": "MAIN_001_detail_core_slot_10",
+      "templateName": "单本台历主图模板 - 详情页面10",
+      "templateType": "detail",
+      "productType": "calendar",
+      "aspectRatio": "1:1",
+      "outputWidth": 790,
+      "outputHeight": 1200,
+      "background": {
+        "type": "color",
+        "color": "#FFFFFF"
+      },
+      "status": "enabled",
+      "slots": [],
+      "textFields": [],
+      "exportSettings": {
+        "format": "JPG",
+        "quality": 95,
+        "width": 800,
+        "height": 800
+      },
+      "components": []
+    },
+    {
+      "id": "MAIN_001_detail_size_slot_11",
+      "templateName": "单本台历主图模板 - 详情页面11",
+      "templateType": "detail",
+      "productType": "calendar",
+      "aspectRatio": "1:1",
+      "outputWidth": 790,
+      "outputHeight": 1200,
+      "background": {
+        "type": "color",
+        "color": "#FFFFFF"
+      },
+      "status": "enabled",
+      "slots": [],
+      "textFields": [],
+      "exportSettings": {
+        "format": "JPG",
+        "quality": 95,
+        "width": 800,
+        "height": 800
+      },
+      "components": []
+    },
+    {
+      "id": "MAIN_001_detail_inner_slot_12",
+      "templateName": "单本台历主图模板 - 详情页面12",
+      "templateType": "detail",
+      "productType": "calendar",
+      "aspectRatio": "1:1",
+      "outputWidth": 790,
+      "outputHeight": 1200,
+      "background": {
+        "type": "color",
+        "color": "#FFFFFF"
+      },
+      "status": "enabled",
+      "slots": [],
+      "textFields": [],
+      "exportSettings": {
+        "format": "JPG",
+        "quality": 95,
+        "width": 800,
+        "height": 800
+      },
+      "components": []
+    },
+    {
+      "id": "MAIN_001_detail_core_slot_13",
+      "templateName": "单本台历主图模板 - 详情页面13",
+      "templateType": "detail",
+      "productType": "calendar",
+      "aspectRatio": "1:1",
+      "outputWidth": 790,
+      "outputHeight": 1200,
+      "background": {
+        "type": "color",
+        "color": "#FFFFFF"
+      },
+      "status": "enabled",
+      "slots": [],
+      "textFields": [],
+      "exportSettings": {
+        "format": "JPG",
+        "quality": 95,
+        "width": 800,
+        "height": 800
+      },
+      "components": []
+    },
+    {
+      "id": "MAIN_001_detail_size_slot_14",
+      "templateName": "单本台历主图模板 - 详情页面14",
+      "templateType": "detail",
+      "productType": "calendar",
+      "aspectRatio": "1:1",
+      "outputWidth": 790,
+      "outputHeight": 1200,
+      "background": {
+        "type": "color",
+        "color": "#FFFFFF"
+      },
+      "status": "enabled",
+      "slots": [],
+      "textFields": [],
+      "exportSettings": {
+        "format": "JPG",
+        "quality": 95,
+        "width": 800,
+        "height": 800
+      },
+      "components": []
+    },
+    {
+      "id": "MAIN_001_white_bg",
+      "templateName": "单本台历主图模板 - 白底图",
+      "templateType": "white_bg",
+      "productType": "calendar",
+      "aspectRatio": "1:1",
+      "outputWidth": 800,
+      "outputHeight": 800,
+      "background": {
+        "type": "color",
+        "color": "#FFFFFF"
+      },
+      "status": "enabled",
+      "slots": [],
+      "textFields": [],
+      "exportSettings": {
+        "format": "JPG",
+        "quality": 95,
+        "width": 800,
+        "height": 800
+      },
+      "components": []
+    },
+    {
+      "id": "MAIN_001_transparent_png",
+      "templateName": "单本台历主图模板 - 透明 PNG",
+      "templateType": "white_bg",
+      "productType": "calendar",
+      "aspectRatio": "1:1",
+      "outputWidth": 800,
+      "outputHeight": 800,
+      "background": {
+        "type": "color",
+        "color": "#FFFFFF"
+      },
+      "status": "enabled",
+      "slots": [],
+      "textFields": [],
+      "exportSettings": {
+        "format": "JPG",
+        "quality": 95,
+        "width": 800,
+        "height": 800
+      },
+      "components": []
+    },
+    {
+      "id": "MAIN_001_sample_book",
+      "templateName": "单本台历主图模板 - 书样模板",
+      "templateType": "main",
+      "productType": "calendar",
+      "aspectRatio": "1:1",
+      "outputWidth": 3508,
+      "outputHeight": 2480,
+      "background": {
+        "type": "color",
+        "color": "#FFFFFF"
+      },
+      "status": "enabled",
+      "slots": [],
+      "textFields": [],
+      "exportSettings": {
+        "format": "JPG",
+        "quality": 95,
+        "width": 800,
+        "height": 800
+      },
+      "components": []
+    },
+    {
+      "id": "MAIN_001_custom_ad",
+      "templateName": "单本台历主图模板 - 广告定制",
+      "templateType": "ad_custom",
+      "productType": "calendar",
+      "aspectRatio": "1:1",
+      "outputWidth": 790,
+      "outputHeight": 1500,
+      "background": {
+        "type": "color",
+        "color": "#FFFFFF"
+      },
+      "status": "enabled",
+      "slots": [],
+      "textFields": [],
+      "exportSettings": {
+        "format": "JPG",
+        "quality": 95,
+        "width": 800,
+        "height": 800
+      },
+      "components": []
+    },
+    {
+      "id": "MAIN_001_main_01_vertical_slot_1",
+      "templateName": "单本台历主图模板",
+      "templateType": "main",
+      "productType": "calendar",
+      "aspectRatio": "3:4",
+      "outputWidth": 750,
+      "outputHeight": 1000,
+      "background": {
+        "type": "color",
+        "color": "#FFFFFF"
+      },
+      "status": "enabled",
+      "slots": [],
+      "textFields": [],
+      "exportSettings": {
+        "format": "JPG",
+        "quality": 95,
+        "width": 800,
+        "height": 800
+      },
+      "components": [
+        {
+          "id": "comp_1781252626548_ik7vd",
+          "name": "ChatGPT Image 2026年6月10日 03_03_37 (10) (装饰层)",
+          "type": "scene_base",
+          "imageUrl": "/assets/1781252626543_4fd52223.png",
+          "x": 0,
+          "y": 0,
+          "width": 100,
+          "height": 100,
+          "zIndex": 30,
+          "visible": true,
+          "sendToRunningHub": false,
+          "positionLocked": false,
+          "lockAspectRatio": true,
+          "scaleMode": "contain",
+          "anchor": "center"
+        },
+        {
+          "id": "comp_1781255426792_9bi9o",
+          "name": "65-瑞马迎祥_05 (装饰层)",
+          "type": "product_slot",
+          "imageUrl": "/assets/1781255426787_49033ad7.png",
+          "x": 6.17647058823529,
+          "y": 17.260742187499993,
+          "width": 87.64705882352942,
+          "height": 65.47851562500001,
+          "zIndex": 30,
+          "visible": true,
+          "sendToRunningHub": true,
+          "positionLocked": true,
+          "lockAspectRatio": true,
+          "scaleMode": "contain",
+          "anchor": "center"
+        }
+      ]
+    },
+    {
+      "id": "MAIN_001_main_02_vertical_slot_2",
+      "templateName": "单本台历主图模板",
+      "templateType": "main",
+      "productType": "calendar",
+      "aspectRatio": "3:4",
+      "outputWidth": 750,
+      "outputHeight": 1000,
+      "background": {
+        "type": "color",
+        "color": "#FFFFFF"
+      },
+      "status": "enabled",
+      "slots": [],
+      "textFields": [],
+      "exportSettings": {
+        "format": "JPG",
+        "quality": 95,
+        "width": 800,
+        "height": 800
+      },
+      "components": [
+        {
+          "id": "comp_1781252639951_fwg2t",
+          "name": "ChatGPT Image 2026年6月10日 03_03_33 (4) (装饰层)",
+          "type": "scene_base",
+          "imageUrl": "/assets/1781252639947_b6bde6f0.png",
+          "x": 0,
+          "y": 0,
+          "width": 100,
+          "height": 100,
+          "zIndex": 30,
+          "visible": true,
+          "sendToRunningHub": true,
+          "positionLocked": true,
+          "lockAspectRatio": true,
+          "scaleMode": "contain",
+          "anchor": "center"
+        },
+        {
+          "id": "comp_1781255503443_p3d7a",
+          "name": "BiRefNet-UltraV2_00001_bmvrn_1780995211 (装饰层)",
+          "type": "product_slot",
+          "imageUrl": "/assets/1781255503439_17c6ca40.png",
+          "x": 2.585674157303373,
+          "y": 34.013174019607845,
+          "width": 94.82865168539325,
+          "height": 49.5,
+          "zIndex": 30,
+          "visible": true,
+          "sendToRunningHub": true,
+          "positionLocked": true,
+          "lockAspectRatio": true,
+          "scaleMode": "contain",
+          "anchor": "center"
+        }
+      ]
+    },
+    {
+      "id": "MAIN_001_main_02_vertical_slot_8",
+      "templateName": "单本台历主图模板",
+      "templateType": "main",
+      "productType": "calendar",
+      "aspectRatio": "3:4",
+      "outputWidth": 750,
+      "outputHeight": 1000,
+      "background": {
+        "type": "color",
+        "color": "#FFFFFF"
+      },
+      "status": "enabled",
+      "slots": [],
+      "textFields": [],
+      "exportSettings": {
+        "format": "JPG",
+        "quality": 95,
+        "width": 800,
+        "height": 800
+      },
+      "components": [
+        {
+          "id": "comp_1781255352939_gzsmp",
+          "name": "ChatGPT Image 2026年6月10日 03_03_35 (7) (装饰层)",
+          "type": "scene_base",
+          "imageUrl": "/assets/1781255352936_663073e9.png",
+          "x": 0,
+          "y": 0,
+          "width": 100,
+          "height": 100,
+          "zIndex": 30,
+          "visible": true,
+          "sendToRunningHub": true,
+          "positionLocked": true,
+          "lockAspectRatio": true,
+          "scaleMode": "contain",
+          "anchor": "center"
+        },
+        {
+          "id": "comp_1781256622523_cedpw",
+          "name": "1781256499703_328e4d03 (装饰层)",
+          "type": "product_slot",
+          "imageUrl": "/assets/1781256622518_0e76a2aa.png",
+          "x": 7.112648981161087,
+          "y": 26.090418198529402,
+          "width": 85.77470203767783,
+          "height": 64.07973345588236,
+          "zIndex": 30,
+          "visible": true,
+          "sendToRunningHub": true,
+          "positionLocked": true,
+          "lockAspectRatio": true,
+          "scaleMode": "contain",
+          "anchor": "center"
+        }
+      ]
+    },
+    {
+      "id": "MAIN_001_main_01_vertical_slot_7",
+      "templateName": "单本台历主图模板",
+      "templateType": "main",
+      "productType": "calendar",
+      "aspectRatio": "3:4",
+      "outputWidth": 750,
+      "outputHeight": 1000,
+      "background": {
+        "type": "color",
+        "color": "#FFFFFF"
+      },
+      "status": "enabled",
+      "slots": [],
+      "textFields": [],
+      "exportSettings": {
+        "format": "JPG",
+        "quality": 95,
+        "width": 800,
+        "height": 800
+      },
+      "components": [
+        {
+          "id": "comp_1781255324375_undny",
+          "name": "ChatGPT Image 2026年6月10日 03_03_32 (2) (装饰层)",
+          "type": "scene_base",
+          "imageUrl": "/assets/1781255324371_c1d59ab2.png",
+          "x": 0,
+          "y": 0,
+          "width": 100,
+          "height": 100,
+          "zIndex": 30,
+          "visible": true,
+          "sendToRunningHub": true,
+          "positionLocked": true,
+          "lockAspectRatio": true,
+          "scaleMode": "contain",
+          "anchor": "center"
+        },
+        {
+          "id": "comp_1781256333538_bgrta",
+          "name": "1781250387988_f3370122 (装饰层)",
+          "type": "product_slot",
+          "imageUrl": "/assets/1781256333532_813b7720.png",
+          "x": 6.5194156093810065,
+          "y": 26.193416819852942,
+          "width": 86.96116878123799,
+          "height": 64.96610753676471,
+          "zIndex": 30,
+          "visible": true,
+          "sendToRunningHub": true,
+          "positionLocked": false,
+          "lockAspectRatio": true,
+          "scaleMode": "contain",
+          "anchor": "center"
+        }
+      ]
+    },
+    {
+      "id": "MAIN_001_main_02_vertical_slot_6",
+      "templateName": "单本台历主图模板",
+      "templateType": "main",
+      "productType": "calendar",
+      "aspectRatio": "3:4",
+      "outputWidth": 750,
+      "outputHeight": 1000,
+      "background": {
+        "type": "color",
+        "color": "#FFFFFF"
+      },
+      "status": "enabled",
+      "slots": [],
+      "textFields": [],
+      "exportSettings": {
+        "format": "JPG",
+        "quality": 95,
+        "width": 800,
+        "height": 800
+      },
+      "components": [
+        {
+          "id": "comp_1781255308542_h9sin",
+          "name": "ChatGPT Image 2026年6月10日 03_03_36 (8) (装饰层)",
+          "type": "scene_base",
+          "imageUrl": "/assets/1781255308539_f01a1636.png",
+          "x": 0,
+          "y": 0,
+          "width": 100,
+          "height": 100,
+          "zIndex": 0,
+          "visible": true,
+          "sendToRunningHub": true,
+          "positionLocked": true,
+          "lockAspectRatio": true,
+          "scaleMode": "contain",
+          "anchor": "center"
+        },
+        {
+          "id": "comp_1781256193001_lsb46",
+          "name": "BiRefNet-UltraV2_00003_yhcpj_1780995115 (装饰层)",
+          "type": "product_slot",
+          "imageUrl": "/assets/1781256192994_8cf9808d.png",
+          "x": 3.1372549019607887,
+          "y": 34.24021716998214,
+          "width": 81.18183210784314,
+          "height": 60.13282984720807,
+          "zIndex": 2,
+          "visible": true,
+          "sendToRunningHub": true,
+          "positionLocked": true,
+          "lockAspectRatio": true,
+          "scaleMode": "contain",
+          "anchor": "center"
+        },
+        {
+          "id": "comp_1781256218263_jawx9",
+          "name": "65-瑞马迎祥_04 (装饰层)",
+          "type": "product_slot",
+          "imageUrl": "/assets/1781256218258_35234c28.png",
+          "x": 38.823529411764696,
+          "y": 19.63120404411765,
+          "width": 58.23529411764706,
+          "height": 43.505859375,
+          "zIndex": 1,
+          "visible": true,
+          "sendToRunningHub": true,
+          "positionLocked": true,
+          "lockAspectRatio": true,
+          "scaleMode": "contain",
+          "anchor": "center"
+        }
+      ]
+    },
+    {
+      "id": "MAIN_001_main_01_vertical_slot_3",
+      "templateName": "单本台历主图模板",
+      "templateType": "main",
+      "productType": "calendar",
+      "aspectRatio": "3:4",
+      "outputWidth": 750,
+      "outputHeight": 1000,
+      "background": {
+        "type": "color",
+        "color": "#FFFFFF"
+      },
+      "status": "enabled",
+      "slots": [],
+      "textFields": [],
+      "exportSettings": {
+        "format": "JPG",
+        "quality": 95,
+        "width": 800,
+        "height": 800
+      },
+      "components": [
+        {
+          "id": "comp_1781255701968_7ety6",
+          "name": "ChatGPT Image 2026年6月10日 03_03_34 (5) (装饰层)",
+          "type": "decor_overlay",
+          "imageUrl": "/assets/1781255701965_f9c9bc3b.png",
+          "x": 0,
+          "y": 0,
+          "width": 100,
+          "height": 100,
+          "zIndex": 30,
+          "visible": true,
+          "sendToRunningHub": true,
+          "positionLocked": true,
+          "lockAspectRatio": true,
+          "scaleMode": "contain",
+          "anchor": "center"
+        },
+        {
+          "id": "comp_1781255713511_5ukbo",
+          "name": "65-瑞马迎祥_01 (装饰层)",
+          "type": "product_slot",
+          "imageUrl": "/assets/1781255713505_d9da0d6b.png",
+          "x": 5.380622837370247,
+          "y": 20.43083639705883,
+          "width": 89.2387543252595,
+          "height": 66.66762408088235,
+          "zIndex": 30,
+          "visible": true,
+          "sendToRunningHub": true,
+          "positionLocked": true,
+          "lockAspectRatio": true,
+          "scaleMode": "contain",
+          "anchor": "center"
+        }
+      ]
+    },
+    {
+      "id": "MAIN_001_main_01_vertical_slot_5",
+      "templateName": "单本台历主图模板",
+      "templateType": "main",
+      "productType": "calendar",
+      "aspectRatio": "3:4",
+      "outputWidth": 750,
+      "outputHeight": 1000,
+      "background": {
+        "type": "color",
+        "color": "#FFFFFF"
+      },
+      "status": "enabled",
+      "slots": [],
+      "textFields": [],
+      "exportSettings": {
+        "format": "JPG",
+        "quality": 95,
+        "width": 800,
+        "height": 800
+      },
+      "components": [
+        {
+          "id": "comp_1781255278307_1rlzb",
+          "name": "ChatGPT Image 2026年6月10日 03_03_37 (10) (装饰层)",
+          "type": "scene_base",
+          "imageUrl": "/assets/1781255278303_ea865b5e.png",
+          "x": 0,
+          "y": 0,
+          "width": 100,
+          "height": 100,
+          "zIndex": 30,
+          "visible": true,
+          "sendToRunningHub": true,
+          "positionLocked": true,
+          "lockAspectRatio": true,
+          "scaleMode": "contain",
+          "anchor": "center"
+        },
+        {
+          "id": "comp_1781256047529_2noxr",
+          "name": "65-瑞马迎祥_03 (装饰层)",
+          "type": "product_slot",
+          "imageUrl": "/assets/1781256047523_1df715d9.png",
+          "x": 44.90196078431372,
+          "y": 19.622587316176464,
+          "width": 52.341407151095744,
+          "height": 39.10271139705883,
+          "zIndex": 30,
+          "visible": true,
+          "sendToRunningHub": true,
+          "positionLocked": true,
+          "lockAspectRatio": true,
+          "scaleMode": "contain",
+          "anchor": "center"
+        },
+        {
+          "id": "comp_1781256058825_gxf9s",
+          "name": "65-瑞马迎祥_05 (装饰层)",
+          "type": "product_slot",
+          "imageUrl": "/assets/1781256058818_2caeedee.png",
+          "x": 4.313725490196078,
+          "y": 33.597771139705884,
+          "width": 70.64206074586697,
+          "height": 52.774586397058826,
+          "zIndex": 30,
+          "visible": true,
+          "sendToRunningHub": true,
+          "positionLocked": true,
+          "lockAspectRatio": true,
+          "scaleMode": "contain",
+          "anchor": "center"
+        }
+      ]
+    }
+  ]
+}

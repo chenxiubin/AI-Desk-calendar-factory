@@ -4,8 +4,6 @@ import {
   FolderOpen,
   Scissors,
   Layout,
-  Edit,
-  Layers,
   ShieldCheck,
   Download,
   BarChart3,
@@ -38,7 +36,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
     { id: "assets", label: "产品资产库", icon: FolderOpen },
     { id: "refine", label: "抠图资产生成", icon: Scissors, badge: "AI" },
     { id: "templates", label: "模板套系库", icon: Layout },
-    { id: "editor", label: "模板编辑器", icon: Edit },
     { id: "project_suite", label: "项目工作台", icon: Sparkles, badge: "全新" },
     {
       id: "review",
@@ -50,6 +47,51 @@ export const Sidebar: React.FC<SidebarProps> = ({
     { id: "statistics", label: "数据统计", icon: BarChart3 },
     { id: "settings", label: "系统设置", icon: Settings },
   ];
+
+  const groups = [
+    { title: "基础准备", items: menuItems.slice(0, 3) },
+    { title: "模板生产", items: menuItems.slice(3, 5) },
+    { title: "交付管理", items: menuItems.slice(5, 7) },
+    { title: "系统", items: menuItems.slice(7) },
+  ];
+
+  const renderItem = (item: (typeof menuItems)[number]) => {
+    const IconComponent = item.icon;
+    const isActive = activeTab === item.id;
+
+    return (
+      <button
+        key={item.id}
+        onClick={() => {
+          setActiveTab(item.id);
+          onClose();
+        }}
+        className={`w-full flex items-center px-3.5 py-2.5 text-xs font-medium rounded-lg transition-all group relative ${
+          isActive
+            ? "bg-blue-600 text-white font-semibold shadow-md shadow-blue-900/25"
+            : "hover:bg-slate-800/60 text-slate-400 hover:text-slate-200"
+        }`}
+      >
+        <IconComponent
+          className={`w-4 h-4 mr-3 shrink-0 ${
+            isActive ? "text-white" : "text-slate-500 group-hover:text-slate-300"
+          }`}
+        />
+        <span className="flex-1 text-left truncate">{item.label}</span>
+        {item.badge && (
+          <span
+            className={`ml-2 text-[9px] font-mono px-1.5 py-0.5 rounded-full ${
+              item.badge === "AI"
+                ? "bg-cyan-500 text-slate-950 font-bold"
+                : "bg-amber-500 text-slate-950 font-bold"
+            }`}
+          >
+            {item.badge}
+          </span>
+        )}
+      </button>
+    );
+  };
 
   return (
     <>
@@ -81,94 +123,62 @@ export const Sidebar: React.FC<SidebarProps> = ({
             : "-translate-x-[calc(100%+2rem)] opacity-0 pointer-events-none"
         }`}
       >
-      {/* Brand Header */}
-      <div className="p-4 border-b border-slate-800 flex items-center gap-2.5">
-        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-black text-lg shadow-lg shadow-blue-500/10 shrink-0">
-          <Calendar className="w-5 h-5 text-white" />
-        </div>
-        <div className="min-w-0 flex-1">
-          <h1 className="text-sm font-bold text-white tracking-widest leading-none">
-            台历拼工厂
-          </h1>
-          <p className="text-[10px] text-slate-400 mt-1 leading-none uppercase tracking-wider">
-            企业电商图片生产后台
-          </p>
-        </div>
-        <button
-          type="button"
-          onClick={onClose}
-          className="h-8 w-8 rounded-lg border border-slate-700 bg-slate-800/80 text-slate-300 flex items-center justify-center hover:bg-slate-700 hover:text-white transition-colors"
-          aria-label="关闭导航"
-          title="关闭导航"
-        >
-          <X className="w-4 h-4" />
-        </button>
-      </div>
-
-      {/* User Information Minimal Quick View */}
-      <div className="p-3 border-b border-slate-800 mx-2 my-3 rounded-lg bg-slate-950/40 flex items-center space-x-2">
-        <div className="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center text-xs text-slate-300 border border-slate-700">
-          运营
-        </div>
-        <div className="min-w-0 flex-1">
-          <div className="text-xs font-bold text-slate-200 truncate">
-            运营管理员 (云端)
+        <div className="p-4 border-b border-slate-800 flex items-center gap-2.5">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-black text-lg shadow-lg shadow-blue-500/10 shrink-0">
+            <Calendar className="w-5 h-5 text-white" />
           </div>
-          <p className="text-[9px] text-slate-500 truncate mt-0.5">
-            Chenxiubin86@...
-          </p>
+          <div className="min-w-0 flex-1">
+            <h1 className="text-sm font-bold text-white tracking-widest leading-none">
+              台历拼工厂
+            </h1>
+            <p className="text-[10px] text-slate-400 mt-1 leading-none uppercase tracking-wider">
+              企业电商图片生产后台
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="h-8 w-8 rounded-lg border border-slate-700 bg-slate-800/80 text-slate-300 flex items-center justify-center hover:bg-slate-700 hover:text-white transition-colors"
+            aria-label="关闭导航"
+            title="关闭导航"
+          >
+            <X className="w-4 h-4" />
+          </button>
         </div>
-        <span className="w-2 h-2 rounded-full bg-emerald-500 shadow-sm animate-pulse" />
-      </div>
 
-      {/* Nav list */}
-      <nav className="flex-1 px-2 space-y-1 overflow-y-auto">
-        {menuItems.map((item) => {
-          const IconComponent = item.icon;
-          const isActive = activeTab === item.id;
-          return (
-            <button
-              key={item.id}
-              onClick={() => {
-                setActiveTab(item.id);
-                onClose();
-              }}
-              className={`w-full flex items-center px-3.5 py-2.5 text-xs font-medium rounded-lg transition-all group relative ${
-                isActive
-                  ? "bg-blue-600 text-white font-semibold shadow-md shadow-blue-900/25"
-                  : "hover:bg-slate-800/60 text-slate-400 hover:text-slate-200"
-              }`}
-            >
-              <IconComponent
-                className={`w-4 h-4 mr-3 shrink-0 ${
-                  isActive
-                    ? "text-white"
-                    : "text-slate-500 group-hover:text-slate-300"
-                }`}
-              />
-              <span className="flex-1 text-left truncate">{item.label}</span>
-              {item.badge && (
-                <span
-                  className={`ml-2 text-[9px] font-mono px-1.5 py-0.5 rounded-full ${
-                    item.badge === "AI"
-                      ? "bg-cyan-500 text-slate-950 font-bold"
-                      : "bg-amber-500 text-slate-950 font-bold"
-                  }`}
-                >
-                  {item.badge}
-                </span>
-              )}
-            </button>
-          );
-        })}
-      </nav>
+        <div className="p-3 border-b border-slate-800 mx-2 my-3 rounded-lg bg-slate-950/40 flex items-center space-x-2">
+          <div className="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center text-xs text-slate-300 border border-slate-700">
+            运营
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="text-xs font-bold text-slate-200 truncate">
+              运营管理端(云端)
+            </div>
+            <p className="text-[9px] text-slate-500 truncate mt-0.5">
+              Chenxiubin86@...
+            </p>
+          </div>
+          <span className="w-2 h-2 rounded-full bg-emerald-500 shadow-sm animate-pulse" />
+        </div>
 
-      {/* Info Footnote */}
-      <div className="p-3 border-t border-slate-800 bg-slate-950 text-center text-[10px] text-slate-600">
-        <p className="font-mono">MVP Production v1.0.0</p>
-        <p className="mt-1">由 Antigravity 智能引擎托管</p>
-      </div>
-    </aside>
+        <nav className="flex-1 px-2 space-y-1 overflow-y-auto">
+          {groups.map((group) => (
+            <div key={group.title}>
+              <div className="px-2 pt-1 pb-1 text-[10px] font-medium uppercase tracking-[0.22em] text-slate-600">
+                {group.title}
+              </div>
+              <div className="space-y-1">
+                {group.items.map(renderItem)}
+              </div>
+            </div>
+          ))}
+        </nav>
+
+        <div className="p-3 border-t border-slate-800 bg-slate-950 text-center text-[10px] text-slate-600">
+          <p className="font-mono">MVP Production v1.0.0</p>
+          <p className="mt-1">由 Antigravity 智能引擎托管</p>
+        </div>
+      </aside>
     </>
   );
 };

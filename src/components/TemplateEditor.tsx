@@ -11,9 +11,15 @@ import {
 import { getTemplateComponents } from "../utils/renderTemplate";
 import { detectLayerType, getDefaultZIndexForType, getDefaultSendToRH, getTypeLabel, detectPageIndex } from "../utils/templateImport";
 import {
+  getExpandedSuiteThumbs,
+  TEMPLATE_THUMBNAILS,
+  ThumbnailBoard,
+  type TemplateThumb,
+  type ThumbFilter,
+} from "./template-editor/TemplateThumbnailBoard";
+import {
   Check,
-  Eye,
-  EyeOff,
+  ArrowLeft,
   FolderOpen,
   Grid,
   Layers,
@@ -24,7 +30,6 @@ import {
   Sliders,
   Sparkles,
   Trash,
-  Type,
   X,
 } from "lucide-react";
 
@@ -32,7 +37,11 @@ interface TemplateEditorProps {
   initialTemplates: Template[];
   products: Product[];
   selectedTemplateFromLib?: Template | null;
-  onSaveTemplate: (template: Template) => void;
+  initialSelectedProductId?: string;
+  onBackToSuiteLibrary?: () => void;
+  onSaveTemplate: (template: Template | Template[]) =>
+    | void
+    | Promise<{ componentCount?: number } | void>;
 }
 
 type ProductLine = "desk_calendar" | "wall_calendar";
@@ -64,31 +73,7 @@ type BusinessRole =
   | "sample_book"
   | "custom_ad"
   | "package_gift";
-type FloatingPanel = "info" | "import" | "slots" | "test" | "save";
-type ThumbFilter =
-  | "all"
-  | "main_3_4"
-  | "main_1_1"
-  | "sku"
-  | "detail"
-  | "white_transparent"
-  | "scene_800"
-  | "scene_1200"
-  | "sample_book"
-  | "ad_effect";
-
-const THUMB_FILTER_OPTIONS: Array<{ value: ThumbFilter; label: string }> = [
-  { value: "all", label: "全部" },
-  { value: "main_3_4", label: "3:4方形主图" },
-  { value: "main_1_1", label: "1:1长形主图" },
-  { value: "sku", label: "SKU" },
-  { value: "detail", label: "详情图" },
-  { value: "white_transparent", label: "白透产品图" },
-  { value: "scene_800", label: "800产品场景图" },
-  { value: "scene_1200", label: "1200产品场景图" },
-  { value: "sample_book", label: "书样模板图" },
-  { value: "ad_effect", label: "广告效果图" },
-];
+type FloatingPanel = "info" | "import" | "add" | "test" | "save";
 
 interface BusinessTemplateConfig {
   productLine: ProductLine;
@@ -99,20 +84,6 @@ interface BusinessTemplateConfig {
   minCount: number;
   maxCount: number;
   allowProjectAddRemove: boolean;
-}
-
-interface TemplateThumb {
-  id: string;
-  group: "main" | "sku" | "detail" | "special";
-  filter: Exclude<ThumbFilter, "all">;
-  title: string;
-  subtitle: string;
-  deliveryType: DeliveryType;
-  ratioVersion: RatioVersion;
-  role: BusinessRole;
-  width: number;
-  height: number;
-  status: "ready" | "warning" | "draft";
 }
 
 const PRODUCT_LINE_OPTIONS: Array<{ value: ProductLine; label: string }> = [
@@ -185,204 +156,6 @@ const COMPONENT_TYPE_COLOR: Record<TemplateComponentType, string> = {
   decor_overlay: "bg-rose-500",
   logo_overlay: "bg-teal-500",
 };
-
-const TEMPLATE_THUMBNAILS: TemplateThumb[] = [
-  {
-    id: "main_01_square",
-    group: "main",
-    filter: "main_1_1",
-    title: "产品展示",
-    subtitle: "1:1 方形",
-    deliveryType: "main_group",
-    ratioVersion: "square_1_1",
-    role: "product_showcase",
-    width: 800,
-    height: 800,
-    status: "ready",
-  },
-  {
-    id: "main_01_vertical",
-    group: "main",
-    filter: "main_3_4",
-    title: "产品展示",
-    subtitle: "3:4 竖版",
-    deliveryType: "main_group",
-    ratioVersion: "vertical_3_4",
-    role: "product_showcase",
-    width: 750,
-    height: 1000,
-    status: "ready",
-  },
-  {
-    id: "main_02_square",
-    group: "main",
-    filter: "main_1_1",
-    title: "产品包装",
-    subtitle: "1:1 方形",
-    deliveryType: "main_group",
-    ratioVersion: "square_1_1",
-    role: "package_showcase",
-    width: 800,
-    height: 800,
-    status: "warning",
-  },
-  {
-    id: "main_02_vertical",
-    group: "main",
-    filter: "main_3_4",
-    title: "产品包装",
-    subtitle: "3:4 竖版",
-    deliveryType: "main_group",
-    ratioVersion: "vertical_3_4",
-    role: "package_showcase",
-    width: 750,
-    height: 1000,
-    status: "warning",
-  },
-  {
-    id: "scene_800",
-    group: "main",
-    filter: "scene_800",
-    title: "800 产品场景",
-    subtitle: "根目录 800",
-    deliveryType: "main_group",
-    ratioVersion: "square_1_1",
-    role: "product_showcase",
-    width: 800,
-    height: 800,
-    status: "ready",
-  },
-  {
-    id: "scene_1200",
-    group: "main",
-    filter: "scene_1200",
-    title: "1200 产品场景",
-    subtitle: "根目录 1200",
-    deliveryType: "main_group",
-    ratioVersion: "original",
-    role: "product_showcase",
-    width: 800,
-    height: 1200,
-    status: "ready",
-  },
-  {
-    id: "sku_01",
-    group: "sku",
-    filter: "sku",
-    title: "单款 SKU",
-    subtitle: "款式图",
-    deliveryType: "sku_group",
-    ratioVersion: "square_1_1",
-    role: "sku_single",
-    width: 800,
-    height: 800,
-    status: "ready",
-  },
-  {
-    id: "sku_grid",
-    group: "sku",
-    filter: "sku",
-    title: "SKU 宫格",
-    subtitle: "多款展示",
-    deliveryType: "sku_group",
-    ratioVersion: "square_1_1",
-    role: "sku_grid",
-    width: 800,
-    height: 800,
-    status: "draft",
-  },
-  {
-    id: "detail_core",
-    group: "detail",
-    filter: "detail",
-    title: "核心卖点",
-    subtitle: "详情切片",
-    deliveryType: "detail_group",
-    ratioVersion: "detail_long",
-    role: "detail_core",
-    width: 790,
-    height: 1200,
-    status: "ready",
-  },
-  {
-    id: "detail_size",
-    group: "detail",
-    filter: "detail",
-    title: "尺寸材质",
-    subtitle: "详情切片",
-    deliveryType: "detail_group",
-    ratioVersion: "detail_long",
-    role: "detail_size",
-    width: 790,
-    height: 1200,
-    status: "ready",
-  },
-  {
-    id: "detail_inner",
-    group: "detail",
-    filter: "detail",
-    title: "内页展示",
-    subtitle: "详情切片",
-    deliveryType: "detail_group",
-    ratioVersion: "detail_long",
-    role: "detail_inner",
-    width: 790,
-    height: 1200,
-    status: "draft",
-  },
-  {
-    id: "white_bg",
-    group: "special",
-    filter: "white_transparent",
-    title: "白底图",
-    subtitle: "根目录交付",
-    deliveryType: "white_bg",
-    ratioVersion: "original",
-    role: "white_bg",
-    width: 800,
-    height: 800,
-    status: "ready",
-  },
-  {
-    id: "transparent_png",
-    group: "special",
-    filter: "white_transparent",
-    title: "透明 PNG",
-    subtitle: "根目录交付",
-    deliveryType: "transparent_png",
-    ratioVersion: "original",
-    role: "transparent_png",
-    width: 800,
-    height: 800,
-    status: "ready",
-  },
-  {
-    id: "sample_book",
-    group: "special",
-    filter: "sample_book",
-    title: "书样模板",
-    subtitle: "客户选款",
-    deliveryType: "sample_book",
-    ratioVersion: "original",
-    role: "sample_book",
-    width: 3508,
-    height: 2480,
-    status: "draft",
-  },
-  {
-    id: "custom_ad",
-    group: "special",
-    filter: "ad_effect",
-    title: "广告定制",
-    subtitle: "Canvas-only",
-    deliveryType: "custom_ad",
-    ratioVersion: "original",
-    role: "custom_ad",
-    width: 790,
-    height: 1500,
-    status: "warning",
-  },
-];
 
 const getOptionLabel = <T extends string>(
   options: Array<{ value: T; label: string }>,
@@ -464,15 +237,45 @@ const getInitialBusinessConfig = (
   };
 };
 
+const stripLegacyTemplateSlots = (templates: Template[]): Template[] =>
+  templates.map((template) => ({
+    ...template,
+    slots: [],
+  }));
+
+const stripLegacyTemplateSlot = (template: Template): Template => ({
+  ...template,
+  slots: [],
+});
+
 const getComponentTypeByFileName = (fileName: string): TemplateComponentType => {
   const lower = fileName.toLowerCase();
   if (
     lower.includes("bg") ||
-    lower.includes("scene") ||
+    lower.includes("background") ||
+    lower.includes("scene_base") ||
+    lower.includes("base") ||
+    lower.includes("底图") ||
     lower.includes("背景") ||
-    lower.includes("场景")
+    lower.includes("主背景") ||
+    lower.includes("场景底")
   ) {
     return "scene_base";
+  }
+  if (
+    lower.includes("product") ||
+    lower.includes("slot") ||
+    lower.includes("main") ||
+    lower.includes("产品") ||
+    lower.includes("商品") ||
+    lower.includes("主体") ||
+    lower.includes("槽位") ||
+    lower.includes("占位") ||
+    lower.includes("主图") ||
+    lower.includes("产品场景") ||
+    lower.includes("产品效果")
+  ) {
+    return "product_slot";
   }
   if (
     lower.includes("text") ||
@@ -492,6 +295,510 @@ const getDefaultZIndex = (type: TemplateComponentType) => {
   if (type === "decor_overlay") return 30;
   if (type === "text_overlay") return 40;
   return 50;
+};
+
+const MIN_VISIBLE_PERCENT = 4;
+const MAX_ELEMENT_SIZE_PERCENT = 240;
+const SAFE_REGION_INSET_PERCENT = 6;
+const SNAP_THRESHOLD_PERCENT = 2.5;
+
+const clampPartiallyVisible = (
+  value: number,
+  size: number,
+  canvasEnd = 100,
+) =>
+  Math.max(
+    -size + MIN_VISIBLE_PERCENT,
+    Math.min(canvasEnd - MIN_VISIBLE_PERCENT, value),
+  );
+
+const clampVisualBoxToCanvas = (box: {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}) => ({
+  ...box,
+  x: clampPartiallyVisible(box.x, box.width),
+  y: clampPartiallyVisible(box.y, box.height),
+});
+
+const getAlignmentBounds = (useSafetyRegion: boolean) => {
+  const inset = useSafetyRegion ? SAFE_REGION_INSET_PERCENT : 0;
+  return {
+    left: inset,
+    top: inset,
+    right: 100 - inset,
+    bottom: 100 - inset,
+    centerX: 50,
+    centerY: 50,
+  };
+};
+
+const snapBoxToBounds = (
+  box: { x: number; y: number; width: number; height: number },
+  bounds: ReturnType<typeof getAlignmentBounds>,
+) => {
+  let nextX = box.x;
+  let nextY = box.y;
+  const canvasBounds = getAlignmentBounds(false);
+  const candidates = [canvasBounds];
+  if (bounds.left !== 0 || bounds.top !== 0 || bounds.right !== 100) {
+    candidates.push(bounds);
+  }
+
+  for (const candidate of candidates) {
+    const boxRight = nextX + box.width;
+    const boxCenterX = nextX + box.width / 2;
+    if (Math.abs(nextX - candidate.left) <= SNAP_THRESHOLD_PERCENT) {
+      nextX = candidate.left;
+      break;
+    }
+    if (Math.abs(boxRight - candidate.right) <= SNAP_THRESHOLD_PERCENT) {
+      nextX = candidate.right - box.width;
+      break;
+    }
+    if (Math.abs(boxCenterX - candidate.centerX) <= SNAP_THRESHOLD_PERCENT) {
+      nextX = candidate.centerX - box.width / 2;
+      break;
+    }
+  }
+
+  for (const candidate of candidates) {
+    const boxBottom = nextY + box.height;
+    const boxCenterY = nextY + box.height / 2;
+    if (Math.abs(nextY - candidate.top) <= SNAP_THRESHOLD_PERCENT) {
+      nextY = candidate.top;
+      break;
+    }
+    if (Math.abs(boxBottom - candidate.bottom) <= SNAP_THRESHOLD_PERCENT) {
+      nextY = candidate.bottom - box.height;
+      break;
+    }
+    if (Math.abs(boxCenterY - candidate.centerY) <= SNAP_THRESHOLD_PERCENT) {
+      nextY = candidate.centerY - box.height / 2;
+      break;
+    }
+  }
+
+  return {
+    ...box,
+    x: nextX,
+    y: nextY,
+  };
+};
+
+const snapResizedBoxToCanvasFrame = (
+  box: { x: number; y: number; width: number; height: number },
+  handle?: "tl" | "tr" | "bl" | "br",
+  aspect = box.width / Math.max(0.01, box.height),
+) => {
+  if (!handle || !Number.isFinite(aspect) || aspect <= 0) return box;
+
+  const anchorLeft = box.x;
+  const anchorTop = box.y;
+  const anchorRight = box.x + box.width;
+  const anchorBottom = box.y + box.height;
+  const options: Array<{
+    distance: number;
+    box: { x: number; y: number; width: number; height: number };
+  }> = [];
+
+  const addWidthSnap = (targetEdge: "left" | "right", distance: number) => {
+    const width =
+      targetEdge === "left" ? anchorRight : 100 - anchorLeft;
+    if (width <= 2) return;
+    const height = width / aspect;
+    options.push({
+      distance,
+      box: {
+        x: targetEdge === "left" ? 0 : anchorLeft,
+        y: handle === "tl" || handle === "tr" ? anchorBottom - height : anchorTop,
+        width,
+        height,
+      },
+    });
+  };
+
+  const addHeightSnap = (targetEdge: "top" | "bottom", distance: number) => {
+    const height =
+      targetEdge === "top" ? anchorBottom : 100 - anchorTop;
+    if (height <= 2) return;
+    const width = height * aspect;
+    options.push({
+      distance,
+      box: {
+        x: handle === "tl" || handle === "bl" ? anchorRight - width : anchorLeft,
+        y: targetEdge === "top" ? 0 : anchorTop,
+        width,
+        height,
+      },
+    });
+  };
+
+  if (handle === "tl" || handle === "bl") {
+    const distance = Math.abs(box.x);
+    if (distance <= SNAP_THRESHOLD_PERCENT) addWidthSnap("left", distance);
+  }
+  if (handle === "tr" || handle === "br") {
+    const distance = Math.abs(anchorRight - 100);
+    if (distance <= SNAP_THRESHOLD_PERCENT) addWidthSnap("right", distance);
+  }
+  if (handle === "tl" || handle === "tr") {
+    const distance = Math.abs(box.y);
+    if (distance <= SNAP_THRESHOLD_PERCENT) addHeightSnap("top", distance);
+  }
+  if (handle === "bl" || handle === "br") {
+    const distance = Math.abs(anchorBottom - 100);
+    if (distance <= SNAP_THRESHOLD_PERCENT) addHeightSnap("bottom", distance);
+  }
+
+  return options.sort((a, b) => a.distance - b.distance)[0]?.box ?? box;
+};
+
+interface ImportedImageData {
+  dataUrl: string;
+  sourceWidth: number;
+  sourceHeight: number;
+  cropX: number;
+  cropY: number;
+  cropWidth: number;
+  cropHeight: number;
+  wasTrimmed: boolean;
+}
+
+const readFileAsDataUrl = (file: File) =>
+  new Promise<string>((resolve) => {
+    const reader = new FileReader();
+    reader.onload = (event) => resolve(event.target?.result as string);
+    reader.readAsDataURL(file);
+  });
+
+const dataUrlToBlob = (dataUrl: string) => {
+  const [header, payload] = dataUrl.split(",");
+  const mime = header.match(/data:(.*?);base64/)?.[1] || "image/png";
+  const binary = atob(payload || "");
+  const bytes = new Uint8Array(binary.length);
+  for (let index = 0; index < binary.length; index += 1) {
+    bytes[index] = binary.charCodeAt(index);
+  }
+  return new Blob([bytes], { type: mime });
+};
+
+const getExtensionFromDataUrl = (dataUrl: string) => {
+  const mime = dataUrl.match(/^data:(.*?);base64/)?.[1] || "image/png";
+  if (mime.includes("jpeg") || mime.includes("jpg")) return "jpg";
+  if (mime.includes("webp")) return "webp";
+  return "png";
+};
+
+const safeAssetFileName = (name: string, extension: string) => {
+  const safeName = name
+    .replace(/\.[^.]+$/, "")
+    .replace(/[^\w\u4e00-\u9fa5-]+/g, "_")
+    .slice(0, 80);
+  return `${safeName || "template_asset"}.${extension}`;
+};
+
+const uploadTemplateImage = async (
+  dataUrl: string,
+  name: string,
+  cache: Map<string, string>,
+) => {
+  if (!dataUrl.startsWith("data:")) return dataUrl;
+  const cachedUrl = cache.get(dataUrl);
+  if (cachedUrl) return cachedUrl;
+
+  const extension = getExtensionFromDataUrl(dataUrl);
+  const formData = new FormData();
+  formData.append(
+    "image",
+    dataUrlToBlob(dataUrl),
+    safeAssetFileName(name, extension),
+  );
+
+  const response = await fetch("/api/upload-canvas", {
+    method: "POST",
+    body: formData,
+  });
+  if (!response.ok) {
+    throw new Error("本地素材保存失败");
+  }
+  const result = await response.json();
+  const fileUrl = String(result.fileUrl || "");
+  if (!fileUrl) {
+    throw new Error("本地素材保存后没有返回文件地址");
+  }
+  cache.set(dataUrl, fileUrl);
+  return fileUrl;
+};
+
+const persistTemplateComponentImages = async (
+  template: Template,
+  cache: Map<string, string>,
+): Promise<Template> => {
+  const components = await Promise.all(
+    (template.components || []).map(async (component) => {
+      if (!component.imageUrl?.startsWith("data:")) return component;
+      return {
+        ...component,
+        imageUrl: await uploadTemplateImage(
+          component.imageUrl,
+          component.name || component.id,
+          cache,
+        ),
+      };
+    }),
+  );
+
+  return {
+    ...template,
+    components,
+  };
+};
+
+const loadImageElement = (src: string) =>
+  new Promise<HTMLImageElement>((resolve, reject) => {
+    const image = new Image();
+    image.onload = () => resolve(image);
+    image.onerror = reject;
+    image.src = src;
+  });
+
+const trimTransparentImage = async (
+  dataUrl: string,
+  shouldTrim: boolean,
+): Promise<ImportedImageData> => {
+  const image = await loadImageElement(dataUrl);
+  const sourceWidth = image.naturalWidth || image.width;
+  const sourceHeight = image.naturalHeight || image.height;
+
+  if (!shouldTrim || sourceWidth <= 0 || sourceHeight <= 0) {
+    return {
+      dataUrl,
+      sourceWidth,
+      sourceHeight,
+      cropX: 0,
+      cropY: 0,
+      cropWidth: sourceWidth,
+      cropHeight: sourceHeight,
+      wasTrimmed: false,
+    };
+  }
+
+  const canvas = document.createElement("canvas");
+  canvas.width = sourceWidth;
+  canvas.height = sourceHeight;
+  const ctx = canvas.getContext("2d", { willReadFrequently: true });
+  if (!ctx) {
+    return {
+      dataUrl,
+      sourceWidth,
+      sourceHeight,
+      cropX: 0,
+      cropY: 0,
+      cropWidth: sourceWidth,
+      cropHeight: sourceHeight,
+      wasTrimmed: false,
+    };
+  }
+
+  ctx.drawImage(image, 0, 0);
+  const pixels = ctx.getImageData(0, 0, sourceWidth, sourceHeight).data;
+  let minX = sourceWidth;
+  let minY = sourceHeight;
+  let maxX = -1;
+  let maxY = -1;
+  const alphaThreshold = 8;
+  let hasTransparentPixels = false;
+
+  for (let y = 0; y < sourceHeight; y += 1) {
+    for (let x = 0; x < sourceWidth; x += 1) {
+      const alpha = pixels[(y * sourceWidth + x) * 4 + 3];
+      if (alpha < 245) hasTransparentPixels = true;
+      if (alpha > alphaThreshold && alpha < 245) {
+        minX = Math.min(minX, x);
+        minY = Math.min(minY, y);
+        maxX = Math.max(maxX, x);
+        maxY = Math.max(maxY, y);
+      }
+    }
+  }
+
+  if (!hasTransparentPixels) {
+    minX = sourceWidth;
+    minY = sourceHeight;
+    maxX = -1;
+    maxY = -1;
+
+    const backgroundSamples: Array<[number, number, number]> = [];
+    const sampleStep = Math.max(1, Math.floor(Math.min(sourceWidth, sourceHeight) / 24));
+    const scanStep = Math.max(1, Math.floor(Math.min(sourceWidth, sourceHeight) / 900));
+    const addSample = (x: number, y: number) => {
+      const offset = (y * sourceWidth + x) * 4;
+      backgroundSamples.push([pixels[offset], pixels[offset + 1], pixels[offset + 2]]);
+    };
+    for (let x = 0; x < sourceWidth; x += sampleStep) {
+      addSample(x, 0);
+      addSample(x, sourceHeight - 1);
+    }
+    for (let y = 0; y < sourceHeight; y += sampleStep) {
+      addSample(0, y);
+      addSample(sourceWidth - 1, y);
+    }
+
+    const luminance = (r: number, g: number, b: number) =>
+      r * 0.299 + g * 0.587 + b * 0.114;
+    const saturation = (r: number, g: number, b: number) =>
+      Math.max(r, g, b) - Math.min(r, g, b);
+    const colorDistance = (
+      r1: number,
+      g1: number,
+      b1: number,
+      r2: number,
+      g2: number,
+      b2: number,
+    ) => {
+      const dr = r1 - r2;
+      const dg = g1 - g2;
+      const db = b1 - b2;
+      return Math.sqrt(dr * dr + dg * dg + db * db);
+    };
+    const backgroundPool = [...backgroundSamples]
+      .sort(
+        (left, right) =>
+          luminance(right[0], right[1], right[2]) -
+          luminance(left[0], left[1], left[2]),
+      )
+      .slice(0, Math.max(8, Math.floor(backgroundSamples.length * 0.45)));
+    const backgroundColor = backgroundPool.reduce(
+      (acc, color) => {
+        acc[0] += color[0];
+        acc[1] += color[1];
+        acc[2] += color[2];
+        return acc;
+      },
+      [0, 0, 0],
+    );
+    backgroundColor[0] /= backgroundPool.length || 1;
+    backgroundColor[1] /= backgroundPool.length || 1;
+    backgroundColor[2] /= backgroundPool.length || 1;
+    const bgLum = luminance(backgroundColor[0], backgroundColor[1], backgroundColor[2]);
+    const bgSat = saturation(backgroundColor[0], backgroundColor[1], backgroundColor[2]);
+
+    const isDifferentFromBackground = (x: number, y: number) => {
+      const offset = (y * sourceWidth + x) * 4;
+      const r = pixels[offset];
+      const g = pixels[offset + 1];
+      const b = pixels[offset + 2];
+      const lum = luminance(r, g, b);
+      const sat = saturation(r, g, b);
+      const distance = colorDistance(
+        r,
+        g,
+        b,
+        backgroundColor[0],
+        backgroundColor[1],
+        backgroundColor[2],
+      );
+      return (
+        distance > 52 &&
+        (lum < bgLum - 18 || Math.abs(sat - bgSat) > 38)
+      );
+    };
+
+    for (let y = 0; y < sourceHeight; y += scanStep) {
+      for (let x = 0; x < sourceWidth; x += scanStep) {
+        if (isDifferentFromBackground(x, y)) {
+          minX = Math.min(minX, x);
+          minY = Math.min(minY, y);
+          maxX = Math.max(maxX, x);
+          maxY = Math.max(maxY, y);
+        }
+      }
+    }
+  } else {
+    minX = sourceWidth;
+    minY = sourceHeight;
+    maxX = -1;
+    maxY = -1;
+    for (let y = 0; y < sourceHeight; y += 1) {
+      for (let x = 0; x < sourceWidth; x += 1) {
+        const alpha = pixels[(y * sourceWidth + x) * 4 + 3];
+        if (alpha > alphaThreshold) {
+          minX = Math.min(minX, x);
+          minY = Math.min(minY, y);
+          maxX = Math.max(maxX, x);
+          maxY = Math.max(maxY, y);
+        }
+      }
+    }
+  }
+
+  if (maxX < 0 || maxY < 0) {
+    return {
+      dataUrl,
+      sourceWidth,
+      sourceHeight,
+      cropX: 0,
+      cropY: 0,
+      cropWidth: sourceWidth,
+      cropHeight: sourceHeight,
+      wasTrimmed: false,
+    };
+  }
+
+  const padding = hasTransparentPixels
+    ? 2
+    : Math.max(4, Math.floor(Math.min(sourceWidth, sourceHeight) * 0.01));
+  minX = Math.max(0, minX - padding);
+  minY = Math.max(0, minY - padding);
+  maxX = Math.min(sourceWidth - 1, maxX + padding);
+  maxY = Math.min(sourceHeight - 1, maxY + padding);
+  const cropWidth = maxX - minX + 1;
+  const cropHeight = maxY - minY + 1;
+  const wasTrimmed = cropWidth < sourceWidth || cropHeight < sourceHeight;
+  const cropAreaRatio = (cropWidth * cropHeight) / Math.max(1, sourceWidth * sourceHeight);
+
+  if (!wasTrimmed || (!hasTransparentPixels && cropAreaRatio > 0.82)) {
+    return {
+      dataUrl,
+      sourceWidth,
+      sourceHeight,
+      cropX: 0,
+      cropY: 0,
+      cropWidth: sourceWidth,
+      cropHeight: sourceHeight,
+      wasTrimmed: false,
+    };
+  }
+
+  const trimmedCanvas = document.createElement("canvas");
+  trimmedCanvas.width = cropWidth;
+  trimmedCanvas.height = cropHeight;
+  const trimmedCtx = trimmedCanvas.getContext("2d");
+  trimmedCtx?.drawImage(
+    image,
+    minX,
+    minY,
+    cropWidth,
+    cropHeight,
+    0,
+    0,
+    cropWidth,
+    cropHeight,
+  );
+
+  return {
+    dataUrl: trimmedCanvas.toDataURL("image/png"),
+    sourceWidth,
+    sourceHeight,
+    cropX: minX,
+    cropY: minY,
+    cropWidth,
+    cropHeight,
+    wasTrimmed: true,
+  };
 };
 
 const getCanvasBackgroundClass = (styleName?: string) => {
@@ -515,20 +822,43 @@ export const TemplateEditor: React.FC<TemplateEditorProps> = ({
   initialTemplates,
   products,
   selectedTemplateFromLib,
+  initialSelectedProductId,
+  onBackToSuiteLibrary,
   onSaveTemplate,
 }) => {
-  const [templates, setTemplates] = useState<Template[]>(initialTemplates);
+  const [templates, setTemplates] = useState<Template[]>(() =>
+    stripLegacyTemplateSlots(initialTemplates),
+  );
   const baseTemplate = templates[0];
   const [selectedProductId, setSelectedProductId] = useState<string>(
-    products[0]?.id || "",
+    initialSelectedProductId &&
+      products.some((product) => product.id === initialSelectedProductId)
+      ? initialSelectedProductId
+      : products[0]?.id || "",
   );
   const [businessConfig, setBusinessConfig] =
     useState<BusinessTemplateConfig>(() =>
       getInitialBusinessConfig(selectedTemplateFromLib || initialTemplates[0]),
     );
   const [activePanel, setActivePanel] = useState<FloatingPanel | null>(null);
-  const [activeThumbId, setActiveThumbId] = useState("main_01_square");
-  const [thumbFilter, setThumbFilter] = useState<ThumbFilter>("all");
+  const [activeThumbId, setActiveThumbId] = useState(() => {
+    try {
+      return localStorage.getItem("template_editor_active_thumb_id") ||
+        "main_01_square_slot_1";
+    } catch {
+      return "main_01_square_slot_1";
+    }
+  });
+  const [thumbFilter, setThumbFilter] = useState<ThumbFilter>(() => {
+    try {
+      return (
+        (localStorage.getItem("template_editor_thumb_filter") as ThumbFilter | null) ||
+        "all"
+      );
+    } catch {
+      return "all";
+    }
+  });
   const [selectedComponentId, setSelectedComponentId] = useState<string | null>(
     null,
   );
@@ -544,9 +874,38 @@ export const TemplateEditor: React.FC<TemplateEditorProps> = ({
   const [detailCount, setDetailCount] = useState(14);
   const [draggingLayerId, setDraggingLayerId] = useState<string | null>(null);
   const [isLayerPanelOpen, setIsLayerPanelOpen] = useState(false);
-  const [panelPos, setPanelPos] = useState({ x: 12, y: 12 }); // draggable panel position (px from bottom-left)
+  const [componentImageRatios, setComponentImageRatios] = useState<Record<string, number>>({});
+  const tightenedComponentIdsRef = useRef<Set<string>>(new Set());
+  const aspectSyncedComponentIdsRef = useRef<Set<string>>(new Set());
+  const [isCanvasFileDragActive, setIsCanvasFileDragActive] = useState(false);
+  const [isSavingTemplateSuite, setIsSavingTemplateSuite] = useState(false);
+  const [isImportingComponents, setIsImportingComponents] = useState(false);
+  const [saveStatusMessage, setSaveStatusMessage] = useState("");
+  const [panelPos, setPanelPos] = useState({ x: 16, y: 16 }); // draggable panel position (px from bottom-left of canvas work area)
   const panelDragging = useRef(false);
   const panelDragStart = useRef({ x: 0, y: 0, px: 0, py: 0 });
+  const pendingImportPromisesRef = useRef<Set<Promise<void>>>(new Set());
+
+  useEffect(() => {
+    try {
+      localStorage.setItem("template_editor_active_thumb_id", activeThumbId);
+      localStorage.setItem("template_editor_thumb_filter", thumbFilter);
+    } catch {}
+  }, [activeThumbId, thumbFilter]);
+
+  const runImportJob = async (job: () => Promise<void>) => {
+    const promise = job();
+    pendingImportPromisesRef.current.add(promise);
+    setIsImportingComponents(true);
+    try {
+      await promise;
+    } finally {
+      pendingImportPromisesRef.current.delete(promise);
+      if (pendingImportPromisesRef.current.size === 0) {
+        setIsImportingComponents(false);
+      }
+    }
+  };
 
   const getComponentLayerItems = () => {
     return [...(activeTemplate.components || [])].sort((a, b) => {
@@ -626,21 +985,331 @@ export const TemplateEditor: React.FC<TemplateEditorProps> = ({
 
   // Per-thumbnail independent template store (ref avoids closure issues)
   const thumbTemplatesRef = useRef<Record<string, Template>>({});
+  const saveSnapshotRef = useRef<Record<string, Template>>({});
+  const skipNextTemplateHydrationRef = useRef(false);
+  const didRestoreConfiguredPageRef = useRef(false);
   const [storeVersion, setStoreVersion] = useState(0);
+  useEffect(() => {
+    if (skipNextTemplateHydrationRef.current) {
+      skipNextTemplateHydrationRef.current = false;
+      return;
+    }
+    const sanitizedTemplates = stripLegacyTemplateSlots(initialTemplates);
+    setTemplates(sanitizedTemplates);
+    const expandedThumbs = getExpandedSuiteThumbs(
+      mainThemeCount,
+      skuCount,
+      detailCount,
+    );
+    const hydratedTemplates: Record<string, Template> = {};
+    expandedThumbs.forEach((thumb) => {
+      const savedTemplate = [...sanitizedTemplates]
+        .reverse()
+        .find(
+          (template) =>
+            template.id === thumb.id || template.id.endsWith(`_${thumb.id}`),
+        );
+      if (savedTemplate) {
+        hydratedTemplates[thumb.id] = {
+          ...stripLegacyTemplateSlot(savedTemplate),
+          outputWidth: thumb.width,
+          outputHeight: thumb.height,
+          templateType: getTemplateTypeByDelivery(thumb.deliveryType),
+          aspectRatio:
+            thumb.ratioVersion === "vertical_3_4"
+              ? "3:4"
+              : thumb.ratioVersion === "square_1_1"
+                ? "1:1"
+                : savedTemplate.aspectRatio || "1:1",
+        };
+      }
+    });
+    sanitizedTemplates.forEach((template) => {
+      if (!template.id.startsWith(`${baseTemplate.id}_`)) return;
+      const thumbId = template.id.slice(`${baseTemplate.id}_`.length);
+      if (!thumbId || hydratedTemplates[thumbId]) return;
+      hydratedTemplates[thumbId] = stripLegacyTemplateSlot(template);
+    });
+    thumbTemplatesRef.current = {
+      ...Object.fromEntries(
+        Object.entries(thumbTemplatesRef.current).map(([thumbId, template]) => [
+          thumbId,
+          stripLegacyTemplateSlot(template as Template),
+        ]),
+      ),
+      ...hydratedTemplates,
+    };
+    if (!didRestoreConfiguredPageRef.current) {
+      const activeTemplateFromDisk = hydratedTemplates[activeThumbId];
+      const activeHasContent = Boolean(
+        activeTemplateFromDisk &&
+          ((activeTemplateFromDisk.components?.length || 0) > 0 ||
+            (activeTemplateFromDisk.textFields?.length || 0) > 0),
+      );
+      if (!activeHasContent) {
+        const firstConfiguredThumb = expandedThumbs.find((thumb) => {
+          const template = hydratedTemplates[thumb.id];
+          return Boolean(
+            template &&
+              ((template.components?.length || 0) > 0 ||
+                (template.textFields?.length || 0) > 0),
+          );
+        });
+        if (firstConfiguredThumb) {
+          setActiveThumbId(firstConfiguredThumb.id);
+        }
+      }
+      didRestoreConfiguredPageRef.current = true;
+    }
+    saveSnapshotRef.current = {
+      ...saveSnapshotRef.current,
+      ...thumbTemplatesRef.current,
+    };
+    setStoreVersion((version) => version + 1);
+  }, [detailCount, initialTemplates, mainThemeCount, skuCount]);
+
   const getThumbTemplate = (thumbId: string): Template => {
     if (thumbTemplatesRef.current[thumbId]) return thumbTemplatesRef.current[thumbId];
     const clone = JSON.parse(JSON.stringify(baseTemplate));
     clone.id = `${baseTemplate.id}_${thumbId}`;
+    clone.slots = [];
     thumbTemplatesRef.current[thumbId] = clone;
     return clone;
   };
   const saveThumbTemplate = (thumbId: string, tmpl: Template) => {
-    thumbTemplatesRef.current[thumbId] = tmpl;
+    const cleanTemplate = stripLegacyTemplateSlot(tmpl);
+    thumbTemplatesRef.current[thumbId] = cleanTemplate;
+    saveSnapshotRef.current[thumbId] = cleanTemplate;
     setStoreVersion((v) => v + 1);
+  };
+  const normalizeTemplateForThumb = (thumb: TemplateThumb): Template => {
+    const existing =
+      saveSnapshotRef.current[thumb.id] ||
+      thumbTemplatesRef.current[thumb.id] ||
+      getThumbTemplate(thumb.id);
+    return {
+      ...existing,
+      id: `${baseTemplate.id}_${thumb.id}`,
+      templateName: `${baseTemplate.templateName} - ${thumb.title}`,
+      templateType: getTemplateTypeByDelivery(thumb.deliveryType),
+      outputWidth: thumb.width,
+      outputHeight: thumb.height,
+      slots: [],
+      aspectRatio:
+        thumb.ratioVersion === "vertical_3_4"
+          ? "3:4"
+          : thumb.ratioVersion === "square_1_1"
+            ? "1:1"
+            : existing.aspectRatio || "1:1",
+    };
+  };
+  const getSuiteTemplatesForSave = () =>
+    getExpandedSuiteThumbs(mainThemeCount, skuCount, detailCount).map((thumb) =>
+      normalizeTemplateForThumb(thumb),
+    );
+
+  const mergeActiveTemplateIntoSaveList = (
+    templatesForSave: Template[],
+    activeTemplateForSave: Template,
+  ) => {
+    const expandedThumbs = getExpandedSuiteThumbs(
+      mainThemeCount,
+      skuCount,
+      detailCount,
+    );
+    const activeThumb = expandedThumbs.find((thumb) => thumb.id === activeThumbId);
+    const normalizedActiveTemplate = activeThumb
+      ? {
+          ...activeTemplateForSave,
+          id: `${baseTemplate.id}_${activeThumb.id}`,
+          templateName: `${baseTemplate.templateName} - ${activeThumb.title}`,
+          templateType: getTemplateTypeByDelivery(activeThumb.deliveryType),
+          outputWidth: activeThumb.width,
+          outputHeight: activeThumb.height,
+          slots: [],
+          aspectRatio:
+            activeThumb.ratioVersion === "vertical_3_4"
+              ? "3:4"
+              : activeThumb.ratioVersion === "square_1_1"
+                ? "1:1"
+                : activeTemplateForSave.aspectRatio || "1:1",
+        }
+      : activeTemplateForSave;
+
+    let replaced = false;
+    const mergedTemplates = templatesForSave.map((template) => {
+      const isSameTemplate =
+        template.id === normalizedActiveTemplate.id ||
+        template.id === activeThumbId ||
+        template.id.endsWith(`_${activeThumbId}`);
+      if (!isSameTemplate) return template;
+      replaced = true;
+      return normalizedActiveTemplate;
+    });
+
+    if (!replaced) {
+      mergedTemplates.push(normalizedActiveTemplate);
+    }
+
+    return mergedTemplates;
+  };
+
+  const handleSaveSuite = async () => {
+    if (isSavingTemplateSuite) return;
+    setIsSavingTemplateSuite(true);
+    setSaveStatusMessage("正在保存...");
+    try {
+      if (pendingImportPromisesRef.current.size > 0) {
+        setSaveStatusMessage("正在等待素材导入完成...");
+        await Promise.allSettled(Array.from(pendingImportPromisesRef.current));
+      }
+      const activeTemplateForSave = stripLegacyTemplateSlot(activeTemplate);
+      thumbTemplatesRef.current[activeThumbId] = activeTemplateForSave;
+      saveSnapshotRef.current[activeThumbId] = activeTemplateForSave;
+      const uploadCache = new Map<string, string>();
+      const templatesForSave = mergeActiveTemplateIntoSaveList(
+        getSuiteTemplatesForSave(),
+        activeTemplateForSave,
+      );
+      const persistedTemplates = await Promise.all(
+        templatesForSave.map((template) =>
+          persistTemplateComponentImages(template, uploadCache),
+        ),
+      );
+      const activeComponentCount = activeTemplateForSave.components?.length || 0;
+      persistedTemplates.forEach((template) => {
+        const thumb = getExpandedSuiteThumbs(
+          mainThemeCount,
+          skuCount,
+          detailCount,
+        ).find(
+          (item) =>
+            template.id === item.id || template.id.endsWith(`_${item.id}`),
+        );
+        if (thumb) {
+          thumbTemplatesRef.current[thumb.id] = template;
+        }
+      });
+      setStoreVersion((version) => version + 1);
+      skipNextTemplateHydrationRef.current = true;
+      const saveResult = await onSaveTemplate(persistedTemplates);
+      const savedTotalComponents =
+        saveResult && "componentCount" in saveResult
+          ? saveResult.componentCount ?? 0
+          : undefined;
+      setSaveStatusMessage(
+        savedTotalComponents === undefined
+          ? `已保存到本地，当前页 ${activeComponentCount} 个图层`
+          : `已保存到本地，当前页 ${activeComponentCount} 个图层，文件共 ${savedTotalComponents} 个图层`,
+      );
+      window.setTimeout(() => setSaveStatusMessage(""), 1800);
+    } catch (error) {
+      console.error("Save template suite failed", error);
+      setSaveStatusMessage("");
+      window.alert("保存整套模板失败：素材没有成功写入本地，请再试一次。");
+    } finally {
+      setIsSavingTemplateSuite(false);
+    }
   };
 
   // Active template from ref store
   const activeTemplate = getThumbTemplate(activeThumbId);
+  const getVisualComponentBox = (component: TemplateComponent) => {
+    const isScene = component.type === "scene_base";
+    const baseBox = {
+      x: component.x ?? (isScene ? 0 : 50),
+      y: component.y ?? (isScene ? 0 : 50),
+      width: component.width ?? (isScene ? 100 : 30),
+      height: component.height ?? (isScene ? 100 : 30),
+    };
+
+    const imageAspect = component.imageUrl ? componentImageRatios[component.id] : undefined;
+    if (!imageAspect || imageAspect <= 0 || !activeTemplate) {
+      return baseBox;
+    }
+
+    const canvasAspect =
+      activeTemplate.outputWidth / Math.max(1, activeTemplate.outputHeight);
+    const boxPixelAspect = (baseBox.width * canvasAspect) / Math.max(0.01, baseBox.height);
+
+    if (Math.abs(boxPixelAspect - imageAspect) < 0.02) {
+      return baseBox;
+    }
+
+    if (boxPixelAspect > imageAspect) {
+      const visualWidth = Math.min(
+        baseBox.width,
+        (baseBox.height * imageAspect) / canvasAspect,
+      );
+      return {
+        ...baseBox,
+        x: baseBox.x + (baseBox.width - visualWidth) / 2,
+        width: visualWidth,
+      };
+    }
+
+    const visualHeight = Math.min(
+      baseBox.height,
+      (baseBox.width * canvasAspect) / imageAspect,
+    );
+    return {
+      ...baseBox,
+      y: baseBox.y + (baseBox.height - visualHeight) / 2,
+      height: visualHeight,
+    };
+  };
+
+  const registerComponentImageRatio = (
+    componentId: string,
+    image: HTMLImageElement,
+  ) => {
+    const ratio = image.naturalWidth / Math.max(1, image.naturalHeight);
+    if (!Number.isFinite(ratio) || ratio <= 0) return;
+    setComponentImageRatios((prev) => {
+      if (Math.abs((prev[componentId] || 0) - ratio) < 0.001) return prev;
+      return { ...prev, [componentId]: ratio };
+    });
+  };
+
+  const syncComponentBoxToImageRatio = (
+    component: TemplateComponent,
+    image: HTMLImageElement,
+  ) => {
+    if (
+      component.type === "scene_base" ||
+      !activeTemplate ||
+      aspectSyncedComponentIdsRef.current.has(component.id)
+    ) {
+      return;
+    }
+    const imageAspect = image.naturalWidth / Math.max(1, image.naturalHeight);
+    if (!Number.isFinite(imageAspect) || imageAspect <= 0) return;
+
+    const canvasAspect =
+      activeTemplate.outputWidth / Math.max(1, activeTemplate.outputHeight);
+    const currentWidth = component.width ?? 30;
+    const currentHeight = component.height ?? 30;
+    const currentAspect = (currentWidth * canvasAspect) / Math.max(0.01, currentHeight);
+
+    if (Math.abs(currentAspect - imageAspect) < 0.04) {
+      aspectSyncedComponentIdsRef.current.add(component.id);
+      return;
+    }
+
+    const nextHeight = Math.max(
+      2,
+      Math.min(95, (currentWidth * canvasAspect) / imageAspect),
+    );
+    const centerY = (component.y ?? 0) + currentHeight / 2;
+    const nextY = Math.max(0, Math.min(100 - nextHeight, centerY - nextHeight / 2));
+
+    aspectSyncedComponentIdsRef.current.add(component.id);
+    updateComponent(component.id, {
+      height: nextHeight,
+      y: nextY,
+    });
+  };
+
   const activeProduct =
     products.find((product) => product.id === selectedProductId) || products[0];
   const selectedComponent = activeTemplate?.components?.find(
@@ -673,6 +1342,15 @@ export const TemplateEditor: React.FC<TemplateEditorProps> = ({
     RATIO_VERSION_OPTIONS,
     businessConfig.ratioVersion,
   )} / ${getOptionLabel(ROLE_OPTIONS, businessConfig.role)}`;
+  const currentThumb = useMemo(
+    () =>
+      getExpandedSuiteThumbs(mainThemeCount, skuCount, detailCount).find(
+        (thumb) => thumb.id === activeThumbId,
+      ),
+    [activeThumbId, detailCount, mainThemeCount, skuCount],
+  );
+  const currentSuiteName = baseTemplate?.templateName || "未命名套系";
+  const currentPageName = currentThumb?.title || activeTemplate?.templateName || "当前页面";
 
   const canvasSize = useMemo(() => {
     if (!activeTemplate) return { width: 560, height: 560 };
@@ -768,7 +1446,18 @@ export const TemplateEditor: React.FC<TemplateEditorProps> = ({
 
   // Save template edits to the per-thumbnail ref store
   const handleUpdateTemplate = (updated: Template) => {
-    saveThumbTemplate(activeThumbId, updated);
+    saveThumbTemplate(activeThumbId, stripLegacyTemplateSlot(updated));
+  };
+
+  const patchActiveTemplate = (
+    patcher: (template: Template) => Template,
+    targetThumbId = activeThumbId,
+  ) => {
+    const latestTemplate =
+      saveSnapshotRef.current[targetThumbId] ||
+      thumbTemplatesRef.current[targetThumbId] ||
+      getThumbTemplate(targetThumbId);
+    saveThumbTemplate(targetThumbId, patcher(stripLegacyTemplateSlot(latestTemplate)));
   };
 
   const clearSelection = () => {
@@ -859,7 +1548,16 @@ export const TemplateEditor: React.FC<TemplateEditorProps> = ({
   useEffect(() => {
     const onMove = (e: MouseEvent) => {
       if (panelDragging.current) {
-        setPanelPos({ x: (panelDragStart.current.px + (e.clientX - panelDragStart.current.x)), y: Math.max(0, panelDragStart.current.py - (e.clientY - panelDragStart.current.y)) });
+        const host = canvasAreaRef.current?.closest("[data-canvas-work-area]");
+        const hostRect = host?.getBoundingClientRect();
+        const nextX = panelDragStart.current.px + (e.clientX - panelDragStart.current.x);
+        const nextY = panelDragStart.current.py - (e.clientY - panelDragStart.current.y);
+        const maxX = Math.max(0, (hostRect?.width || 900) - 58);
+        const maxY = Math.max(0, (hostRect?.height || 600) - 58);
+        setPanelPos({
+          x: Math.max(8, Math.min(maxX, nextX)),
+          y: Math.max(8, Math.min(maxY, nextY)),
+        });
         return;
       }
       const drag = dragRef.current;
@@ -874,29 +1572,57 @@ export const TemplateEditor: React.FC<TemplateEditorProps> = ({
 
       const isMove = drag.action === "move";
       const limit = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
-      const nextX = limit(drag.startTargetX + dxPct, 0, 100 - (isMove ? drag.startTargetW : 0));
-      const nextY = limit(drag.startTargetY + dyPct, 0, 100 - (isMove ? drag.startTargetH : 0));
+      const alignmentBounds = getAlignmentBounds(showSafetyRegion);
+      const movedBox = snapBoxToBounds(
+        clampVisualBoxToCanvas({
+          x: drag.startTargetX + dxPct,
+          y: drag.startTargetY + dyPct,
+          width: drag.startTargetW,
+          height: drag.startTargetH,
+        }),
+        alignmentBounds,
+      );
+      const nextX = isMove ? movedBox.x : drag.startTargetX + dxPct;
+      const nextY = isMove ? movedBox.y : drag.startTargetY + dyPct;
 
       if (drag.targetType === "component") {
         if (isMove) {
-          updateComponent(drag.targetId, { x: nextX, y: nextY });
+          updateComponent(drag.targetId, {
+            x: nextX,
+            y: nextY,
+            width: drag.startTargetW,
+            height: drag.startTargetH,
+          });
         } else {
           let rx = drag.startTargetX, ry = drag.startTargetY, rw = drag.startTargetW, rh = drag.startTargetH;
           if (drag.handle === "tl") { rx += dxPct; ry += dyPct; rw -= dxPct; rh -= dyPct; }
           else if (drag.handle === "tr") { ry += dyPct; rw += dxPct; rh -= dyPct; }
           else if (drag.handle === "bl") { rx += dxPct; rw -= dxPct; rh += dyPct; }
           else if (drag.handle === "br") { rw += dxPct; rh += dyPct; }
-          rw = limit(rw, 2, 100); rh = limit(rh, 2, 100);
+          rw = limit(rw, 2, MAX_ELEMENT_SIZE_PERCENT); rh = limit(rh, 2, MAX_ELEMENT_SIZE_PERCENT);
           // Proportional resize: lock aspect ratio
           const aspect = drag.startTargetW / Math.max(0.01, drag.startTargetH);
           const wDriven = Math.abs(rw - drag.startTargetW) >= Math.abs(rh - drag.startTargetH);
           if (wDriven) { rh = rw / aspect; } else { rw = rh * aspect; }
-          rw = limit(rw, 2, 100); rh = limit(rh, 2, 100);
+          rw = limit(rw, 2, MAX_ELEMENT_SIZE_PERCENT); rh = limit(rh, 2, MAX_ELEMENT_SIZE_PERCENT);
           if (drag.handle === "tl") { rx = drag.startTargetX + drag.startTargetW - rw; ry = drag.startTargetY + drag.startTargetH - rh; }
           else if (drag.handle === "tr") { ry = drag.startTargetY + drag.startTargetH - rh; }
           else if (drag.handle === "bl") { rx = drag.startTargetX + drag.startTargetW - rw; }
-          rx = limit(rx, 0, 100 - rw); ry = limit(ry, 0, 100 - rh);
-          updateComponent(drag.targetId, { x: rx, y: ry, width: rw, height: rh });
+          const resizedBox = snapResizedBoxToCanvasFrame(
+            { x: rx, y: ry, width: rw, height: rh },
+            drag.handle,
+            aspect,
+          );
+          const nextBox = snapBoxToBounds(
+            clampVisualBoxToCanvas(resizedBox),
+            alignmentBounds,
+          );
+          updateComponent(drag.targetId, {
+            x: nextBox.x,
+            y: nextBox.y,
+            width: nextBox.width,
+            height: nextBox.height,
+          });
         }
       } else if (drag.targetType === "slot") {
         if (isMove) {
@@ -918,7 +1644,15 @@ export const TemplateEditor: React.FC<TemplateEditorProps> = ({
           if (drag.handle === "tl") { rx = drag.startTargetX + drag.startTargetW - rw; ry = drag.startTargetY + drag.startTargetH - rh; }
           else if (drag.handle === "tr") { ry = drag.startTargetY + drag.startTargetH - rh; }
           else if (drag.handle === "bl") { rx = drag.startTargetX + drag.startTargetW - rw; }
-          rx = limit(rx, 0, 100 - rw); ry = limit(ry, 0, 100 - rh);
+          const resizedSlotBox = snapResizedBoxToCanvasFrame(
+            { x: rx, y: ry, width: rw, height: rh },
+            drag.handle,
+            sAspect,
+          );
+          rx = limit(resizedSlotBox.x, 0, 100 - resizedSlotBox.width);
+          ry = limit(resizedSlotBox.y, 0, 100 - resizedSlotBox.height);
+          rw = resizedSlotBox.width;
+          rh = resizedSlotBox.height;
           // convert top-left back to slot center coordinates
           updateSlotGeometry(drag.targetId, "x", rx + rw / 2);
           updateSlotGeometry(drag.targetId, "y", ry + rh / 2);
@@ -942,7 +1676,7 @@ export const TemplateEditor: React.FC<TemplateEditorProps> = ({
     window.addEventListener("mousemove", onMove);
     window.addEventListener("mouseup", onUp);
     return () => { window.removeEventListener("mousemove", onMove); window.removeEventListener("mouseup", onUp); };
-  }, [activeTemplate, updateComponent]);
+  }, [activeTemplate, showSafetyRegion, updateComponent]);
 
   const updateSlotGeometry = (
     slotId: string,
@@ -1010,8 +1744,12 @@ export const TemplateEditor: React.FC<TemplateEditorProps> = ({
     const isScene = type === "scene_base";
     const component: TemplateComponent = {
       id,
-      name: name || COMPONENT_TYPE_LABEL[type],
+      name:
+        name ||
+        (type === "product_slot" ? "台历产品槽位" : COMPONENT_TYPE_LABEL[type]),
       type,
+      slotProductType:
+        type === "product_slot" ? businessConfig.productLine : undefined,
       imageUrl,
       x: isScene ? 0 : position?.x ?? (type === "product_slot" ? 36 : 20),
       y: isScene ? 0 : position?.y ?? (type === "product_slot" ? 34 : 20),
@@ -1020,76 +1758,190 @@ export const TemplateEditor: React.FC<TemplateEditorProps> = ({
       zIndex: getDefaultZIndex(type),
       visible: true,
       sendToRunningHub: type === "scene_base" || type === "product_slot",
+      positionLocked: false,
       lockAspectRatio: true,
       scaleMode: "contain",
       anchor: "center",
     };
-    handleUpdateTemplate({
-      ...activeTemplate,
-      components: [...(activeTemplate.components || []), component],
-    });
+    patchActiveTemplate((template) => ({
+      ...template,
+      components: [...(template.components || []), component],
+    }));
     clearSelection();
     setSelectedComponentId(id);
   };
 
-  const importComponentFile = (file: File, position?: { x: number; y: number }) => {
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const dataUrl = event.target?.result as string;
-      const fileBaseName = file.name.replace(/\.[^.]+$/, "");
-      const type = getComponentTypeByFileName(file.name);
-      addComponent(type, dataUrl, `${fileBaseName} / ${COMPONENT_TYPE_LABEL[type]}`, position);
+  const getImageBoxForImport = (
+    image: ImportedImageData,
+    type: TemplateComponentType,
+    position?: { x: number; y: number },
+  ) => {
+    if (type === "scene_base") {
+      const canvasAspect =
+        activeTemplate.outputWidth / Math.max(1, activeTemplate.outputHeight);
+      const imageAspect = image.cropWidth / Math.max(1, image.cropHeight);
+      const width = 100;
+      const height = Math.max(1, (width * canvasAspect) / Math.max(0.01, imageAspect));
+      return {
+        x: 0,
+        y: (100 - height) / 2,
+        width,
+        height,
+      };
+    }
+
+    if (image.wasTrimmed) {
+      return {
+        x: (image.cropX / Math.max(1, image.sourceWidth)) * 100,
+        y: (image.cropY / Math.max(1, image.sourceHeight)) * 100,
+        width: (image.cropWidth / Math.max(1, image.sourceWidth)) * 100,
+        height: (image.cropHeight / Math.max(1, image.sourceHeight)) * 100,
+      };
+    }
+
+    const canvasAspect = activeTemplate.outputWidth / Math.max(1, activeTemplate.outputHeight);
+    const imageAspect = image.cropWidth / Math.max(1, image.cropHeight);
+    const defaultWidth =
+      type === "product_slot" ? 36 : type === "text_overlay" ? 28 : 24;
+    const width = defaultWidth;
+    const height = Math.max(3, Math.min(85, (width * canvasAspect) / imageAspect));
+    const centerX = position?.x ?? 50;
+    const centerY = position?.y ?? 50;
+    const x = Math.max(0, Math.min(100 - width, centerX - width / 2));
+    const y = Math.max(0, Math.min(100 - height, centerY - height / 2));
+
+    return { x, y, width, height };
+  };
+
+  const tightenExistingComponentOnce = async (component: TemplateComponent) => {
+    if (
+      component.type === "scene_base" ||
+      !component.imageUrl ||
+      tightenedComponentIdsRef.current.has(component.id)
+    ) {
+      return;
+    }
+    tightenedComponentIdsRef.current.add(component.id);
+
+    try {
+      const image = await trimTransparentImage(component.imageUrl, true);
+      if (!image.wasTrimmed) return;
+      const box = {
+        x:
+          (component.x ?? 0) +
+          (image.cropX / Math.max(1, image.sourceWidth)) * (component.width ?? 30),
+        y:
+          (component.y ?? 0) +
+          (image.cropY / Math.max(1, image.sourceHeight)) * (component.height ?? 30),
+        width:
+          (image.cropWidth / Math.max(1, image.sourceWidth)) *
+          (component.width ?? 30),
+        height:
+          (image.cropHeight / Math.max(1, image.sourceHeight)) *
+          (component.height ?? 30),
+      };
+      updateComponent(component.id, {
+        imageUrl: image.dataUrl,
+        x: Math.max(0, Math.min(100 - box.width, box.x)),
+        y: Math.max(0, Math.min(100 - box.height, box.y)),
+        width: Math.max(2, Math.min(100, box.width)),
+        height: Math.max(2, Math.min(100, box.height)),
+      });
+    } catch {
+      // Ignore images that cannot be analyzed in-browser.
+    }
+  };
+
+  const buildImportedComponent = async (
+    file: File,
+    type: TemplateComponentType,
+    position?: { x: number; y: number },
+  ): Promise<TemplateComponent> => {
+    const dataUrl = await readFileAsDataUrl(file);
+    const image = await trimTransparentImage(
+      dataUrl,
+      type !== "scene_base",
+    );
+    const box = getImageBoxForImport(image, type, position);
+    const baseName = file.name.replace(/\.[^.]+$/, "");
+    const label = getTypeLabel(type);
+    const savedImageUrl = await uploadTemplateImage(
+      image.dataUrl,
+      file.name,
+      new Map(),
+    );
+
+    return {
+      id: `comp_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+      name: `${baseName} (${label})`,
+      type,
+      slotProductType:
+        type === "product_slot" ? businessConfig.productLine : undefined,
+      imageUrl: savedImageUrl,
+      x: box.x,
+      y: box.y,
+      width: Math.max(2, type === "scene_base" ? box.width : Math.min(100, box.width)),
+      height: Math.max(2, type === "scene_base" ? box.height : Math.min(100, box.height)),
+      zIndex: getDefaultZIndexForType(type),
+      visible: true,
+      sendToRunningHub: getDefaultSendToRH(type),
+      positionLocked: false,
+      lockAspectRatio: true,
+      scaleMode: "contain",
+      anchor: "center",
     };
-    reader.readAsDataURL(file);
+  };
+
+  const importComponentFile = async (
+    file: File,
+    position?: { x: number; y: number },
+  ) => {
+    await runImportJob(async () => {
+      const type = getComponentTypeByFileName(file.name);
+      const component = await buildImportedComponent(file, type, position);
+      patchActiveTemplate((template) => {
+        const nextComponents =
+          type === "scene_base"
+            ? [
+                component,
+                ...(template.components || []).filter(
+                  (item) => item.type !== "scene_base",
+                ),
+              ]
+            : [...(template.components || []), component];
+        return { ...template, components: nextComponents };
+      });
+      clearSelection();
+      setSelectedComponentId(component.id);
+    });
   };
 
   // Batch import: read all files, detect types, create components at once
   const handleBatchImport = async (files: FileList) => {
-    const fileArray = Array.from(files);
-    const newComponents: TemplateComponent[] = [];
+    await runImportJob(async () => {
+      const fileArray = Array.from(files);
+      const newComponents: TemplateComponent[] = [];
 
-    for (const file of fileArray) {
-      const dataUrl = await new Promise<string>((resolve) => {
-        const reader = new FileReader();
-        reader.onload = (e) => resolve(e.target?.result as string);
-        reader.readAsDataURL(file);
+      for (const file of fileArray) {
+        const type = detectLayerType(file.name);
+        newComponents.push(await buildImportedComponent(file, type));
+      }
+
+      if (newComponents.length === 0) return;
+
+      // Merge with existing components, scene_base goes first
+      patchActiveTemplate((template) => {
+        const existing = (template.components || []).filter(
+          (c) => !newComponents.some((nc) => nc.type === "scene_base" && c.type === "scene_base"),
+        );
+        const merged = [
+          ...newComponents.filter((c) => c.type === "scene_base"),
+          ...existing.filter((c) => c.type !== "scene_base"),
+          ...newComponents.filter((c) => c.type !== "scene_base"),
+        ];
+        return { ...template, components: merged };
       });
-      const baseName = file.name.replace(/\.[^.]+$/, "");
-      const type = detectLayerType(file.name);
-      const label = getTypeLabel(type);
-      const id = `comp_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
-
-      newComponents.push({
-        id,
-        name: `${baseName} (${label})`,
-        type,
-        imageUrl: dataUrl,
-        x: type === "scene_base" ? 0 : 50,
-        y: type === "scene_base" ? 0 : 50,
-        width: type === "scene_base" ? 100 : 30,
-        height: type === "scene_base" ? 100 : 30,
-        zIndex: getDefaultZIndexForType(type),
-        visible: true,
-        sendToRunningHub: getDefaultSendToRH(type),
-        lockAspectRatio: true,
-        scaleMode: "contain",
-        anchor: "center",
-      });
-    }
-
-    if (newComponents.length === 0) return;
-
-    // Merge with existing components, scene_base goes first
-    const existing = (activeTemplate.components || []).filter(
-      (c) => !newComponents.some((nc) => nc.type === "scene_base" && c.type === "scene_base"),
-    );
-    const merged = [
-      ...newComponents.filter((c) => c.type === "scene_base"),
-      ...existing.filter((c) => c.type !== "scene_base"),
-      ...newComponents.filter((c) => c.type !== "scene_base"),
-    ];
-
-    handleUpdateTemplate({ ...activeTemplate, components: merged });
+    });
   };
 
   const getRenderedContent = (textField: TextField, product: Product) => {
@@ -1118,6 +1970,7 @@ export const TemplateEditor: React.FC<TemplateEditorProps> = ({
       templateType: getTemplateTypeByDelivery(thumb.deliveryType),
       outputWidth: thumb.width,
       outputHeight: thumb.height,
+      slots: [],
       aspectRatio:
         thumb.ratioVersion === "vertical_3_4"
           ? "3:4"
@@ -1133,27 +1986,60 @@ export const TemplateEditor: React.FC<TemplateEditorProps> = ({
     if (event.dataTransfer.types.includes("Files")) {
       event.preventDefault();
       event.dataTransfer.dropEffect = "copy";
+      setIsCanvasFileDragActive(true);
     }
   };
 
-  const handleCanvasDrop = (event: React.DragEvent<HTMLDivElement>) => {
+  const handleCanvasDragLeave = (event: React.DragEvent<HTMLDivElement>) => {
+    if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
+      setIsCanvasFileDragActive(false);
+    }
+  };
+
+  const handleCanvasDrop = async (event: React.DragEvent<HTMLDivElement>) => {
     event.preventDefault();
-    let file: File | null = null;
+    setIsCanvasFileDragActive(false);
+    const files: File[] = [];
     for (let index = 0; index < event.dataTransfer.files.length; index += 1) {
       const item = event.dataTransfer.files.item(index);
       if (item && item.type.startsWith("image/")) {
-        file = item;
-        break;
+        files.push(item);
       }
     }
-    if (!file) return;
+    if (files.length === 0) return;
 
     const rect = event.currentTarget.getBoundingClientRect();
     const x = ((event.clientX - rect.left) / rect.width) * 100;
     const y = ((event.clientY - rect.top) / rect.height) * 100;
-    importComponentFile(file, {
+    const dropPosition = {
       x: Math.min(95, Math.max(5, x)),
       y: Math.min(95, Math.max(5, y)),
+    };
+    await runImportJob(async () => {
+      const importedComponents = await Promise.all(
+        files.map((file, index) =>
+          buildImportedComponent(file, getComponentTypeByFileName(file.name), {
+            x: dropPosition.x + index * 2,
+            y: dropPosition.y + index * 2,
+          }),
+        ),
+      );
+      const hasSceneBase = importedComponents.some(
+        (component) => component.type === "scene_base",
+      );
+      patchActiveTemplate((template) => {
+        const nextComponents = [
+          ...importedComponents.filter((component) => component.type === "scene_base"),
+          ...(template.components || []).filter(
+            (component) => !(hasSceneBase && component.type === "scene_base"),
+          ),
+          ...importedComponents.filter((component) => component.type !== "scene_base"),
+        ];
+        return { ...template, components: nextComponents };
+      });
+      clearSelection();
+      const lastComponent = importedComponents[importedComponents.length - 1];
+      setSelectedComponentId(lastComponent?.id || null);
     });
   };
 
@@ -1185,24 +2071,25 @@ export const TemplateEditor: React.FC<TemplateEditorProps> = ({
     const isSelected = selectedComponentId === component.id && dragRef.current?.targetId !== component.id;
     const isDragTarget = dragRef.current?.active && dragRef.current.targetId === component.id;
     const isScene = component.type === "scene_base";
-    const isLocked = component.type === "scene_base";
-    const compX = isScene ? 0 : (component.x ?? 50);
-    const compY = isScene ? 0 : (component.y ?? 50);
-    const compW = isScene ? 100 : (component.width ?? 30);
-    const compH = isScene ? 100 : (component.height ?? 30);
+    const isLocked = component.positionLocked === true;
+    const visualBox = getVisualComponentBox(component);
+    const compX = visualBox.x;
+    const compY = visualBox.y;
+    const compW = visualBox.width;
+    const compH = visualBox.height;
     const style: React.CSSProperties = isScene
       ? {
-          left: 0,
-          top: 0,
-          width: "100%",
-          height: "100%",
+          left: `${compX}%`,
+          top: `${compY}%`,
+          width: `${compW}%`,
+          height: `${compH}%`,
           zIndex: component.zIndex,
         }
       : {
-          left: `${component.x}%`,
-          top: `${component.y}%`,
-          width: `${component.width}%`,
-          height: `${component.height}%`,
+          left: `${compX}%`,
+          top: `${compY}%`,
+          width: `${compW}%`,
+          height: `${compH}%`,
           zIndex: component.zIndex,
         };
 
@@ -1210,16 +2097,32 @@ export const TemplateEditor: React.FC<TemplateEditorProps> = ({
       return (
         <div
           key={component.id}
-          className={`absolute inset-0 text-left ${isLocked ? "" : "cursor-move"}`}
-          style={style}
+          className={`absolute text-left ${isLocked ? "cursor-default" : "cursor-move"}`}
+          style={{ ...style, pointerEvents: isSelected ? "auto" : "none" }}
           onMouseDown={(e) => {
-            if (isLocked) return;
+            if (isLocked) {
+              e.stopPropagation();
+              selectComp(component.id);
+              return;
+            }
             startDrag(e, "move", "component", component.id, { x: compX, y: compY, w: compW, h: compH });
           }}
         >
           {component.imageUrl ? (
-            <img src={component.imageUrl} alt={component.name} className="h-full w-full object-cover" />
+            <img
+              src={component.imageUrl}
+              alt={component.name}
+              className="h-full w-full object-cover pointer-events-none"
+              onLoad={(event) => {
+                registerComponentImageRatio(component.id, event.currentTarget);
+              }}
+            />
           ) : null}
+          {isSelected && (
+            <span className="absolute -top-5 left-0 rounded bg-slate-900 px-1.5 py-0.5 text-[9px] font-bold text-white">
+              {component.name}
+            </span>
+          )}
         </div>
       );
     }
@@ -1227,14 +2130,14 @@ export const TemplateEditor: React.FC<TemplateEditorProps> = ({
     return (
       <div
         key={component.id}
-        className={`absolute rounded-md text-left ${
-          isSelected ? "ring-2 ring-blue-500 ring-offset-0" : "ring-1 ring-white/40 hover:ring-blue-300/70"
-        } ${component.type === "product_slot" ? "border border-dashed border-blue-500 bg-transparent" : "bg-transparent"} ${
-          isLocked ? "" : "cursor-move"
-        }`}
+        className={`absolute text-left ${isLocked ? "" : "cursor-move"}`}
         style={style}
         onMouseDown={(e) => {
-          if (isLocked) return;
+          if (isLocked) {
+            e.stopPropagation();
+            selectComp(component.id);
+            return;
+          }
           startDrag(e, "move", "component", component.id, { x: compX, y: compY, w: compW, h: compH });
         }}
       >
@@ -1243,6 +2146,11 @@ export const TemplateEditor: React.FC<TemplateEditorProps> = ({
             src={component.imageUrl}
             alt={component.name}
             className="h-full w-full object-contain pointer-events-none"
+            onLoad={(event) => {
+              registerComponentImageRatio(component.id, event.currentTarget);
+              void tightenExistingComponentOnce(component);
+              syncComponentBoxToImageRatio(component, event.currentTarget);
+            }}
           />
         ) : component.type === "product_slot" ? (
           renderProductPreview()
@@ -1251,9 +2159,11 @@ export const TemplateEditor: React.FC<TemplateEditorProps> = ({
             {COMPONENT_TYPE_LABEL[component.type]}
           </div>
         )}
-        <span className="absolute -top-5 left-0 rounded bg-slate-900 px-1.5 py-0.5 text-[9px] font-bold text-white">
-          {component.name}
-        </span>
+        {isSelected && (
+          <span className="absolute -top-5 left-0 rounded bg-slate-900 px-1.5 py-0.5 text-[9px] font-bold text-white">
+            {component.name}
+          </span>
+        )}
       </div>
     );
   };
@@ -1265,9 +2175,9 @@ export const TemplateEditor: React.FC<TemplateEditorProps> = ({
     if (selectedComponentId && activeTemplate.components) {
       const c = activeTemplate.components.find((x) => x.id === selectedComponentId);
       if (!c || c.visible === false) return null;
-      if (c.type === "scene_base") return null;
-      tx = c.x ?? 50; ty = c.y ?? 50; tw = c.width ?? 30; th = c.height ?? 30;
-      tLocked = false; tVisible = true;
+      const box = getVisualComponentBox(c);
+      tx = box.x; ty = box.y; tw = box.width; th = box.height;
+      tLocked = c.positionLocked === true; tVisible = true;
     } else if (selectedSlotId) {
       const s = activeTemplate.slots.find((x) => x.id === selectedSlotId);
       if (!s) return null;
@@ -1315,10 +2225,183 @@ export const TemplateEditor: React.FC<TemplateEditorProps> = ({
         {children}
       </div>
     );
-    const NInp = ({v,onCh,min,max}:{v:number,onCh:(n:number)=>void,min?:number,max?:number}) => (
-      <input type="number" value={Math.round(v*10)/10} step={0.5} min={min??0} max={max??100}
-        onChange={(e) => onCh(Number(e.target.value))}
+    const NInp = ({
+      v,
+      onCh,
+      min,
+      max,
+      step = 0.5,
+    }: {
+      v: number;
+      onCh: (n: number) => void;
+      min?: number;
+      max?: number;
+      step?: number;
+    }) => (
+      <input
+        type="number"
+        value={Math.round(v * 10) / 10}
+        step={step}
+        min={min ?? 0}
+        max={max ?? 100}
+        onChange={(e) => {
+          const nextValue = e.currentTarget.valueAsNumber;
+          if (Number.isFinite(nextValue)) {
+            onCh(nextValue);
+          }
+        }}
         className="w-full rounded border border-slate-200 px-2 py-1 text-[10px] font-mono" />
+    );
+    const selBox = sel ? getVisualComponentBox(sel) : null;
+    const canvasAspect =
+      activeTemplate.outputWidth / Math.max(1, activeTemplate.outputHeight);
+    const imageAspect = sel?.imageUrl ? componentImageRatios[sel.id] : undefined;
+    const updateSelectedBox = (patch: Partial<{ x: number; y: number; width: number; height: number }>) => {
+      if (!sel || !selBox) return;
+      if (sel.positionLocked) return;
+      aspectSyncedComponentIdsRef.current.add(sel.id);
+      const nextBox = snapBoxToBounds(
+        clampVisualBoxToCanvas({
+          x: patch.x ?? selBox.x,
+          y: patch.y ?? selBox.y,
+          width: patch.width ?? selBox.width,
+          height: patch.height ?? selBox.height,
+        }),
+        getAlignmentBounds(showSafetyRegion),
+      );
+      updateComponent(sel.id, {
+        x: nextBox.x,
+        y: nextBox.y,
+        width: nextBox.width,
+        height: nextBox.height,
+      });
+    };
+    const updateSelectedPixelWidth = (pixelWidth: number) => {
+      if (!sel || !selBox || pixelWidth <= 0) return;
+      const nextWidth = Math.max(
+        2,
+        Math.min(
+          MAX_ELEMENT_SIZE_PERCENT,
+          (pixelWidth / activeTemplate.outputWidth) * 100,
+        ),
+      );
+      const nextHeight =
+        imageAspect && imageAspect > 0
+          ? Math.max(
+              2,
+              Math.min(
+                MAX_ELEMENT_SIZE_PERCENT,
+                (nextWidth * canvasAspect) / imageAspect,
+              ),
+            )
+          : selBox.height;
+      const centerX = selBox.x + selBox.width / 2;
+      const centerY = selBox.y + selBox.height / 2;
+      updateSelectedBox({
+        x: centerX - nextWidth / 2,
+        y: centerY - nextHeight / 2,
+        width: nextWidth,
+        height: nextHeight,
+      });
+    };
+    const updateSelectedPixelHeight = (pixelHeight: number) => {
+      if (!sel || !selBox || pixelHeight <= 0) return;
+      const nextHeight = Math.max(
+        2,
+        Math.min(
+          MAX_ELEMENT_SIZE_PERCENT,
+          (pixelHeight / activeTemplate.outputHeight) * 100,
+        ),
+      );
+      const nextWidth =
+        imageAspect && imageAspect > 0
+          ? Math.max(
+              2,
+              Math.min(
+                MAX_ELEMENT_SIZE_PERCENT,
+                (nextHeight * imageAspect) / canvasAspect,
+              ),
+            )
+          : selBox.width;
+      const centerX = selBox.x + selBox.width / 2;
+      const centerY = selBox.y + selBox.height / 2;
+      updateSelectedBox({
+        x: centerX - nextWidth / 2,
+        y: centerY - nextHeight / 2,
+        width: nextWidth,
+        height: nextHeight,
+      });
+    };
+    const alignSelectedElement = (
+      axis: "x" | "y",
+      position: "start" | "center" | "end",
+    ) => {
+      const bounds = getAlignmentBounds(showSafetyRegion);
+      if (sel && selBox) {
+        if (axis === "x") {
+          const nextX =
+            position === "start"
+              ? bounds.left
+              : position === "center"
+                ? bounds.centerX - selBox.width / 2
+                : bounds.right - selBox.width;
+          updateSelectedBox({ x: nextX });
+        } else {
+          const nextY =
+            position === "start"
+              ? bounds.top
+              : position === "center"
+                ? bounds.centerY - selBox.height / 2
+                : bounds.bottom - selBox.height;
+          updateSelectedBox({ y: nextY });
+        }
+        return;
+      }
+      if (sTf) {
+        const halfWidth = 12;
+        const halfHeight = 4;
+        if (axis === "x") {
+          updateTextFieldValue(
+            sTf.id,
+            "x",
+            position === "start"
+              ? bounds.left + halfWidth
+              : position === "center"
+                ? bounds.centerX
+                : bounds.right - halfWidth,
+          );
+        } else {
+          updateTextFieldValue(
+            sTf.id,
+            "y",
+            position === "start"
+              ? bounds.top + halfHeight
+              : position === "center"
+                ? bounds.centerY
+                : bounds.bottom - halfHeight,
+          );
+        }
+      }
+    };
+    const alignButtonClass =
+      "rounded border border-slate-200 bg-white px-2 py-1 text-[10px] font-bold text-slate-600 hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700";
+    const renderAlignTools = () => (
+      <div className="rounded-lg border border-slate-200 bg-slate-50 p-2">
+        <div className="mb-2 flex items-center justify-between gap-2">
+          <span className="text-[10px] font-black text-slate-700">对齐工具</span>
+          <span className="rounded bg-white px-1.5 py-0.5 text-[9px] font-bold text-slate-500">
+            {showSafetyRegion ? "按安全框" : "按画布框"}
+          </span>
+        </div>
+        <div className="grid grid-cols-3 gap-1.5">
+          <button type="button" className={alignButtonClass} onClick={() => alignSelectedElement("x", "start")}>左对齐</button>
+          <button type="button" className={alignButtonClass} onClick={() => alignSelectedElement("x", "center")}>水平居中</button>
+          <button type="button" className={alignButtonClass} onClick={() => alignSelectedElement("x", "end")}>右对齐</button>
+          <button type="button" className={alignButtonClass} onClick={() => alignSelectedElement("y", "start")}>顶部</button>
+          <button type="button" className={alignButtonClass} onClick={() => alignSelectedElement("y", "center")}>垂直居中</button>
+          <button type="button" className={alignButtonClass} onClick={() => alignSelectedElement("y", "end")}>底部</button>
+        </div>
+      </div>
     );
     return (
       <div className="space-y-3 text-[11px]">
@@ -1326,11 +2409,58 @@ export const TemplateEditor: React.FC<TemplateEditorProps> = ({
           <>
             <Field l="名称"><input value={sel.name||""} onChange={(e) => updateComponent(sel.id,{name:e.target.value})} className="w-full rounded border border-slate-200 px-2 py-1 text-[10px] font-bold" /></Field>
             <Field l="类型"><span className="text-[10px] text-slate-500">{COMPONENT_TYPE_LABEL[sel.type]}</span></Field>
+            {sel.type === "product_slot" && (
+              <Field l="产品槽位类型">
+                <select
+                  value={sel.slotProductType || businessConfig.productLine}
+                  onChange={(event) => {
+                    const value = event.target.value as ProductLine;
+                    updateComponent(sel.id, {
+                      slotProductType: value,
+                      name:
+                        value === "wall_calendar"
+                          ? "挂历产品槽位"
+                          : "台历产品槽位",
+                    });
+                  }}
+                  className="w-full rounded border border-slate-200 px-2 py-1 text-[10px] font-bold"
+                >
+                  <option value="desk_calendar">台历</option>
+                  <option value="wall_calendar">挂历</option>
+                </select>
+              </Field>
+            )}
             <div className="grid grid-cols-2 gap-2">
-              <Field l="X"><NInp v={sel.x??50} onCh={(n) => updateComponent(sel.id,{x:n})} /></Field>
-              <Field l="Y"><NInp v={sel.y??50} onCh={(n) => updateComponent(sel.id,{y:n})} /></Field>
-              <Field l="宽度"><NInp v={sel.width??30} onCh={(n) => updateComponent(sel.id,{width:n})} min={2} /></Field>
-              <Field l="高度"><NInp v={sel.height??30} onCh={(n) => updateComponent(sel.id,{height:n})} min={2} /></Field>
+              <Field l="X (%)"><NInp v={selBox?.x ?? sel.x ?? 50} onCh={(n) => updateSelectedBox({x:n})} /></Field>
+              <Field l="Y (%)"><NInp v={selBox?.y ?? sel.y ?? 50} onCh={(n) => updateSelectedBox({y:n})} /></Field>
+              <Field l="宽度 (%)"><NInp v={selBox?.width ?? sel.width ?? 30} onCh={(n) => updateSelectedBox({width:n})} min={2} max={MAX_ELEMENT_SIZE_PERCENT} /></Field>
+              <Field l="高度 (%)"><NInp v={selBox?.height ?? sel.height ?? 30} onCh={(n) => updateSelectedBox({height:n})} min={2} max={MAX_ELEMENT_SIZE_PERCENT} /></Field>
+            </div>
+            <div className="rounded-lg bg-blue-50 p-2">
+              <div className="mb-1 text-[10px] font-black text-blue-700">实际输出尺寸</div>
+              <div className="grid grid-cols-2 gap-2">
+                <Field l="实际宽度 px">
+                  <NInp
+                    v={((selBox?.width ?? sel.width ?? 30) / 100) * activeTemplate.outputWidth}
+                    onCh={updateSelectedPixelWidth}
+                    min={1}
+                    max={activeTemplate.outputWidth * 3}
+                    step={1}
+                  />
+                </Field>
+                <Field l="实际高度 px">
+                  <NInp
+                    v={((selBox?.height ?? sel.height ?? 30) / 100) * activeTemplate.outputHeight}
+                    onCh={updateSelectedPixelHeight}
+                    min={1}
+                    max={activeTemplate.outputHeight * 3}
+                    step={1}
+                  />
+                </Field>
+              </div>
+              <div className="text-[9px] font-bold text-blue-500">
+                用这里的高度统一文案尺寸；修改像素高度时会按素材比例同步宽度。
+              </div>
             </div>
             <Field l="zIndex"><NInp v={sel.zIndex??0} onCh={(n) => updateComponent(sel.id,{zIndex:n})} min={0} max={999} /></Field>
             <Field l="图层类型"><select value={sel.type} onChange={(e) => updateComponent(sel.id, {type: e.target.value as TemplateComponentType})}
@@ -1340,7 +2470,9 @@ export const TemplateEditor: React.FC<TemplateEditorProps> = ({
             <div className="flex items-center gap-3">
               <label className="flex items-center gap-1 text-[10px] cursor-pointer"><input type="checkbox" checked={sel.visible!==false} onChange={(e) => updateComponent(sel.id,{visible:e.target.checked})} /> 可见</label>
               <label className="flex items-center gap-1 text-[10px] cursor-pointer"><input type="checkbox" checked={sel.sendToRunningHub??false} onChange={(e) => updateComponent(sel.id,{sendToRunningHub:e.target.checked})} /> 发送RH</label>
+              <label className="flex items-center gap-1 text-[10px] cursor-pointer"><input type="checkbox" checked={sel.positionLocked===true} onChange={(e) => updateComponent(sel.id,{positionLocked:e.target.checked})} /> 锁定位置</label>
             </div>
+            {renderAlignTools()}
             <button type="button" onClick={() => deleteComponent(sel.id)} className="w-full rounded bg-rose-50 py-1.5 text-[10px] font-bold text-rose-600">删除图层</button>
           </>
         )}
@@ -1363,6 +2495,7 @@ export const TemplateEditor: React.FC<TemplateEditorProps> = ({
               <Field l="字号"><NInp v={sTf.fontSize} onCh={(n) => updateTextFieldValue(sTf.id,"fontSize",n)} min={6} max={200} /></Field>
               <Field l="颜色"><input type="color" value={sTf.color||"#000000"} onChange={(e) => updateTextFieldValue(sTf.id,"color",e.target.value)} className="w-full h-8 rounded border border-slate-200 p-0.5" /></Field>
             </div>
+            {renderAlignTools()}
           </>
         )}
       </div>
@@ -1370,64 +2503,90 @@ export const TemplateEditor: React.FC<TemplateEditorProps> = ({
   };
 
   const renderLayerList = () => {
-    const groups = [
-      { type: "scene_base" as const, label: "场景", color: "bg-slate-400" },
-      { type: "product_slot" as const, label: "产品槽", color: "bg-blue-400" },
-      { type: "text_overlay" as const, label: "文案", color: "bg-sky-400" },
-      { type: "logo_overlay" as const, label: "LOGO", color: "bg-teal-400" },
-      { type: "decor_overlay" as const, label: "装饰", color: "bg-rose-400" },
-    ];
-    const allComps = [...(activeTemplate.components || [])].sort((a, b) => {
-      if (a.type === "scene_base") return 1;
-      if (b.type === "scene_base") return -1;
-      return (b.zIndex ?? 0) - (a.zIndex ?? 0);
-    });
+    const layerItems = getComponentLayerItems();
     return (
       <div className="space-y-2">
-        {groups.map((g) => {
-          const items = allComps.filter((c) => c.type === g.type);
-          if (items.length === 0) return null;
-          return (
-            <div key={g.type}>
-              <div className="mb-1 text-[9px] font-bold text-slate-400">{g.label} · {items.length}</div>
-              {items.map((c) => (
-                <div key={c.id}
-                  onDragOver={(e) => { if (c.type !== "scene_base") e.preventDefault(); }}
-                  onDrop={(e) => { e.preventDefault(); if (draggingLayerId && draggingLayerId !== c.id) reorderComponentLayer(draggingLayerId, c.id); setDraggingLayerId(null); }}
-                  className={`flex items-center gap-1.5 rounded px-1.5 py-1 text-[10px] cursor-pointer ${
-                    draggingLayerId === c.id ? "bg-blue-100/50" : ""
-                  } ${selectedComponentId === c.id ? "bg-blue-50 text-blue-700 ring-1 ring-blue-200" : "text-slate-600 hover:bg-slate-50"}`}
-                  onClick={() => { setSelectedComponentId(c.id); setSelectedSlotId(null); setSelectedTextFieldId(null); }}>
-                  {c.type !== "scene_base" && (
-                    <button type="button" draggable
-                      onDragStart={(e) => { e.stopPropagation(); e.dataTransfer.effectAllowed = "move"; setDraggingLayerId(c.id); }}
-                      onDragEnd={() => setDraggingLayerId(null)}
-                      className="cursor-grab active:cursor-grabbing text-slate-300 hover:text-slate-500 px-0.5 shrink-0" title="拖动排序">
-                      ⠿
-                    </button>
-                  )}
-                  <span className={`h-2 w-2 shrink-0 rounded-full ${g.color}`} />
+        {layerItems.length > 0 && (
+          <div>
+            <div className="mb-1 flex items-center justify-between text-[9px] font-bold text-slate-400">
+              <span>图层顺序 · 上方显示在前</span>
+              <span>{layerItems.length}</span>
+            </div>
+            <div className="space-y-1">
+              {layerItems.map((c) => (
+                <div
+                  key={c.id}
+                  draggable={c.type !== "scene_base" && c.positionLocked !== true}
+                  onDragStart={(e) => {
+                    if (c.type === "scene_base" || c.positionLocked) return;
+                    e.dataTransfer.effectAllowed = "move";
+                    setDraggingLayerId(c.id);
+                  }}
+                  onDragEnd={() => setDraggingLayerId(null)}
+                  onDragOver={(e) => {
+                    if (draggingLayerId && c.type !== "scene_base") {
+                      e.preventDefault();
+                      e.dataTransfer.dropEffect = "move";
+                    }
+                  }}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    if (draggingLayerId && draggingLayerId !== c.id) {
+                      reorderComponentLayer(draggingLayerId, c.id);
+                    }
+                    setDraggingLayerId(null);
+                  }}
+                  className={`flex items-center gap-1.5 rounded px-1.5 py-1 text-[10px] ${
+                    c.type === "scene_base" || c.positionLocked ? "cursor-default" : "cursor-grab active:cursor-grabbing"
+                  } ${draggingLayerId === c.id ? "bg-blue-100/60 opacity-70" : ""} ${
+                    selectedComponentId === c.id
+                      ? "bg-blue-50 text-blue-700 ring-1 ring-blue-200"
+                      : "text-slate-600 hover:bg-slate-50"
+                  }`}
+                  onClick={() => {
+                    setSelectedComponentId(c.id);
+                    setSelectedSlotId(null);
+                    setSelectedTextFieldId(null);
+                  }}
+                >
+                  <span className="w-3 shrink-0 text-center text-slate-300">
+                    {c.type === "scene_base" ? "底" : c.positionLocked ? "锁" : "⠿"}
+                  </span>
+                  <span
+                    className={`h-2 w-2 shrink-0 rounded-full ${
+                      COMPONENT_TYPE_COLOR[c.type]
+                    }`}
+                  />
                   <span className="truncate font-medium flex-1">{c.name || c.type}</span>
+                  <span className="rounded bg-slate-100 px-1 py-0.5 text-[8px] font-bold text-slate-400">
+                    {COMPONENT_TYPE_LABEL[c.type]}
+                  </span>
                   <button type="button" onClick={(e) => { e.stopPropagation(); updateComponent(c.id, { visible: c.visible === false ? true : false }); }}
                     className="text-[9px] px-0.5 hover:bg-slate-200 rounded">{c.visible === false ? "⊘" : "◉"}</button>
-                  <button type="button" onClick={(e) => { e.stopPropagation(); deleteComponent(c.id); }}
-                    className="text-[9px] px-0.5 hover:bg-red-100 hover:text-red-500 rounded text-slate-400" title="删除图层">
-                    ✕
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      updateComponent(c.id, {
+                        positionLocked: c.positionLocked === true ? false : true,
+                      });
+                    }}
+                    className={`rounded px-0.5 text-[9px] hover:bg-slate-200 ${
+                      c.positionLocked ? "text-blue-600" : "text-slate-400"
+                    }`}
+                    title={c.positionLocked ? "解除位置锁定" : "锁定位置"}
+                  >
+                    {c.positionLocked ? "锁" : "开"}
                   </button>
+                  {c.type !== "scene_base" && (
+                    <button type="button" onClick={(e) => { e.stopPropagation(); deleteComponent(c.id); }}
+                      className="text-[9px] px-0.5 hover:bg-red-100 hover:text-red-500 rounded text-slate-400" title="删除图层">
+                      ✕
+                    </button>
+                  )}
                 </div>
               ))}
             </div>
-          );
-        })}
-        {activeTemplate.slots.length > 0 && (
-          <div className="pt-2 border-t border-slate-100">
-            <div className="mb-1 text-[9px] font-bold text-slate-400">旧版槽位</div>
-            {activeTemplate.slots.map((s) => (
-              <div key={s.id} className={`flex items-center gap-1.5 rounded px-1.5 py-1 text-[10px] cursor-pointer ${selectedSlotId === s.id ? "bg-blue-50 text-blue-700" : "text-slate-600 hover:bg-slate-50"}`}
-                onClick={() => { setSelectedSlotId(s.id); setSelectedComponentId(null); setSelectedTextFieldId(null); }}>
-                <span className="h-2 w-2 shrink-0 rounded-full bg-blue-400" /><span className="truncate font-medium">{s.slotName || "槽位"}</span>
-              </div>
-            ))}
           </div>
         )}
         {activeTemplate.textFields.length > 0 && (
@@ -1451,7 +2610,6 @@ export const TemplateEditor: React.FC<TemplateEditorProps> = ({
         <span className="text-[11px] font-black text-slate-700">图层列表</span>
         <div className="flex gap-1">
           <button type="button" onClick={() => setActivePanel("import")} className="rounded bg-indigo-50 px-1.5 py-0.5 text-[9px] font-bold text-indigo-600">导入</button>
-          <button type="button" onClick={() => setActivePanel("slots")} className="rounded bg-blue-50 px-1.5 py-0.5 text-[9px] font-bold text-blue-600">添加</button>
         </div>
       </div>
       <div className="max-h-[44vh] overflow-y-auto p-2">
@@ -1468,11 +2626,7 @@ export const TemplateEditor: React.FC<TemplateEditorProps> = ({
         onMouseDown={(e) => {
           startDrag(e, "move", "slot", slot.id, { x: slot.x - slot.maxWidth / 2, y: slot.y - slot.maxHeight / 2, w: slot.maxWidth, h: slot.maxHeight });
         }}
-        className={`absolute rounded-md border border-dashed border-blue-500 bg-transparent cursor-move text-left ${
-          isSelected
-            ? "border-blue-500 ring-2 ring-blue-500 ring-offset-0"
-            : "border-blue-400"
-        }`}
+        className="absolute cursor-move bg-transparent text-left"
         style={{
           left: `${slot.x}%`,
           top: `${slot.y}%`,
@@ -1483,9 +2637,11 @@ export const TemplateEditor: React.FC<TemplateEditorProps> = ({
         }}
       >
         {renderProductPreview()}
-        <span className="absolute -top-5 left-0 rounded bg-slate-900 px-1.5 py-0.5 text-[9px] font-bold text-white">
-          {slot.slotName}
-        </span>
+        {isSelected && (
+          <span className="absolute -top-5 left-0 rounded bg-slate-900 px-1.5 py-0.5 text-[9px] font-bold text-white">
+            {slot.slotName}
+          </span>
+        )}
       </div>
     );
   };
@@ -1498,9 +2654,7 @@ export const TemplateEditor: React.FC<TemplateEditorProps> = ({
         onMouseDown={(e) => {
           startDrag(e, "move", "textField", textField.id, { x: textField.x, y: textField.y, w: 24, h: 8 });
         }}
-        className={`absolute max-w-[80%] cursor-move rounded px-1.5 py-1 text-left ${
-          isSelected ? "ring-2 ring-sky-500" : "hover:ring-1"
-        }`}
+        className="absolute max-w-[80%] cursor-move rounded px-1.5 py-1 text-left"
         style={{
           left: `${textField.x}%`,
           top: `${textField.y}%`,
@@ -1518,28 +2672,38 @@ export const TemplateEditor: React.FC<TemplateEditorProps> = ({
   };
 
   return (
-    <div className="flex h-full min-h-[680px] flex-col overflow-hidden bg-slate-100 text-left text-slate-800">
-      <header className="shrink-0 border-b border-slate-200 bg-white px-5 py-3">
-        <div className="flex items-center justify-between gap-4">
-          <div className="min-w-0">
-            <div className="text-[11px] font-bold uppercase tracking-[0.2em] text-slate-400">
-              真实交付模板配置器
-            </div>
-            <div className="mt-1 flex items-center gap-3">
-              <span className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-sm font-black text-slate-800">
-                {activeTemplate.templateName}
-              </span>
-              <span className="truncate rounded-full bg-blue-50 px-3 py-1 text-xs font-bold text-blue-700">
-                {businessPathLabel}
-              </span>
-            </div>
+    <div className="flex h-full min-h-0 flex-col overflow-hidden bg-slate-100 text-left text-slate-800">
+      <header className="shrink-0 border-b border-slate-200 bg-white px-3">
+        <div className="flex h-14 items-center justify-between gap-2 overflow-x-auto">
+          <div className="flex min-w-0 items-center gap-2 whitespace-nowrap">
+            {onBackToSuiteLibrary && (
+              <button
+                type="button"
+                onClick={onBackToSuiteLibrary}
+                className="inline-flex h-8 shrink-0 items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 text-[11px] font-bold text-slate-600 transition hover:bg-slate-50 hover:text-slate-900"
+              >
+                <ArrowLeft className="h-3.5 w-3.5" />
+                返回模板套系库
+              </button>
+            )}
+            <span className="shrink-0 text-slate-300">/</span>
+            <span className="min-w-0 max-w-[42vw] truncate text-[12px] font-semibold text-slate-900 md:max-w-[28rem]">
+              {currentSuiteName}
+            </span>
+            <span className="shrink-0 text-slate-300">/</span>
+            <span className="min-w-0 max-w-[28vw] truncate text-[12px] text-slate-600 md:max-w-[18rem]">
+              {currentPageName}
+            </span>
+            <span className="hidden shrink-0 rounded-full border border-slate-200 px-2 py-1 text-[10px] text-slate-400 opacity-50 xl:inline-flex">
+              {businessPathLabel}
+            </span>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex shrink-0 items-center gap-1.5">
             <button
               type="button"
               onClick={() => setShowGrid((value) => !value)}
-              className={`flex items-center gap-1 rounded-lg border px-2.5 py-1.5 text-xs font-bold ${
+              className={`inline-flex h-8 items-center gap-1 rounded-lg border px-2 text-[11px] font-bold whitespace-nowrap ${
                 showGrid
                   ? "border-blue-200 bg-blue-50 text-blue-700"
                   : "border-slate-200 bg-white text-slate-600"
@@ -1551,7 +2715,7 @@ export const TemplateEditor: React.FC<TemplateEditorProps> = ({
             <button
               type="button"
               onClick={() => setShowSafetyRegion((value) => !value)}
-              className={`flex items-center gap-1 rounded-lg border px-2.5 py-1.5 text-xs font-bold ${
+              className={`inline-flex h-8 items-center gap-1 rounded-lg border px-2 text-[11px] font-bold whitespace-nowrap ${
                 showSafetyRegion
                   ? "border-blue-200 bg-blue-50 text-blue-700"
                   : "border-slate-200 bg-white text-slate-600"
@@ -1563,7 +2727,7 @@ export const TemplateEditor: React.FC<TemplateEditorProps> = ({
             <select
               value={zoomRatio}
               onChange={(event) => setZoomRatio(Number(event.target.value))}
-              className="rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-bold text-slate-700"
+              className="h-8 rounded-lg border border-slate-200 bg-white px-2 text-[11px] font-bold text-slate-700 whitespace-nowrap"
             >
               <option value={80}>80%</option>
               <option value={100}>100%</option>
@@ -1572,22 +2736,29 @@ export const TemplateEditor: React.FC<TemplateEditorProps> = ({
             <button
               type="button"
               onClick={() => setActivePanel("test")}
-              className="flex items-center gap-1 rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-bold text-white"
+              className="inline-flex h-8 items-center gap-1 rounded-lg bg-slate-900 px-2.5 text-[11px] font-bold text-white whitespace-nowrap"
             >
               <Play className="h-3.5 w-3.5" />
               试套检查
             </button>
             <button
               type="button"
-              onClick={() => {
-                onSaveTemplate(activeTemplate);
-                setActivePanel("save");
-              }}
-              className="flex items-center gap-1 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-bold text-white shadow-sm"
+              disabled={isSavingTemplateSuite || isImportingComponents}
+              onClick={() => void handleSaveSuite()}
+              className="inline-flex h-8 items-center gap-1 rounded-lg bg-blue-600 px-2.5 text-[11px] font-bold text-white shadow-sm whitespace-nowrap disabled:cursor-not-allowed disabled:opacity-60"
             >
               <Save className="h-3.5 w-3.5" />
-              保存模板页
+              {isImportingComponents
+                ? "导入中..."
+                : isSavingTemplateSuite
+                  ? "保存中..."
+                  : "保存整套模板"}
             </button>
+            {saveStatusMessage && (
+              <span className="rounded-full bg-emerald-50 px-2 py-1 text-[11px] font-bold text-emerald-700">
+                {saveStatusMessage}
+              </span>
+            )}
           </div>
         </div>
       </header>
@@ -1602,7 +2773,6 @@ export const TemplateEditor: React.FC<TemplateEditorProps> = ({
           products={products}
           businessConfig={businessConfig}
           selectedComponent={selectedComponent}
-          selectedSlot={selectedSlot}
           selectedTextField={selectedTextField}
           sortedComponents={sortedComponents}
           mainThemeCount={mainThemeCount}
@@ -1618,13 +2788,15 @@ export const TemplateEditor: React.FC<TemplateEditorProps> = ({
           onComponentSelect={(id) => { setSelectedComponentId(id); setSelectedSlotId(null); setSelectedTextFieldId(null); }}
           onComponentUpdate={(id, patch) => updateComponent(id, patch)}
           onComponentDelete={deleteComponent}
-          onSlotUpdate={(id, field, value) => updateSlotGeometry(id, field, value)}
           onTextFieldUpdate={(id, field, value) => updateTextFieldValue(id, field, value)}
           onProductChange={setSelectedProductId}
           onMainThemeCountChange={setMainThemeCount}
           onSkuCountChange={setSkuCount}
           onDetailCountChange={setDetailCount}
-          onSave={() => { onSaveTemplate(activeTemplate); setActivePanel(null); }}
+          onSave={async () => {
+            await handleSaveSuite();
+            setActivePanel(null);
+          }}
         />
       )}
 
@@ -1641,7 +2813,10 @@ export const TemplateEditor: React.FC<TemplateEditorProps> = ({
         </aside>
 
         {/* CENTER: Canvas */}
-        <div className="relative flex min-h-0 flex-col overflow-hidden rounded-xl border border-slate-200 bg-white">
+        <div
+          data-canvas-work-area
+          className="relative flex min-h-0 flex-col overflow-hidden rounded-xl border border-slate-200 bg-white"
+        >
           <div className="flex items-center justify-between border-b border-slate-100 px-3 py-1.5 text-xs text-slate-500 shrink-0">
             <div className="flex items-center gap-2">
               <span className="font-bold text-slate-700">模板画布</span>
@@ -1654,8 +2829,20 @@ export const TemplateEditor: React.FC<TemplateEditorProps> = ({
               <select value={zoomRatio} onChange={(e) => setZoomRatio(Number(e.target.value))} className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-bold">
                 <option value={80}>80%</option><option value={100}>100%</option><option value={120}>120%</option>
               </select>
+              <button type="button" onClick={() => setActivePanel("add")} className="rounded bg-blue-100 px-2 py-0.5 text-[10px] font-bold text-blue-700">添加产品/元素</button>
               <button type="button" onClick={() => setActivePanel("test")} className="rounded bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-700">试套检查</button>
-              <button type="button" onClick={() => onSaveTemplate(activeTemplate)} className="rounded bg-blue-600 px-2.5 py-0.5 text-[10px] font-bold text-white">保存</button>
+              <button
+                type="button"
+                disabled={isSavingTemplateSuite || isImportingComponents}
+                onClick={() => void handleSaveSuite()}
+                className="rounded bg-blue-600 px-2.5 py-0.5 text-[10px] font-bold text-white disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {isImportingComponents
+                  ? "导入中..."
+                  : isSavingTemplateSuite
+                    ? "保存中..."
+                    : "保存整套"}
+              </button>
             </div>
           </div>
           <div className="min-h-0 flex-1 overflow-auto p-4">
@@ -1663,40 +2850,72 @@ export const TemplateEditor: React.FC<TemplateEditorProps> = ({
               <div className="relative inline-block">
                 <div
                   ref={canvasAreaRef}
-                  onMouseDown={(e) => { if (e.target === e.currentTarget) { setSelectedComponentId(null); setSelectedSlotId(null); setSelectedTextFieldId(null); } }}
-                  className={`relative overflow-hidden border border-slate-300 shadow-2xl ${activeTemplate.background.type === "scene" ? getCanvasBackgroundClass(activeTemplate.background.sceneStyle) : "bg-white"}`}
+                  className="relative overflow-visible border border-slate-300 shadow-2xl"
+                  onDragEnter={handleCanvasDragOver}
                   onDragOver={handleCanvasDragOver}
+                  onDragLeave={handleCanvasDragLeave}
                   onDrop={handleCanvasDrop}
                   style={{ width: canvasSize.width, height: canvasSize.height }}
                 >
-                  {showGrid && (<div className="absolute inset-0 opacity-40" style={{backgroundImage:"linear-gradient(to right, rgba(15,23,42,0.08) 1px, transparent 1px), linear-gradient(to bottom, rgba(15,23,42,0.08) 1px, transparent 1px)",backgroundSize:"20px 20px"}} />)}
-                  {sortedComponents.map(renderComponentOnCanvas)}
-                  {!hasLayerComponents && activeTemplate.slots.map(renderLegacySlot)}
-                  {activeTemplate.textFields.map(renderTextField)}
-                  {renderTransformBox()}
-                  {showSafetyRegion && (<div className="pointer-events-none absolute inset-[6%] border-2 border-dashed border-rose-400/70" />)}
-                </div>
-                <div className="absolute z-50" style={{ bottom: panelPos.y, left: panelPos.x }}>
-                  <button
-                    type="button"
-                    onClick={() => setIsLayerPanelOpen(v => !v)}
+                  <div
                     onMouseDown={(e) => {
-                      panelDragging.current = true;
-                      panelDragStart.current = { x: e.clientX, y: e.clientY, px: panelPos.x, py: panelPos.y };
-                      e.preventDefault();
+                      if (e.target === e.currentTarget) {
+                        clearSelection();
+                      }
                     }}
-                    className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white/95 text-slate-600 shadow-lg hover:bg-slate-50 hover:text-slate-800 transition-colors cursor-grab active:cursor-grabbing"
-                    title={isLayerPanelOpen ? "收起图层列表 (可拖拽移动)" : "展开图层列表 (可拖拽移动)"}>
-                    <Layers className="h-4 w-4" />
-                  </button>
-                  {isLayerPanelOpen && (
-                    <div className="absolute bottom-12">
-                      {renderFloatingLayerList()}
-                    </div>
-                  )}
+                    className={`absolute inset-0 overflow-hidden ${activeTemplate.background.type === "scene" ? getCanvasBackgroundClass(activeTemplate.background.sceneStyle) : "bg-white"}`}
+                  >
+                    {showGrid && (<div className="pointer-events-none absolute inset-0 opacity-40" style={{backgroundImage:"linear-gradient(to right, rgba(15,23,42,0.08) 1px, transparent 1px), linear-gradient(to bottom, rgba(15,23,42,0.08) 1px, transparent 1px)",backgroundSize:"20px 20px"}} />)}
+                    {sortedComponents.map(renderComponentOnCanvas)}
+                    {activeTemplate.textFields.map(renderTextField)}
+                    {showSafetyRegion && (<div className="pointer-events-none absolute inset-[6%] border-2 border-dashed border-rose-400/70" />)}
+                    {isCanvasFileDragActive && (
+                      <div className="pointer-events-none absolute inset-0 z-[9000] flex items-center justify-center bg-blue-500/15 backdrop-blur-[1px]">
+                        <div className="rounded-2xl border border-blue-300 bg-white/95 px-5 py-4 text-center shadow-xl">
+                          <div className="text-sm font-black text-blue-700">松手导入素材</div>
+                          <div className="mt-1 text-[11px] font-bold text-slate-500">
+                            支持 PNG / JPG / WebP，可一次拖入多张
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                    {isImportingComponents && (
+                      <div className="pointer-events-none absolute inset-0 z-[9000] flex items-center justify-center bg-white/35 backdrop-blur-[1px]">
+                        <div className="rounded-2xl border border-blue-200 bg-white/95 px-5 py-4 text-center shadow-xl">
+                          <div className="text-sm font-black text-blue-700">素材正在导入</div>
+                          <div className="mt-1 text-[11px] font-bold text-slate-500">
+                            完成后再保存，避免空模板
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  <div className="pointer-events-none absolute inset-0 overflow-visible">
+                    {renderTransformBox()}
+                  </div>
                 </div>
               </div>
             </div>
+          </div>
+          <div className="absolute z-50" style={{ bottom: panelPos.y, left: panelPos.x }}>
+            <button
+              type="button"
+              onClick={() => setIsLayerPanelOpen(v => !v)}
+              onMouseDown={(e) => {
+                panelDragging.current = true;
+                panelDragStart.current = { x: e.clientX, y: e.clientY, px: panelPos.x, py: panelPos.y };
+                e.preventDefault();
+              }}
+              className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white/95 text-slate-600 shadow-lg transition-colors hover:bg-slate-50 hover:text-slate-800 cursor-grab active:cursor-grabbing"
+              title={isLayerPanelOpen ? "收起图层列表，可拖拽移动" : "展开图层列表，可拖拽移动"}
+            >
+              <Layers className="h-4 w-4" />
+            </button>
+            {isLayerPanelOpen && (
+              <div className="absolute bottom-12 left-0">
+                {renderFloatingLayerList()}
+              </div>
+            )}
           </div>
         </div>
 
@@ -1710,6 +2929,7 @@ export const TemplateEditor: React.FC<TemplateEditorProps> = ({
             skuCount={skuCount}
             detailCount={detailCount}
             getThumbTemplate={getThumbTemplate}
+            refreshKey={storeVersion}
             onFilterChange={setThumbFilter}
             onThumbSelect={selectThumb}
             onAddMain={() => setMainThemeCount((count) => count + 1)}
@@ -1759,7 +2979,7 @@ const FloatingToolbar: React.FC<{
   }> = [
     { id: "info", label: "模板信息", icon: Sliders },
     { id: "import", label: "导入分层", icon: FolderOpen },
-    { id: "slots", label: "添加槽位", icon: Plus },
+    { id: "add", label: "添加产品/元素", icon: Plus },
     { id: "test", label: "试套检查", icon: Play },
     { id: "save", label: "保存检查", icon: Check },
   ];
@@ -1796,7 +3016,6 @@ const FloatingEditorPanel: React.FC<{
   products: Product[];
   businessConfig: BusinessTemplateConfig;
   selectedComponent?: TemplateComponent;
-  selectedSlot?: TemplateSlot;
   selectedTextField?: TextField;
   sortedComponents: TemplateComponent[];
   mainThemeCount: number;
@@ -1819,7 +3038,6 @@ const FloatingEditorPanel: React.FC<{
     patch: Partial<TemplateComponent>,
   ) => void;
   onComponentDelete: (componentId: string) => void;
-  onSlotUpdate: (slotId: string, field: keyof TemplateSlot, value: unknown) => void;
   onTextFieldUpdate: (
     fieldId: string,
     field: keyof TextField,
@@ -1829,7 +3047,7 @@ const FloatingEditorPanel: React.FC<{
   onMainThemeCountChange: (count: number) => void;
   onSkuCountChange: (count: number) => void;
   onDetailCountChange: (count: number) => void;
-  onSave: () => void;
+  onSave: () => void | Promise<void>;
 }> = ({
   activePanel,
   onClose,
@@ -1838,7 +3056,6 @@ const FloatingEditorPanel: React.FC<{
   products,
   businessConfig,
   selectedComponent,
-  selectedSlot,
   selectedTextField,
   sortedComponents,
   mainThemeCount,
@@ -1854,7 +3071,6 @@ const FloatingEditorPanel: React.FC<{
   onComponentSelect,
   onComponentUpdate,
   onComponentDelete,
-  onSlotUpdate,
   onTextFieldUpdate,
   onProductChange,
   onMainThemeCountChange,
@@ -1862,7 +3078,7 @@ const FloatingEditorPanel: React.FC<{
   onDetailCountChange,
   onSave,
 }) => {
-  const panelPositionClass = "left-4 top-4 max-h-[calc(100vh-8rem)]";
+  const panelPositionClass = "bottom-8 left-[330px] max-h-[calc(100vh-10rem)]";
 
   return (
     <aside
@@ -1880,7 +3096,7 @@ const FloatingEditorPanel: React.FC<{
         <div className="text-sm font-black text-slate-900">
           {activePanel === "info" && "模板信息"}
           {activePanel === "import" && "导入分层"}
-          {activePanel === "slots" && "添加槽位"}
+          {activePanel === "add" && "添加产品/元素"}
           {activePanel === "info" && "信息"}
           {activePanel === "test" && "试套检查"}
           {activePanel === "save" && "保存检查"}
@@ -1911,11 +3127,10 @@ const FloatingEditorPanel: React.FC<{
             onActivateLayers={onActivateLayers}
           />
         )}
-        {activePanel === "slots" && (
-          <SlotsPanel
-            selectedSlot={selectedSlot}
+        {activePanel === "add" && (
+          <AddElementPanel
+            productLine={businessConfig.productLine}
             onAddComponent={onAddComponent}
-            onSlotUpdate={onSlotUpdate}
           />
         )}
         {activePanel === "test" && (
@@ -2133,23 +3348,25 @@ const ImportPanel: React.FC<{
   </div>
 );
 
-const SlotsPanel: React.FC<{
-  selectedSlot?: TemplateSlot;
+const AddElementPanel: React.FC<{
+  productLine: ProductLine;
   onAddComponent: (
     type: TemplateComponentType,
     imageUrl?: string,
     name?: string,
   ) => void;
-  onSlotUpdate: (slotId: string, field: keyof TemplateSlot, value: unknown) => void;
-}> = ({ selectedSlot, onAddComponent, onSlotUpdate }) => (
+}> = ({ productLine, onAddComponent }) => {
+  const productSlotName =
+    productLine === "wall_calendar" ? "挂历产品槽位" : "台历产品槽位";
+  return (
   <div className="space-y-4">
     <div className="grid grid-cols-2 gap-2">
       <button
         type="button"
-        onClick={() => onAddComponent("product_slot")}
+        onClick={() => onAddComponent("product_slot", undefined, productSlotName)}
         className="rounded-lg border border-blue-200 bg-blue-50 px-2 py-3 text-xs font-bold text-blue-700"
       >
-        产品槽位
+        {productSlotName}
       </button>
       <button
         type="button"
@@ -2173,145 +3390,7 @@ const SlotsPanel: React.FC<{
         文案层
       </button>
     </div>
-    {selectedSlot && (
-      <div className="rounded-xl border border-blue-100 bg-blue-50 p-4">
-        <div className="mb-3 text-sm font-bold text-slate-900">当前槽位</div>
-        <input
-          value={selectedSlot.slotName}
-          onChange={(event) =>
-            onSlotUpdate(selectedSlot.id, "slotName", event.target.value)
-          }
-          className="mb-3 w-full rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-xs font-bold"
-        />
-        <div className="grid grid-cols-2 gap-2">
-          <NumberInput
-            label="X"
-            value={selectedSlot.x}
-            onChange={(value) => onSlotUpdate(selectedSlot.id, "x", value)}
-          />
-          <NumberInput
-            label="Y"
-            value={selectedSlot.y}
-            onChange={(value) => onSlotUpdate(selectedSlot.id, "y", value)}
-          />
-          <NumberInput
-            label="宽度"
-            value={selectedSlot.maxWidth}
-            onChange={(value) =>
-              onSlotUpdate(selectedSlot.id, "maxWidth", value)
-            }
-          />
-          <NumberInput
-            label="高度"
-            value={selectedSlot.maxHeight}
-            onChange={(value) =>
-              onSlotUpdate(selectedSlot.id, "maxHeight", value)
-            }
-          />
-        </div>
-      </div>
-    )}
   </div>
-);
-
-const LAYER_GROUP_CONFIG: Array<{
-  type: TemplateComponentType;
-  label: string;
-  icon: string;
-  borderColor: string;
-  bgColor: string;
-}> = [
-  { type: "scene_base", label: "场景底图", icon: "🖼️", borderColor: "border-slate-300", bgColor: "bg-slate-50" },
-  { type: "product_slot", label: "产品槽位", icon: "📦", borderColor: "border-blue-300", bgColor: "bg-blue-50" },
-  { type: "text_overlay", label: "文案层", icon: "📝", borderColor: "border-sky-300", bgColor: "bg-sky-50" },
-  { type: "logo_overlay", label: "LOGO 层", icon: "🏷️", borderColor: "border-teal-300", bgColor: "bg-teal-50" },
-  { type: "decor_overlay", label: "装饰层", icon: "✨", borderColor: "border-rose-300", bgColor: "bg-rose-50" },
-];
-
-const LayersPanel: React.FC<{
-  sortedComponents: TemplateComponent[];
-  selectedComponent?: TemplateComponent;
-  selectedTextField?: TextField;
-  onComponentSelect: (id: string) => void;
-  onComponentUpdate: (
-    componentId: string,
-    patch: Partial<TemplateComponent>,
-  ) => void;
-  onComponentDelete: (componentId: string) => void;
-  onTextFieldUpdate: (
-    fieldId: string,
-    field: keyof TextField,
-    value: unknown,
-  ) => void;
-}> = ({
-  sortedComponents,
-  selectedComponent,
-  selectedTextField,
-  onComponentSelect,
-  onComponentUpdate,
-  onComponentDelete,
-  onTextFieldUpdate,
-}) => {
-  // Group components by type
-  const groupedComponents = LAYER_GROUP_CONFIG.map((group) => ({
-    ...group,
-    items: sortedComponents.filter((c) => c.type === group.type),
-  })).filter((g) => g.items.length > 0);
-
-  return (
-    <div className="space-y-4">
-      {/* Grouped layer list */}
-      {sortedComponents.length === 0 && (
-        <div className="rounded-lg bg-slate-50 p-3 text-xs text-slate-500">
-          暂无图层，请先导入或添加组件。
-        </div>
-      )}
-      {groupedComponents.map((group) => (
-        <div key={group.type} className={`rounded-lg border ${group.borderColor} ${group.bgColor} overflow-hidden`}>
-          {/* Group header */}
-          <div className="flex items-center justify-between px-2.5 py-2 border-b border-white/50">
-            <span className="text-[11px] font-bold text-slate-700">
-              {group.icon} {group.label}
-            </span>
-            <span className="text-[10px] text-slate-400 font-mono">{group.items.length}</span>
-          </div>
-          {/* Group items */}
-          <div className="space-y-0.5 p-1">
-            {group.items.map((component) => (
-              <div
-                key={component.id}
-                className={`flex items-center gap-1 rounded-md border px-2 py-1.5 text-xs transition-colors ${
-                  selectedComponent?.id === component.id
-                    ? "border-blue-400 bg-white shadow-sm"
-                    : "border-transparent bg-white/60 hover:bg-white"
-                }`}
-              >
-                <button
-                  type="button"
-                  onClick={() => onComponentSelect(component.id)}
-                  className="flex min-w-0 flex-1 items-center gap-2 text-left"
-                >
-                  <span
-                    className={`h-2 w-2 shrink-0 rounded-full ${
-                      COMPONENT_TYPE_COLOR[component.type]
-                    }`}
-                  />
-                  <span className="truncate text-[10px] font-medium text-slate-700">{component.name}</span>
-                </button>
-                <span className="rounded bg-slate-100 px-1 py-0.5 text-[8px] font-bold text-slate-400">
-                  {component.sendToRunningHub ? "RH" : "CV"}
-                </span>
-                {component.visible !== false ? (
-                  <Eye className="h-3 w-3 text-blue-400" />
-                ) : (
-                  <EyeOff className="h-3 w-3 text-slate-300" />
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-      ))}
-    </div>
   );
 };
 
@@ -2353,7 +3432,7 @@ const TestPanel: React.FC<{
 
 const SavePanel: React.FC<{
   inspectionItems: Array<{ label: string; ok: boolean }>;
-  onSave: () => void;
+  onSave: () => void | Promise<void>;
 }> = ({ inspectionItems, onSave }) => (
   <div className="space-y-4">
     <InspectionList items={inspectionItems} />
@@ -2362,7 +3441,7 @@ const SavePanel: React.FC<{
       onClick={onSave}
       className="w-full rounded-lg bg-blue-600 py-2 text-sm font-bold text-white"
     >
-      保存为模板页面
+      保存整套模板
     </button>
   </div>
 );
@@ -2394,322 +3473,3 @@ const InspectionList: React.FC<{
   </div>
 );
 
-const ThumbnailBoard: React.FC<{
-  thumbnails: TemplateThumb[];
-  activeThumbId: string;
-  thumbFilter: ThumbFilter;
-  mainThemeCount: number;
-  skuCount: number;
-  detailCount: number;
-  getThumbTemplate?: (thumbId: string) => Template;
-  onFilterChange: (filter: ThumbFilter) => void;
-  onThumbSelect: (thumb: TemplateThumb) => void;
-  onAddMain: () => void;
-  onAddSku: () => void;
-  onAddDetail: () => void;
-}> = ({
-  thumbnails,
-  activeThumbId,
-  thumbFilter,
-  mainThemeCount,
-  skuCount,
-  detailCount,
-  getThumbTemplate,
-  onFilterChange,
-  onThumbSelect,
-  onAddMain,
-  onAddSku,
-  onAddDetail,
-}) => {
-  const groups: Array<{
-    key: TemplateThumb["group"];
-    label: string;
-    countLabel: string;
-    onAdd?: () => void;
-  }> = [
-    { key: "main", label: "主图组", countLabel: `${mainThemeCount} 张`, onAdd: onAddMain },
-    { key: "sku", label: "SKU 图组", countLabel: `${skuCount} 张`, onAdd: onAddSku },
-    { key: "detail", label: "详情图组", countLabel: `${detailCount} 屏`, onAdd: onAddDetail },
-    { key: "special", label: "特殊交付图", countLabel: "固定页" },
-  ];
-  const visibleThumbs =
-    thumbFilter === "all"
-      ? thumbnails
-      : thumbnails.filter((thumb) => thumb.filter === thumbFilter);
-  const expandThumbs = (
-    items: TemplateThumb[],
-    targetCount: number,
-    fallbackTitle: string,
-    unit: string,
-  ) => {
-    if (items.length === 0 || items.length >= targetCount) return items;
-    return Array.from({ length: targetCount }, (_, index) => {
-      const base = items[index % items.length];
-      const sequence = index + 1;
-      const isBaseItem = index < items.length;
-      return {
-        ...base,
-        id: `${base.id}_slot_${sequence}`,
-        title: isBaseItem ? base.title : `${fallbackTitle}${sequence}`,
-        subtitle: `${base.subtitle} · 第${sequence}${unit}`,
-        status: isBaseItem ? base.status : "draft",
-      };
-    });
-  };
-  const getGroupItems = (groupKey: TemplateThumb["group"]) => {
-    const items = visibleThumbs.filter((thumb) => thumb.group === groupKey);
-    if (
-      groupKey === "main" &&
-      ["all", "main_3_4", "main_1_1"].includes(thumbFilter)
-    ) {
-      return expandThumbs(items, mainThemeCount, "主图页面", "张");
-    }
-    if (groupKey === "sku" && ["all", "sku"].includes(thumbFilter)) {
-      return expandThumbs(items, skuCount, "SKU页面", "张");
-    }
-    if (groupKey === "detail" && ["all", "detail"].includes(thumbFilter)) {
-      return expandThumbs(items, detailCount, "详情页面", "屏");
-    }
-    return items;
-  };
-
-  return (
-    <aside className="flex h-full flex-col bg-white">
-      <div className="border-b border-slate-200 px-4 py-3">
-        <div className="text-sm font-black text-slate-900">整套模板缩略图</div>
-        <div className="mt-1 text-[11px] text-slate-500">点击缩略图切换当前编辑页面。</div>
-      </div>
-      <div className="border-b border-slate-100 px-4 py-3">
-        <div className="flex flex-wrap gap-1.5">
-          {THUMB_FILTER_OPTIONS.map((option) => (
-            <button
-              key={option.value}
-              type="button"
-              onClick={() => onFilterChange(option.value)}
-              className={`rounded-full border px-2.5 py-1 text-[11px] font-bold transition ${
-                thumbFilter === option.value
-                  ? "border-blue-500 bg-blue-600 text-white"
-                  : "border-slate-200 bg-slate-50 text-slate-600 hover:border-blue-200 hover:bg-blue-50"
-              }`}
-            >
-              {option.label}
-            </button>
-          ))}
-        </div>
-      </div>
-      <div className="min-h-0 flex-1 space-y-5 overflow-y-auto p-4">
-        {groups.map((group) => {
-          const items = getGroupItems(group.key);
-          if (items.length === 0) return null;
-          return (
-            <section key={group.key}>
-              <div className="mb-2 flex items-center justify-between">
-                <div className="text-xs font-black text-slate-800">
-                  {group.label}
-                </div>
-                <div className="ml-2 flex items-center gap-2">
-                  <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-500">
-                    {group.countLabel}
-                  </span>
-                  {group.onAdd && (
-                    <button type="button" onClick={group.onAdd} className="rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-bold text-blue-700">
-                      添加
-                    </button>
-                  )}
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-2">
-                {items.map((thumb) => (
-                  <ThumbnailCard
-                    key={thumb.id}
-                    thumb={thumb}
-                    active={thumb.id === activeThumbId}
-                    template={getThumbTemplate?.(thumb.id)}
-                    onClick={() => onThumbSelect(thumb)}
-                  />
-                ))}
-              </div>
-            </section>
-          );
-        })}
-      </div>
-    </aside>
-  );
-};
-
-const ThumbnailCard: React.FC<{
-  thumb: TemplateThumb;
-  active: boolean;
-  template?: Template;
-  onClick: () => void;
-}> = ({ thumb, active, template, onClick }) => {
-  const canvasRef = React.useRef<HTMLCanvasElement | null>(null);
-  const ratioClass =
-    thumb.ratioVersion === "vertical_3_4" || thumb.ratioVersion === "detail_long"
-      ? "aspect-[3/4]"
-      : "aspect-square";
-  const statusClass =
-    thumb.status === "ready"
-      ? "bg-emerald-100 text-emerald-700"
-      : thumb.status === "warning"
-        ? "bg-amber-100 text-amber-700"
-        : "bg-slate-100 text-slate-500";
-
-  // Scene gradient colors
-  const SCENE_COLORS: Record<string, [string, string]> = {
-    warm_light: ["#FFF8F0", "#F0DCC0"],
-    beige_paper: ["#FAF7F2", "#EBE0CC"],
-    studio_white: ["#F8F8F8", "#E5E5E5"],
-    luxury_gold: ["#1A1A1A", "#2D1F0E"],
-    festive_red: ["#8B0000", "#DC143C"],
-  };
-
-  const COMP_COLORS: Record<string, string> = {
-    scene_base: "#E2E8F0",
-    product_slot: "#93C5FD",
-    text_overlay: "#7DD3FC",
-    logo_overlay: "#5EEAD4",
-    decor_overlay: "#FDA4AF",
-  };
-
-  React.useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas || !template) return;
-    let cancelled = false;
-
-    (async () => {
-      const ctx = canvas.getContext("2d");
-      if (!ctx) return;
-
-      const w = canvas.width;
-      const h = canvas.height;
-      ctx.clearRect(0, 0, w, h);
-
-      // Background
-      const bg = template.background;
-      if (bg?.color) {
-        ctx.fillStyle = bg.color;
-        ctx.fillRect(0, 0, w, h);
-      } else if (bg?.sceneStyle && SCENE_COLORS[bg.sceneStyle]) {
-        const [top, bot] = SCENE_COLORS[bg.sceneStyle];
-        const grad = ctx.createLinearGradient(0, 0, 0, h);
-        grad.addColorStop(0, top);
-        grad.addColorStop(1, bot);
-        ctx.fillStyle = grad;
-        ctx.fillRect(0, 0, w, h);
-        ctx.fillStyle = "rgba(0,0,0,0.06)";
-        ctx.fillRect(0, h * 0.82, w, 1);
-      } else {
-        ctx.fillStyle = "#F8FAFC";
-        ctx.fillRect(0, 0, w, h);
-      }
-
-      const comps = template.components || [];
-      const visibleComps = comps.filter((c) => c.visible !== false);
-
-      if (visibleComps.length > 0) {
-        // Preload all images first
-        const imageCache = new Map<string, HTMLImageElement>();
-        const urls = visibleComps.filter((c) => c.imageUrl).map((c) => c.imageUrl!);
-        await Promise.all(urls.map((url) =>
-          new Promise<void>((resolve) => {
-            const img = new window.Image();
-            img.crossOrigin = "anonymous";
-            img.onload = () => { imageCache.set(url, img); resolve(); };
-            img.onerror = () => resolve();
-            img.src = url;
-          })
-        ));
-
-        if (cancelled) return;
-
-        // Draw scene_base first
-        const scene = visibleComps.find((c) => c.type === "scene_base");
-        if (scene) {
-          const img = scene.imageUrl ? imageCache.get(scene.imageUrl) : null;
-          if (img) {
-            ctx.drawImage(img, 0, 0, w, h);
-          } else {
-            ctx.fillStyle = COMP_COLORS.scene_base;
-            ctx.fillRect(0, 0, w, h);
-          }
-        }
-
-        // Draw other components on top
-        visibleComps.filter((c) => c.type !== "scene_base").forEach((comp) => {
-          const cx = ((comp.x ?? 50) / 100) * w;
-          const cy = ((comp.y ?? 50) / 100) * h;
-          const cw = ((comp.width ?? 30) / 100) * w;
-          const ch = ((comp.height ?? 30) / 100) * h;
-
-          const img = comp.imageUrl ? imageCache.get(comp.imageUrl) : null;
-          if (img) {
-            ctx.drawImage(img, cx - cw / 2, cy - ch / 2, cw, ch);
-          } else {
-            ctx.fillStyle = COMP_COLORS[comp.type] || "#E5E7EB";
-            ctx.fillRect(cx - cw / 2, cy - ch / 2, cw, ch);
-            ctx.strokeStyle = "rgba(0,0,0,0.15)";
-            ctx.lineWidth = 0.5;
-            ctx.strokeRect(cx - cw / 2, cy - ch / 2, cw, ch);
-          }
-        });
-      } else {
-        // Draw legacy slots
-        (template.slots || []).forEach((slot) => {
-          const sx = ((slot.x ?? 50) / 100) * w;
-          const sy = ((slot.y ?? 50) / 100) * h;
-          const sw = ((slot.maxWidth ?? 80) / 100) * w;
-          const sh = ((slot.maxHeight ?? 60) / 100) * h;
-          ctx.fillStyle = "rgba(59,130,246,0.25)";
-          ctx.fillRect(sx - sw / 2, sy - sh / 2, sw, sh);
-          ctx.strokeStyle = "#3B82F6";
-          ctx.lineWidth = 1;
-          ctx.setLineDash([3, 2]);
-          ctx.strokeRect(sx - sw / 2, sy - sh / 2, sw, sh);
-          ctx.setLineDash([]);
-        });
-      }
-    })();
-
-    return () => { cancelled = true; };
-  }, [template, template?.background?.color, template?.background?.sceneStyle, template?.components, template?.slots]);
-
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`rounded-xl border p-2 text-left transition ${
-        active
-          ? "border-blue-500 bg-blue-50 shadow-sm"
-          : "border-slate-200 bg-white hover:border-blue-200"
-      }`}
-    >
-      <div className={`${ratioClass} relative mb-2 overflow-hidden rounded-lg border border-slate-200 bg-white`}>
-        <canvas
-          ref={canvasRef}
-          width={160}
-          height={thumb.ratioVersion === "vertical_3_4" || thumb.ratioVersion === "detail_long" ? 214 : 160}
-          className="h-full w-full"
-        />
-      </div>
-      <div className="truncate text-xs font-black text-slate-800">
-        {thumb.title}
-      </div>
-      <div className="mt-1 flex items-center justify-between gap-2">
-        <span className="truncate text-[10px] font-bold text-slate-400">
-          {thumb.subtitle}
-        </span>
-        <span className={`rounded-full px-1.5 py-0.5 text-[9px] font-bold ${statusClass}`}>
-          {thumb.status === "ready"
-            ? "已配置"
-            : thumb.status === "warning"
-              ? "待检查"
-              : "草稿"}
-        </span>
-      </div>
-      <div className="mt-1 text-[9px] font-mono text-slate-400">
-        {thumb.width}×{thumb.height}
-      </div>
-    </button>
-  );
-};
